@@ -1,13 +1,22 @@
 import { createApp, type AppOptions, type HttpResponse } from "../src/app.js";
+import { createDynamoRepositories } from "../src/repositories/dynamoRepositories.js";
 import { createInMemoryRepositories } from "../src/repositories/inMemory.js";
+import { MemoryKvStore } from "../src/repositories/kvStore.js";
 
 export const ADMIN_TOKEN = "test-admin-token";
+
+/** TEST_REPOS=dynamo のとき、同じテストを DynamoDB 実装（メモリ上の保存先）で実行する */
+export function createTestRepositories() {
+  return process.env["TEST_REPOS"] === "dynamo"
+    ? createDynamoRepositories(new MemoryKvStore())
+    : createInMemoryRepositories();
+}
 
 export function createTestApp(overrides: Partial<AppOptions> = {}) {
   let counter = 0;
   let minute = 0;
   const app = createApp({
-    repos: createInMemoryRepositories(),
+    repos: createTestRepositories(),
     adminToken: ADMIN_TOKEN,
     // 時刻とIDを固定して、順序を安定させる
     now: () => new Date(Date.UTC(2026, 0, 1, 0, minute++, 0)),

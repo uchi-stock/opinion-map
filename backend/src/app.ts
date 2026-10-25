@@ -11,6 +11,8 @@ import type { Repositories } from "./repositories/types.js";
 import type { AnalysisProvider } from "./analysis/types.js";
 import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
+import type { InsightProvider } from "./insights/types.js";
+import { createInsightService } from "./services/insightService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
 import { createOpinionService } from "./services/opinionService.js";
 import { createSessionService } from "./services/sessionService.js";
@@ -37,6 +39,8 @@ export interface AppOptions {
   /** 分析基盤。未指定なら、分析のAPIは使えない（503） */
   analysisProvider?: AnalysisProvider;
   analysisTimeoutMs?: number;
+  /** 共通点・相違点・問いの案を作るLLM。未指定なら、そのAPIは使えない（503） */
+  insightProvider?: InsightProvider;
   opinionMaxLength?: number;
   now?: () => Date;
   newId?: () => string;
@@ -86,6 +90,15 @@ export function createApp(options: AppOptions) {
         ...(options.analysisTimeoutMs === undefined ? {} : { timeoutMs: options.analysisTimeoutMs }),
       })
     : undefined;
+  const insights = options.insightProvider ? createInsightService(ctx, options.insightProvider) : undefined;
+  const requireInsights = () => {
+    if (!insights) throw new AppError(503, "insights_unavailable", "案を作るAIが設定されていません");
+    return insights;
+  };
+  const eventOfInsight = async (p: Params) => {
+    const insight = await options.repos.insights.get(p["id"]!);
+    return insight ? (await options.repos.sessions.get(insight.sessionId))?.eventId : undefined;
+  };
   const requireAnalyses = () => {
     if (!analyses) throw new AppError(503, "analysis_unavailable", "分析基盤が設定されていません");
     return analyses;
@@ -216,6 +229,36 @@ export function createApp(options: AppOptions) {
       admin: true,
       eventIdOf: eventOfAnalysis,
       handle: async ({ params }) => ({ status: 200, data: await requireAnalyses().get(params["id"]!) }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/analyses\/(?<id>[^/]+)\/clusters\/(?<clusterId>[^/]+)\/insights$/,
+      admin: true,
+      eventIdOf: eventOfAnalysis,
+      handle: async ({ params }) => ({
+        status: 201,
+        data: await requireInsights().generate(params["id"]!, decodeURIComponent(params["clusterId"]!)),
+      }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/analyses\/(?<id>[^/]+)\/insights$/,
+      admin: true,
+      eventIdOf: eventOfAnalysis,
+      handle: async ({ params }) => ({
+        status: 200,
+        data: { insights: await requireInsights().list(params["id"]!) },
+      }),
+    },
+    {
+      method: "PATCH",
+      pattern: /^\/insights\/(?<id>[^/]+)$/,
+      admin: true,
+      eventIdOf: eventOfInsight,
+      handle: async ({ params, body }) => ({
+        status: 200,
+        data: await requireInsights().update(params["id"]!, (body ?? {}) as { edited?: unknown; approved?: unknown }),
+      }),
     },
     {
       method: "POST",

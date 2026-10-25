@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../src/api/client.ts";
 import type { AdminApi } from "../src/api/admin.ts";
 import type { AnalysisRun } from "../src/api/types.ts";
 import { AnalysisPanel, AnalysisResultView } from "../src/components/admin/AnalysisPanel.tsx";
@@ -44,7 +45,7 @@ describe("AnalysisResultView", () => {
 });
 
 function fakeApi(over: Partial<Record<keyof AdminApi, unknown>>) {
-  return { listAnalyses: vi.fn(async () => []), getAnalysis: vi.fn(), startAnalysis: vi.fn(), retryAnalysis: vi.fn(), ...over } as unknown as AdminApi;
+  return { listAnalyses: vi.fn(async () => []), listInsights: vi.fn(async () => []), getAnalysis: vi.fn(), startAnalysis: vi.fn(), retryAnalysis: vi.fn(), ...over } as unknown as AdminApi;
 }
 
 describe("AnalysisPanel", () => {
@@ -76,5 +77,42 @@ describe("AnalysisPanel", () => {
   it("投稿がなければ、分析を始められない", async () => {
     render(<AnalysisPanel api={fakeApi({})} sessionId="s1" opinions={[]} describeError={String} />);
     expect(await screen.findByRole("button", { name: "分析する" })).toBeDisabled();
+  });
+
+  it("クラスタごとに案を作れる。案を作るAIが未設定なら、ボタンを出さない", async () => {
+    const done = run();
+    const created = {
+      id: "i1",
+      analysisRunId: "r1",
+      clusterId: "c1",
+      providerName: "fake",
+      ai: { commonPoints: ["共通A"], differences: [], premiseDifferences: [], questions: ["問いC"] },
+      approved: false,
+    };
+    const api = fakeApi({
+      listAnalyses: vi.fn(async () => [done]),
+      getAnalysis: vi.fn(async () => done),
+      generateInsight: vi.fn(async () => created),
+    });
+    render(<AnalysisPanel api={api} sessionId="s1" opinions={opinions} describeError={String} />);
+    await userEvent.click(await screen.findByRole("button", { name: /共通点・相違点を考える/ }));
+    expect(await screen.findByText("共通A")).toBeInTheDocument();
+    expect(api.generateInsight).toHaveBeenCalledWith("r1", "c1");
+  });
+
+  it("案のAPIが503なら、案を作るボタンを出さない", async () => {
+    const done = run();
+    const api = fakeApi({
+      listAnalyses: vi.fn(async () => [done]),
+      getAnalysis: vi.fn(async () => done),
+      listInsights: vi.fn(async () => {
+        throw new ApiError(503, "insights_unavailable", "未設定");
+      }),
+    });
+    render(<AnalysisPanel api={api} sessionId="s1" opinions={opinions} describeError={String} />);
+    expect(await screen.findByRole("region", { name: "まとまり1" })).toBeInTheDocument();
+    // 503 の応答が反映されると、ボタンが消える
+    await vi.waitFor(() => expect(screen.queryByRole("button", { name: /共通点・相違点を考える/ })).toBeNull());
+    expect(api.listInsights).toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import type { InsightRecord } from "../../../backend/src/insights/types.ts";
 import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
 import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
@@ -10,11 +11,12 @@ interface Data {
   opinions: OpinionRecord[];
   analyses: AnalysisRunRecord[];
   operatorTokens: OperatorTokenRecord[];
+  insights: InsightRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -35,6 +37,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         opinions: parsed.opinions ?? [],
         analyses: parsed.analyses ?? [],
         operatorTokens: parsed.operatorTokens ?? [],
+        insights: parsed.insights ?? [],
       };
     } catch {
       // 読めないとき（保存先が使えない、内容が壊れている）は、メモリ上の内容を使う
@@ -155,6 +158,26 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         const d = read();
         d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
         write(d);
+      },
+    },
+    insights: {
+      async create(insight) {
+        const d = read();
+        d.insights.push(insight);
+        write(d);
+      },
+      async get(id) {
+        return read().insights.find((i) => i.id === id);
+      },
+      async update(insight) {
+        const d = read();
+        d.insights = d.insights.map((i) => (i.id === insight.id ? insight : i));
+        write(d);
+      },
+      async listByAnalysis(analysisRunId) {
+        return read()
+          .insights.filter((i) => i.analysisRunId === analysisRunId)
+          .sort(byCreatedAt);
       },
     },
   };

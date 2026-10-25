@@ -1,4 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
+import type { InsightRecord } from "../insights/types.js";
 import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 
 /**
@@ -50,10 +51,19 @@ export interface OperatorTokenRepository {
   update(token: OperatorTokenRecord): Promise<void>;
 }
 
+export interface InsightRepository {
+  create(insight: InsightRecord): Promise<void>;
+  get(id: string): Promise<InsightRecord | undefined>;
+  update(insight: InsightRecord): Promise<void>;
+  /** 古い順 */
+  listByAnalysis(analysisRunId: string): Promise<InsightRecord[]>;
+}
+
 export interface Repositories {
   events: EventRepository;
   sessions: SessionRepository;
   opinions: OpinionRepository;
   analyses: AnalysisRunRepository;
   operatorTokens: OperatorTokenRepository;
+  insights: InsightRepository;
 }

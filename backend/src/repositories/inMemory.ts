@@ -1,4 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
+import type { InsightRecord } from "../insights/types.js";
 import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
@@ -10,6 +11,7 @@ export function createInMemoryRepositories(): Repositories {
   const bySubmission = new Map<string, string>();
   const analyses = new Map<string, AnalysisRunRecord>();
   const operatorTokens = new Map<string, OperatorTokenRecord>();
+  const insights = new Map<string, InsightRecord>();
 
   return {
     events: {
@@ -106,6 +108,24 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    insights: {
+      async create(insight) {
+        insights.set(insight.id, structuredClone(insight));
+      },
+      async get(id) {
+        const i = insights.get(id);
+        return i ? structuredClone(i) : undefined;
+      },
+      async update(insight) {
+        insights.set(insight.id, structuredClone(insight));
+      },
+      async listByAnalysis(analysisRunId) {
+        return [...insights.values()]
+          .filter((i) => i.analysisRunId === analysisRunId)
+          .map((i) => structuredClone(i))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       },
     },
   };

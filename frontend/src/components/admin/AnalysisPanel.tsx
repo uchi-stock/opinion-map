@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { AnalysisCluster, AnalysisRun, PublicOpinion } from "../../api/types.ts";
+import { ApiError } from "../../api/client.ts";
+import type { AnalysisCluster, AnalysisRun, Insight, PublicOpinion } from "../../api/types.ts";
 import { KIND_LABELS } from "../../lib/text.ts";
+import { InsightCard } from "./InsightCard.tsx";
 
 const POLL_MS = 3000;
 
@@ -33,12 +35,14 @@ function Group({
   ids,
   byId,
   tone,
+  extra,
 }: {
   title: string;
   summary?: string;
   ids: string[];
   byId: Map<string, PublicOpinion>;
   tone?: "warning";
+  extra?: ReactNode;
 }) {
   return (
     <section className={`card mb-2${tone ? ` border-${tone}` : ""}`} aria-label={title}>
@@ -52,6 +56,7 @@ function Group({
             <OpinionLine key={id} opinion={byId.get(id)} />
           ))}
         </ul>
+        {extra}
       </div>
     </section>
   );
@@ -61,7 +66,16 @@ function Group({
  * 分析の結果を表示する。
  * どのクラスタにも入らなかった投稿は、「未分類」として、クラスタと同じ大きさで必ず出す。
  */
-export function AnalysisResultView({ run, opinions }: { run: AnalysisRun; opinions: PublicOpinion[] }) {
+export function AnalysisResultView({
+  run,
+  opinions,
+  clusterExtra,
+}: {
+  run: AnalysisRun;
+  opinions: PublicOpinion[];
+  /** クラスタごとに、追加で表示するもの（共通点・相違点の案など） */
+  clusterExtra?: (cluster: AnalysisCluster) => ReactNode;
+}) {
   const result = run.result;
   if (!result) return null;
   const byId = new Map(opinions.map((o) => [o.id, o]));
@@ -73,10 +87,10 @@ export function AnalysisResultView({ run, opinions }: { run: AnalysisRun; opinio
       {result.overview && <p>{result.overview}</p>}
       {top.map((c) => (
         <div key={c.id}>
-          <Group title={c.title || "（名前なし）"} summary={c.summary} ids={c.opinionIds} byId={byId} />
+          <Group title={c.title || "（名前なし）"} summary={c.summary} ids={c.opinionIds} byId={byId} extra={clusterExtra?.(c)} />
           {childrenOf(c).map((child) => (
             <div key={child.id} className="ms-3">
-              <Group title={child.title || "（名前なし）"} summary={child.summary} ids={child.opinionIds} byId={byId} />
+              <Group title={child.title || "（名前なし）"} summary={child.summary} ids={child.opinionIds} byId={byId} extra={clusterExtra?.(child)} />
             </div>
           ))}
         </div>
@@ -103,6 +117,10 @@ export function AnalysisPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [insightsAvailable, setInsightsAvailable] = useState(true);
+  const [generating, setGenerating] = useState<string | null>(null);
+
   const fail = useCallback((e: unknown) => setError(describeError(e)), [describeError]);
 
   // 最新の実行を取り直す（結果も含める）
@@ -115,6 +133,33 @@ export function AnalysisPanel({
   useEffect(() => {
     refresh().catch(fail);
   }, [refresh, fail]);
+
+  const succeededId = run?.status === "succeeded" ? run.id : null;
+  useEffect(() => {
+    if (!succeededId) {
+      setInsights([]);
+      return;
+    }
+    api.listInsights(succeededId).then(setInsights, (e) => {
+      // 案を作るAIが未設定なら、ボタンを出さない
+      if (e instanceof ApiError && e.status === 503) setInsightsAvailable(false);
+      else fail(e);
+    });
+  }, [api, succeededId, fail]);
+
+  async function generateInsight(analysisId: string, clusterId: string) {
+    if (generating) return;
+    setGenerating(clusterId);
+    setError(null);
+    try {
+      const created = await api.generateInsight(analysisId, clusterId);
+      setInsights((prev) => [...prev, created]);
+    } catch (e) {
+      fail(e);
+    } finally {
+      setGenerating(null);
+    }
+  }
 
   const active = run?.status === "queued" || run?.status === "running";
   useEffect(() => {
@@ -172,7 +217,39 @@ export function AnalysisPanel({
               </button>
             </div>
           )}
-          {run.status === "succeeded" && <AnalysisResultView run={run} opinions={opinions} />}
+          {run.status === "succeeded" && (
+            <AnalysisResultView
+              run={run}
+              opinions={opinions}
+              clusterExtra={(cluster) => {
+                // 同じクラスタの案は、新しいものを表示する
+                const insight = [...insights].reverse().find((i) => i.clusterId === cluster.id);
+                return (
+                  <>
+                    {insight && (
+                      <InsightCard
+                        key={insight.id}
+                        api={api}
+                        insight={insight}
+                        describeError={describeError}
+                        onChanged={(updated) => setInsights((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+                      />
+                    )}
+                    {insightsAvailable && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary mt-2"
+                        disabled={generating !== null}
+                        onClick={() => void generateInsight(run.id, cluster.id)}
+                      >
+                        {generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
+                      </button>
+                    )}
+                  </>
+                );
+              }}
+            />
+          )}
         </div>
       )}
     </section>

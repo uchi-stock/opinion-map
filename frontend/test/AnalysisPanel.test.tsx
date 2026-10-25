@@ -111,7 +111,8 @@ describe("AnalysisPanel", () => {
     });
     render(<AnalysisPanel api={api} sessionId="s1" opinions={opinions} describeError={String} />);
     expect(await screen.findByRole("region", { name: "まとまり1" })).toBeInTheDocument();
-    await vi.waitFor(() => expect(api.listInsights).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: /共通点・相違点を考える/ })).toBeNull();
+    // 503 の応答が反映されると、ボタンが消える
+    await vi.waitFor(() => expect(screen.queryByRole("button", { name: /共通点・相違点を考える/ })).toBeNull());
+    expect(api.listInsights).toHaveBeenCalled();
   });
 });

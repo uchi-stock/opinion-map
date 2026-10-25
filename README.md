@@ -36,6 +36,10 @@ Opinion Mapは、オンラインカンファレンスやワークショップで
 
 The goal is not just to collect opinions or find consensus, but to turn diverse perspectives into meaningful dialogue and new insights.
 
+## Docs
+
+- [分析基盤候補OSSのライセンスと保守状況](docs/oss-candidates-license.md)
+
 ## License
 
 [MIT License](LICENSE)。ライセンスは暫定です。分析基盤に使うOSSの調査結果次第で見直す場合があります。

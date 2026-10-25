@@ -1,0 +1,60 @@
+name: 広聴AI評価
+run-name: 広聴AI評価 (${{ github.event.inputs.note || 'manual' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 実行メモ（任意）
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: "サンプル意見を分析する"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: APIキーの有無を確認する
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::Secrets に GEMINI_API_KEY が設定されていません。"
+            exit 1
+          fi
+      - name: 広聴AIの分析パッケージを入れる
+        run: pip install 'kouchou-ai-analysis-core[gemini,embeddings,clustering]'
+      - name: 実行計画を確認する
+        run: >-
+          kouchou-analyze
+          --config eval/kouchou/config.json
+          --input-dir eval/kouchou/inputs
+          --output-dir eval/kouchou/outputs
+          --dry-run
+      - name: 分析を実行する
+        run: >-
+          kouchou-analyze
+          --config eval/kouchou/config.json
+          --input-dir eval/kouchou/inputs
+          --output-dir eval/kouchou/outputs
+      - name: 結果をJob Summaryに出す
+        run: |
+          RESULT=$(find eval/kouchou/outputs -name hierarchical_result.json | head -1)
+          if [ -z "$RESULT" ]; then
+            echo "::error::hierarchical_result.json が見つかりません。"
+            exit 1
+          fi
+          python eval/kouchou/summarize.py "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+      - name: 出力一式を保存する
+        uses: actions/upload-artifact@v7
+        with:
+          name: kouchou-outputs
+          path: eval/kouchou/outputs

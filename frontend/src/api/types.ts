@@ -33,3 +33,28 @@ export interface OpinionResult {
   opinion: PublicOpinion;
   duplicate: boolean;
 }
+
+export type EventStatus = "draft" | "active" | "archived";
+export type SessionStatus = "draft" | "active" | "closed";
+export type SessionFormat = "talk" | "workshop" | "ost";
+
+export interface EventRecord {
+  id: string;
+  name: string;
+  description: string;
+  status: EventStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionRecord {
+  id: string;
+  eventId: string;
+  title: string;
+  prompt: string;
+  format: SessionFormat;
+  status: SessionStatus;
+  showOpinionsToParticipants: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

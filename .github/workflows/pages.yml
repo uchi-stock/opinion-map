@@ -61,3 +61,27 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+      - name: 公開されたページを確かめる
+        # 公開の反映には、少し時間がかかることがある。アプリの入口(id="root")が返るまで、数回試す。
+        # 存在しないパス(/admin、/s/<ID>)は 404.html で返るため、状態コードは見ず、中身で確かめる
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          fail=0
+          for path in "" "admin" "s/smoke-test"; do
+            ok=0
+            for attempt in $(seq 1 12); do
+              body=$(curl -sS --max-time 20 "${PAGE_URL}${path}" || true)
+              if printf '%s' "$body" | grep -q 'id="root"'; then ok=1; break; fi
+              sleep 10
+            done
+            if [ "$ok" = 1 ]; then
+              echo "- ✅ /${path}" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- ❌ /${path}（アプリの入口が返りません）" | tee -a "$GITHUB_STEP_SUMMARY"
+              fail=1
+            fi
+          done
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "公開URL: ${PAGE_URL}" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$fail"

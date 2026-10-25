@@ -2,7 +2,8 @@ export type OpinionKind = "experience" | "question" | "idea";
 export type EventStatus = "draft" | "active" | "archived";
 export type SessionStatus = "draft" | "active" | "closed";
 export type SessionFormat = "talk" | "workshop" | "ost";
-export type OpinionStatus = "active" | "deleted";
+/** hidden: 運営者が非表示にした（元に戻せる）。deleted: 削除した（本文は消え、戻せない） */
+export type OpinionStatus = "active" | "hidden" | "deleted";
 
 export const OPINION_KINDS: readonly OpinionKind[] = ["experience", "question", "idea"];
 export const EVENT_STATUSES: readonly EventStatus[] = ["draft", "active", "archived"];
@@ -44,6 +45,11 @@ export interface OpinionRecord {
   body: string;
   kind: OpinionKind;
   status: OpinionStatus;
+  /**
+   * 投稿者が、あとで編集・削除するための鍵のハッシュ。鍵は投稿ごとのランダムな値で、
+   * 投稿者のブラウザにだけ保存される。投稿どうしを結びつけず、人も特定しない。
+   */
+  editKeyHash?: string;
   createdAt: string;
   updatedAt: string;
 }

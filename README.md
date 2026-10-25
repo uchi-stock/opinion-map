@@ -87,6 +87,7 @@ The goal is not just to collect opinions or find consensus, but to turn diverse 
 - [ADR-0001: 分析基盤に広聴AIを別プロセスのHTTP APIとして使う](docs/decisions/ADR-0001-analysis-provider.md)
 - [広聴AIをイベント時だけ起動する方式の比較](docs/analysis-runtime-options.md)
 - [ADR-0002: 運営者の認証にイベントごとの失効できるトークンを使う](docs/decisions/ADR-0002-operator-auth.md)
+- [ADR-0003: 投稿の頻度制限と、投稿者・運営者による投稿の修正](docs/decisions/ADR-0003-spam-and-author-control.md)
 
 ## License
 

@@ -100,7 +100,33 @@ describe("参加者の画面", () => {
     const [, init] = postCalls(mock)[0] ?? [];
     const sent = JSON.parse(String((init as RequestInit).body));
     expect(sent).toMatchObject({ body: "私の意見です", kind: "idea" });
-    expect(Object.keys(sent).sort()).toEqual(["body", "kind", "submissionId"]);
+    // 送るのは、本文・種類・送信ID・編集用の鍵だけ。鍵は投稿ごとの乱数で、送信IDとは別の値
+    expect(Object.keys(sent).sort()).toEqual(["body", "editKey", "kind", "submissionId"]);
+    expect(sent.editKey).toMatch(/^[A-Za-z0-9_-]{22,128}$/);
+    expect(sent.editKey).not.toBe(sent.submissionId);
+  });
+
+  it("自分の投稿にだけ、編集と削除の操作を出す", async () => {
+    window.localStorage.removeItem("opinion-map-my-opinions");
+    fakeBackend({ opinions: [opinion("o1", "他の人の意見")] });
+    const user = userEvent.setup();
+    render(<ParticipantPage sessionId="s1" />);
+    await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "私の意見です");
+    await user.click(screen.getByRole("button", { name: "投稿する" }));
+    await screen.findByText("私の意見です");
+    // 操作が出るのは、自分の投稿の1件だけ
+    expect(screen.getAllByRole("button", { name: "編集する" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "削除する" })).toHaveLength(1);
+  });
+
+  it("投稿を受け付けていないときは、削除だけできる", async () => {
+    window.localStorage.setItem("opinion-map-my-opinions", JSON.stringify({ o1: "k".repeat(22) }));
+    fakeBackend({ session: { acceptingOpinions: false }, opinions: [opinion("o1", "自分の意見")] });
+    render(<ParticipantPage sessionId="s1" />);
+    await screen.findByText("自分の意見");
+    expect(screen.queryByRole("button", { name: "編集する" })).toBeNull();
+    expect(screen.getByRole("button", { name: "削除する" })).toBeInTheDocument();
+    window.localStorage.removeItem("opinion-map-my-opinions");
   });
 
   it("連打しても、投稿は1回だけ送られる", async () => {

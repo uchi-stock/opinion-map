@@ -1,4 +1,4 @@
-import type { OpinionList, OpinionResult, OpinionSubmission, PublicSession } from "./types.ts";
+import type { OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -57,4 +57,23 @@ export function postOpinion(sessionId: string, submission: OpinionSubmission): P
     headers: { "content-type": "application/json" },
     body: JSON.stringify(submission),
   });
+}
+
+const jsonPost = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+/** 自分の投稿を編集する。投稿時に作った鍵が必要 */
+export function editOpinion(
+  opinionId: string,
+  input: { editKey: string; body: string; kind?: OpinionKind },
+): Promise<{ opinion: PublicOpinion }> {
+  return request(`/opinions/${enc(opinionId)}`, jsonPost("PATCH", input));
+}
+
+/** 自分の投稿を削除する。削除すると、本文は消え、戻せない */
+export function deleteOpinion(opinionId: string, editKey: string): Promise<{ deleted: true }> {
+  return request(`/opinions/${enc(opinionId)}/delete`, jsonPost("POST", { editKey }));
 }

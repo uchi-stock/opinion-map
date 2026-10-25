@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   parseEventCreate,
   parseEventPatch,
@@ -52,7 +51,7 @@ export function createApp(options: AppOptions) {
   const ctx = {
     repos: options.repos,
     now: options.now ?? (() => new Date()),
-    newId: options.newId ?? (() => randomUUID()),
+    newId: options.newId ?? (() => globalThis.crypto.randomUUID()),
   };
   const events = createEventService(ctx);
   const sessions = createSessionService(ctx);
@@ -169,7 +168,7 @@ export function createApp(options: AppOptions) {
 
   function parseBody(raw: string | undefined): unknown {
     if (raw === undefined || raw === "") return undefined;
-    if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
       throw new AppError(413, "payload_too_large", "リクエストが大きすぎます");
     }
     try {

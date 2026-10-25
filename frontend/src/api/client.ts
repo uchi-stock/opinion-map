@@ -17,7 +17,7 @@ function baseUrl(): string {
   return (configured ?? "/api").replace(/\/+$/, "");
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${baseUrl()}${path}`, init);

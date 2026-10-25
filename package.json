@@ -1,0 +1,14 @@
+{
+  "name": "opinion-map",
+  "version": "0.0.0",
+  "private": true,
+  "description": "意見の違いを、対話のきっかけに。",
+  "license": "MIT",
+  "scripts": {
+    "lint": "commitlint --last --verbose"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0"
+  }
+}

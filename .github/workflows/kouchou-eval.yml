@@ -43,6 +43,22 @@ jobs:
           'kouchou-ai-analysis-core[gemini,embeddings,clustering] @
           git+https://github.com/digitaldemocracy2030/kouchou-ai.git@7fff37a486bbc9e6f7b8c646e58b1aea5a99b95b#subdirectory=packages/analysis-core'
           'polars<2'
+      - name: Geminiに1回だけ問い合わせて状態を診断する
+        # 広聴AIのログにはレート制限の詳細が出ないため、同じモデルで直接確認する。
+        # APIキーは出力しない（エラー本文にも含まれない）
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json, os
+          from google import genai
+          model = json.load(open("eval/kouchou/config.json"))["model"]
+          client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+          try:
+              r = client.models.generate_content(model=model, contents="OKとだけ答えてください")
+              print("OK:", model, (r.text or "")[:40])
+          except Exception as e:
+              print("ERROR:", model, getattr(e, "code", None), str(e)[:800])
+          PY
       - name: 実行計画を確認する
         run: >-
           kouchou-analyze

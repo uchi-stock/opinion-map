@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createInMemoryRepositories } from "../src/repositories/inMemory.js";
 import { MAX_BODY_BYTES } from "../src/app.js";
-import { ADMIN_TOKEN, createTestApp, newSubmissionId } from "./helpers.js";
+import { ADMIN_TOKEN, createTestApp, createTestRepositories, newSubmissionId } from "./helpers.js";
 
 describe("運営者の認証", () => {
   it("トークンなしで管理用のAPIを呼ぶと401", async () => {
@@ -217,7 +216,7 @@ describe("匿名性と安全性", () => {
   });
 
   it("保存される投稿に、IPアドレスやUser-Agentが含まれない", async () => {
-    const repos = createInMemoryRepositories();
+    const repos = createTestRepositories();
     const { call, openSession } = createTestApp({ repos });
     const { sessionId } = await openSession();
     await call("POST", `/sessions/${sessionId}/opinions`, {
@@ -254,7 +253,7 @@ describe("匿名性と安全性", () => {
   });
 
   it("想定外のエラーでは、詳細や投稿本文を返さない", async () => {
-    const repos = createInMemoryRepositories();
+    const repos = createTestRepositories();
     repos.opinions.createIfAbsent = async () => {
       throw new Error("機密の本文: 秘密の意見");
     };

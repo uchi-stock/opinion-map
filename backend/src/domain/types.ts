@@ -59,3 +59,14 @@ export interface PublicOpinion {
 export function toPublicOpinion(o: OpinionRecord): PublicOpinion {
   return { id: o.id, body: o.body, kind: o.kind, createdAt: o.createdAt };
 }
+
+/** イベントごとの運営者トークン。本体は保存せず、ハッシュだけを持つ */
+export interface OperatorTokenRecord {
+  id: string;
+  eventId: string;
+  /** 配った相手が分かるようにする名前（例: 会場係） */
+  label: string;
+  tokenHash: string;
+  createdAt: string;
+  revokedAt?: string;
+}

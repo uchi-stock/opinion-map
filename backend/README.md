@@ -30,6 +30,10 @@ npm run dev
 運営者向けは、`Authorization: Bearer <ADMIN_TOKEN>` が必要である。
 `ADMIN_TOKEN` が未設定のときは、常に拒否する。
 
+`ADMIN_TOKEN` は、オーナーのトークンである。
+オーナーは、イベントごとの運営者トークンを発行・失効できる（`POST /events/:id/operator-tokens`、`POST /operator-tokens/:id/revoke`）。
+運営者トークンは、担当のイベントだけを操作できる。方式は[ADR-0002](../docs/decisions/ADR-0002-operator-auth.md)を参照する。
+
 | メソッド・パス | 用途 | 認証 |
 | --- | --- | --- |
 | `POST /events` | イベントを作る（下書き） | 運営者 |

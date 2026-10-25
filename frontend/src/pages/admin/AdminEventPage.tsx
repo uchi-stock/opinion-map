@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import type { EventRecord, EventStatus, SessionFormat } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
+import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
 import { EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
@@ -60,6 +61,7 @@ function EventContent({
         </a>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
+      <OperatorTokenSection api={api} eventId={eventId} describeError={describeError} />
     </>
   );
 }

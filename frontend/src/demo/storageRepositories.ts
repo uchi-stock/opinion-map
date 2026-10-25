@@ -1,5 +1,5 @@
 import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
-import type { EventRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
+import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 
 export const DEMO_DATA_KEY = "opinion-map-demo-data";
@@ -9,11 +9,12 @@ interface Data {
   sessions: SessionRecord[];
   opinions: OpinionRecord[];
   analyses: AnalysisRunRecord[];
+  operatorTokens: OperatorTokenRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -33,6 +34,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         sessions: parsed.sessions ?? [],
         opinions: parsed.opinions ?? [],
         analyses: parsed.analyses ?? [],
+        operatorTokens: parsed.operatorTokens ?? [],
       };
     } catch {
       // 読めないとき（保存先が使えない、内容が壊れている）は、メモリ上の内容を使う
@@ -130,6 +132,29 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         return read()
           .analyses.filter((r) => r.sessionId === sessionId)
           .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+      },
+    },
+    operatorTokens: {
+      async create(token) {
+        const d = read();
+        d.operatorTokens.push(token);
+        write(d);
+      },
+      async get(id) {
+        return read().operatorTokens.find((t) => t.id === id);
+      },
+      async getByHash(tokenHash) {
+        return read().operatorTokens.find((t) => t.tokenHash === tokenHash);
+      },
+      async listByEvent(eventId) {
+        return read()
+          .operatorTokens.filter((t) => t.eventId === eventId)
+          .sort(byCreatedAt);
+      },
+      async update(token) {
+        const d = read();
+        d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
+        write(d);
       },
     },
   };

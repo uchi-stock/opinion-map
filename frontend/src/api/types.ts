@@ -89,3 +89,11 @@ export interface AnalysisRun {
   error?: { code: string; summary: string };
   result?: AnalysisResult;
 }
+
+export interface OperatorToken {
+  id: string;
+  eventId: string;
+  label: string;
+  createdAt: string;
+  revokedAt?: string;
+}

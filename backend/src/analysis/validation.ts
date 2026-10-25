@@ -1,3 +1,4 @@
+import { sha256Hex } from "../lib/hash.js";
 import { AppError } from "../lib/errors.js";
 import type { AnalysisCluster, AnalysisResult, RawAnalysisResult } from "./types.js";
 
@@ -70,7 +71,5 @@ export async function hashInput(opinions: ReadonlyArray<{ id: string; body: stri
   const normalized = [...opinions]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((o) => [o.id, o.kind, o.body]);
-  const bytes = new TextEncoder().encode(JSON.stringify(normalized));
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  return sha256Hex(JSON.stringify(normalized));
 }

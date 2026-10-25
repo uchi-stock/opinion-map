@@ -3,11 +3,12 @@ import type { AdminApi } from "../../api/admin.ts";
 import type { EventRecord, EventStatus, SessionFormat } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
+import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
 export function AdminEventPage({ eventId }: { eventId: string }) {
   return (
-    <AdminShell title="イベント" back={{ href: "/admin", label: "イベント一覧" }}>
+    <AdminShell title="イベント" back={{ href: withBase("/admin"), label: "イベント一覧" }}>
       {({ api, describeError }) => <EventContent api={api} describeError={describeError} eventId={eventId} />}
     </AdminShell>
   );
@@ -49,7 +50,7 @@ function EventContent({
       {state.data.sessions.map((session) => (
         <a
           key={session.id}
-          href={`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(session.id)}`}
+          href={withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(session.id)}`)}
           className="card mb-2 text-decoration-none"
         >
           <div className="card-body py-2 d-flex justify-content-between align-items-center">

@@ -1,6 +1,7 @@
 import { AdminEventPage } from "./pages/admin/AdminEventPage.tsx";
 import { AdminEventsPage } from "./pages/admin/AdminEventsPage.tsx";
 import { AdminSessionPage } from "./pages/admin/AdminSessionPage.tsx";
+import { stripBase, withBase } from "./lib/paths.ts";
 import { ParticipantPage } from "./pages/ParticipantPage.tsx";
 import { TopPage } from "./pages/TopPage.tsx";
 
@@ -32,7 +33,7 @@ export function routeOf(pathname: string): Route {
 }
 
 export function App({ pathname = window.location.pathname }: { pathname?: string }) {
-  const route = routeOf(pathname);
+  const route = routeOf(stripBase(pathname));
   if (route.page === "top") return <TopPage />;
   if (route.page === "session") return <ParticipantPage sessionId={route.sessionId} />;
   if (route.page === "adminEvents") return <AdminEventsPage />;
@@ -42,7 +43,7 @@ export function App({ pathname = window.location.pathname }: { pathname?: string
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <h1 className="h4">ページが見つかりません</h1>
       <p>
-        <a href="/">トップページへ</a>
+        <a href={withBase("/")}>トップページへ</a>
       </p>
     </main>
   );

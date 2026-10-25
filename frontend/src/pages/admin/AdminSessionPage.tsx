@@ -6,11 +6,12 @@ import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
 import { FORMAT_LABELS, participantUrl, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
+import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
 export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sessionId: string }) {
   return (
-    <AdminShell title="セッション" back={{ href: `/admin/events/${encodeURIComponent(eventId)}`, label: "イベント" }}>
+    <AdminShell title="セッション" back={{ href: withBase(`/admin/events/${encodeURIComponent(eventId)}`), label: "イベント" }}>
       {({ api, describeError }) => (
         <SessionContent api={api} describeError={describeError} eventId={eventId} sessionId={sessionId} />
       )}

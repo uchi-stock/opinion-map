@@ -1,3 +1,4 @@
+import { FakeAnalysisProvider } from "../../../backend/src/analysis/fakeProvider.ts";
 import { createApp, type App } from "../../../backend/src/app.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 import { apiBaseUrl } from "../api/client.ts";
@@ -71,7 +72,12 @@ export async function installDemoApi(options: DemoOptions = {}) {
   const target = options.target ?? globalThis;
   const apiBase = options.apiBase ?? apiBaseUrl();
   const repos = createStorageRepositories(storage);
-  const app = createApp({ repos, adminToken: DEMO_ADMIN_TOKEN });
+  const app = createApp({
+    repos,
+    adminToken: DEMO_ADMIN_TOKEN,
+    // 本物の分析ではない。取りこぼしの表示を確かめられるよう、最後の投稿を結果から外す
+    analysisProvider: new FakeAnalysisProvider((_o, i, total) => total > 2 && i === total - 1),
+  });
   await seedIfEmpty(app, repos);
 
   const originalFetch = target.fetch.bind(target);

@@ -1,5 +1,6 @@
 import { request } from "./client.ts";
 import type {
+  AnalysisRun,
   EventRecord,
   EventStatus,
   OpinionList,
@@ -49,6 +50,18 @@ export function createAdminApi(token: string) {
     },
     listOpinions(sessionId: string): Promise<OpinionList> {
       return send("GET", `/sessions/${enc(sessionId)}/opinions`);
+    },
+    async listAnalyses(sessionId: string): Promise<AnalysisRun[]> {
+      return (await send<{ analyses: AnalysisRun[] }>("GET", `/sessions/${enc(sessionId)}/analyses`)).analyses;
+    },
+    startAnalysis(sessionId: string): Promise<AnalysisRun> {
+      return send("POST", `/sessions/${enc(sessionId)}/analyses`);
+    },
+    getAnalysis(id: string): Promise<AnalysisRun> {
+      return send("GET", `/analyses/${enc(id)}`);
+    },
+    retryAnalysis(id: string): Promise<AnalysisRun> {
+      return send("POST", `/analyses/${enc(id)}/retry`);
     },
   };
 }

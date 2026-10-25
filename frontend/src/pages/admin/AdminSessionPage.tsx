@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import type { SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
+import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
@@ -83,9 +84,13 @@ function SessionContent({
         </div>
         {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
         {[...opinions].reverse().map((o) => (
-          <OpinionCard key={o.id} opinion={o} />
+          <div key={o.id} id={opinionAnchor(o.id)}>
+            <OpinionCard opinion={o} />
+          </div>
         ))}
       </section>
+      <hr />
+      <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
     </>
   );
 }

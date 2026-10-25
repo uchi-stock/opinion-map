@@ -19,6 +19,13 @@ export class FakeAnalysisProvider implements AnalysisProvider {
   /** 結果を、テストから差し替える */
   resultOverride: ((opinions: readonly AnalysisOpinion[]) => unknown) | undefined;
   readonly started: AnalysisRequest[] = [];
+
+  /** 結果から外す投稿を選ぶ。分析が取りこぼす場面を、再現するために使う */
+  private readonly leaveOut: (opinion: AnalysisOpinion, index: number, total: number) => boolean;
+
+  constructor(leaveOut: (opinion: AnalysisOpinion, index: number, total: number) => boolean = () => false) {
+    this.leaveOut = leaveOut;
+  }
   private counter = 0;
 
   async start(request: AnalysisRequest): Promise<{ providerRunId: string }> {
@@ -33,7 +40,8 @@ export class FakeAnalysisProvider implements AnalysisProvider {
 
   async fetchResult(_providerRunId: string, opinions: readonly AnalysisOpinion[]): Promise<RawAnalysisResult> {
     if (this.resultOverride) return this.resultOverride(opinions) as RawAnalysisResult;
-    const kinds = [...new Set(opinions.map((o) => o.kind))];
+    const kept = opinions.filter((o, i) => !this.leaveOut(o, i, opinions.length));
+    const kinds = [...new Set(kept.map((o) => o.kind))];
     return {
       overview: "デモ用の分析結果です。",
       clusters: kinds.map((kind, i) => ({
@@ -42,7 +50,7 @@ export class FakeAnalysisProvider implements AnalysisProvider {
         parentId: null,
         title: `${kind} のまとまり`,
         summary: "種類ごとにまとめた、デモ用のクラスタです。",
-        opinionIds: opinions.filter((o) => o.kind === kind).map((o) => o.id),
+        opinionIds: kept.filter((o) => o.kind === kind).map((o) => o.id),
       })),
     };
   }

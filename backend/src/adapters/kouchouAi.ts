@@ -60,7 +60,9 @@ export function parseKouchouResult(json: unknown): RawAnalysisResult {
   const byCluster = new Map<string, Set<string>>();
   for (const arg of args) {
     if (!isRecord(arg)) throw new AnalysisOutputError("arguments の要素がオブジェクトではありません");
-    const commentId = arg["comment_id"];
+    // CSV由来の数字だけのIDは、数値として返ることがある
+    const rawCommentId = arg["comment_id"];
+    const commentId = typeof rawCommentId === "number" ? String(rawCommentId) : rawCommentId;
     const clusterIds = arg["cluster_ids"];
     if (typeof commentId !== "string" || commentId === "" || !Array.isArray(clusterIds)) continue;
     for (const clusterId of clusterIds) {

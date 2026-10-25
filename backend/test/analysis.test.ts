@@ -158,3 +158,14 @@ describe("広聴AIアダプター", () => {
     expect((await p.fetchResult(providerRunId, [])).clusters).toEqual([]);
   });
 });
+
+describe("広聴AIの結果の数値ID", () => {
+  it("数値で返ったコメントIDも、文字列として扱う", () => {
+    const r = parseKouchouResult({
+      overview: "",
+      clusters: [{ id: "1_1", level: 1, label: "A", takeaway: "", parent: "0" }],
+      arguments: [{ comment_id: 7, cluster_ids: ["1_1"] }],
+    });
+    expect(r.clusters[0]!.opinionIds).toEqual(["7"]);
+  });
+});

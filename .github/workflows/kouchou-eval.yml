@@ -81,6 +81,15 @@ jobs:
           fi
           # Job Summaryに加え、ジョブのログにも出す（API経由で結果を読めるようにする）
           python eval/kouchou/summarize.py "$RESULT" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: 未分類の算出を、アプリのコードで確認する
+        # 広聴AIの実際の出力を、本アプリのアダプターと検証にかける（#23）。
+        # 未分類の件数はLLMの出力で変わるため、固定せず報告する
+        run: |
+          RESULT=$(find eval/kouchou/outputs -name hierarchical_result.json | head -1)
+          npx --yes tsx@4.19.2 eval/kouchou/check-unclassified.ts "$RESULT" eval/kouchou/inputs/sample.csv | tee -a "$GITHUB_STEP_SUMMARY"
       - name: 出力一式を保存する
         uses: actions/upload-artifact@v7
         with:

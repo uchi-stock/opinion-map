@@ -40,3 +40,18 @@ describe("Lambda アダプター", () => {
     });
   });
 });
+
+describe("パスの接頭辞の取り除き", () => {
+  const event = (rawPath: string) => ({ rawPath, requestContext: { http: { method: "GET" } } });
+
+  it("指定の接頭辞を取り除く", () => {
+    expect(toHttpRequest(event("/api/events"), { stripPrefix: "/api" }).path).toBe("/events");
+    expect(toHttpRequest(event("/api"), { stripPrefix: "/api" }).path).toBe("/");
+  });
+
+  it("接頭辞に似ているだけのパスは、変えない", () => {
+    expect(toHttpRequest(event("/apifoo"), { stripPrefix: "/api" }).path).toBe("/apifoo");
+    expect(toHttpRequest(event("/events"), { stripPrefix: "/api" }).path).toBe("/events");
+    expect(toHttpRequest(event("/api/events")).path).toBe("/api/events");
+  });
+});

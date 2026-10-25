@@ -15,7 +15,11 @@ export interface HttpApiResult {
   body: string;
 }
 
-export function toHttpRequest(event: HttpApiEvent): HttpRequest {
+/**
+ * API Gateway のイベントを、アプリのリクエストに直す。
+ * stripPrefix を指定すると、パスの先頭のその部分を取り除く(CloudFront が /api/* をAPIへ転送するときに使う)。
+ */
+export function toHttpRequest(event: HttpApiEvent, options: { stripPrefix?: string } = {}): HttpRequest {
   const headers: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(event.headers ?? {})) {
     headers[key.toLowerCase()] = value;
@@ -24,7 +28,12 @@ export function toHttpRequest(event: HttpApiEvent): HttpRequest {
     event.body !== undefined && event.isBase64Encoded
       ? Buffer.from(event.body, "base64").toString("utf8")
       : event.body;
-  const request: HttpRequest = { method: event.requestContext.http.method, path: event.rawPath, headers };
+  const prefix = options.stripPrefix;
+  const stripped =
+    prefix && (event.rawPath === prefix || event.rawPath.startsWith(`${prefix}/`))
+      ? event.rawPath.slice(prefix.length) || "/"
+      : event.rawPath;
+  const request: HttpRequest = { method: event.requestContext.http.method, path: stripped, headers };
   if (body !== undefined) request.body = body;
   return request;
 }

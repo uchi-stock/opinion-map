@@ -1,0 +1,116 @@
+name: 本番へデプロイ
+run-name: 本番へデプロイ (${{ github.sha }})
+
+# 手動で実行する(Actions 画面の「Run workflow」。スマホのブラウザからも実行できる)。
+# 流れ: バックエンドをバンドル → osls deploy(DynamoDB・Lambda・API Gateway・S3・CloudFront)
+#       → 画面をビルドして S3 へ → CloudFront のキャッシュを消す → 動作を確かめる
+# 必要な Secrets: AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、ADMIN_TOKEN(オーナーのトークン)
+# 任意: GEMINI_API_KEY(共通点・相違点・問いの案)、Variables の AWS_REGION(既定 ap-northeast-1)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "デプロイする"
+    runs-on: ubuntu-latest
+    # CloudFront の初回の作成には、10分ほどかかる
+    timeout-minutes: 45
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      STACK_NAME: opinion-map-prod
+    steps:
+      - name: 必要な Secrets を確認する
+        run: |
+          missing=0
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY ADMIN_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secrets に ${name} が設定されていません。"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: バックエンドをバンドルする
+        working-directory: backend
+        run: |
+          npm ci
+          npm run bundle
+
+      - name: インフラとバックエンドをデプロイする
+        working-directory: backend
+        run: npx osls deploy --stage prod
+
+      - name: スタックの出力を取得する
+        id: outputs
+        run: |
+          outputs=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs" --output json)
+          get() { echo "$outputs" | jq -r --arg k "$1" '.[] | select(.OutputKey==$k) | .OutputValue'; }
+          {
+            echo "site_url=$(get SiteUrl)"
+            echo "bucket=$(get FrontendBucketName)"
+            echo "distribution_id=$(get DistributionId)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 画面をビルドする
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: 画面を S3 へ置く
+        env:
+          BUCKET: ${{ steps.outputs.outputs.bucket }}
+          DISTRIBUTION_ID: ${{ steps.outputs.outputs.distribution_id }}
+        run: |
+          # index.html は、毎回確かめさせる。assets/ は、ファイル名にハッシュが付くため、長く保存させる
+          aws s3 sync frontend/dist/ "s3://${BUCKET}/" --delete --cache-control "no-cache" --exclude "assets/*"
+          aws s3 sync frontend/dist/assets/ "s3://${BUCKET}/assets/" --delete --cache-control "public, max-age=31536000, immutable"
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+
+      - name: 動作を確かめる
+        env:
+          SITE_URL: ${{ steps.outputs.outputs.site_url }}
+        run: |
+          fail=0
+          check() {
+            if [ "$2" = "ok" ]; then echo "- ✅ $1" | tee -a "$GITHUB_STEP_SUMMARY"
+            else echo "- ❌ $1" | tee -a "$GITHUB_STEP_SUMMARY"; fail=1; fi
+          }
+          # 反映に時間がかかることがあるため、数回試す
+          retry() { for _ in $(seq 1 12); do if eval "$1"; then return 0; fi; sleep 10; done; return 1; }
+
+          retry "curl -sS --max-time 20 '$SITE_URL/' | grep -q 'id=\"root\"'" && check "画面(/)" ok || check "画面(/)" ng
+          retry "curl -sS --max-time 20 '$SITE_URL/admin' | grep -q 'id=\"root\"'" && check "画面(/admin)が、index.html で返る" ok || check "画面(/admin)が、index.html で返る" ng
+          retry "curl -sS --max-time 20 '$SITE_URL/api/health' | grep -q '\"status\":\"ok\"'" && check "API(/api/health)" ok || check "API(/api/health)" ng
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE_URL/api/events" || true)
+          [ "$code" = "401" ] && check "トークンなしの運営者API は 401" ok || check "トークンなしの運営者API は 401(実際: $code)" ng
+          # DynamoDB まで届くことを、読み取りだけで確かめる(データは作らない)
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$SITE_URL/api/events" || true)
+          [ "$code" = "200" ] && check "オーナーのトークンで、DynamoDB から一覧を読める" ok || check "オーナーのトークンで、DynamoDB から一覧を読める(実際: $code)" ng
+
+          {
+            echo ""
+            echo "公開URL: ${SITE_URL}"
+            echo "運営者の画面: ${SITE_URL}/admin"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$fail"

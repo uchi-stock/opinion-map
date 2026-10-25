@@ -23,6 +23,61 @@ jobs:
       self_ref: v2.114.1
       # 現状はドキュメントのみ。技術スタック決定後にパッケージを追加する
       packages: "[]"
-      # CI成功後にPRをsquash mergeする（マージ可否の最終判断はCIに委ねる）
-      enable_auto_merge: true
+      # CI単独でのマージは止める。広聴AI評価の完了を待つgate jobがマージする
+      # （dev-standardsの「1 job per app」パターン、docs/cicd-pipeline-specification.md参照）
+      enable_auto_merge: false
     secrets: inherit
+
+  # eval配下を変更したPRだけ、広聴AI評価を実行する
+  changes:
+    name: "評価対象の変更を判定する"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      eval: ${{ steps.diff.outputs.eval }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: 変更ファイルを調べる
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE '^(eval/kouchou/|\.github/workflows/kouchou-eval\.yml$)'; then
+            echo "eval=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eval=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  eval:
+    name: "広聴AI評価"
+    needs: changes
+    if: needs.changes.outputs.eval == 'true'
+    uses: ./.github/workflows/kouchou-eval.yml
+    secrets: inherit
+
+  # CIと評価の両方が成功してからマージする。評価は対象外ならスキップを成功とみなす
+  gate:
+    name: "自動マージ"
+    needs: [ci, changes, eval]
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.ci.result == 'success' &&
+      needs.changes.result == 'success' &&
+      (needs.eval.result == 'success' || needs.eval.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: merge-queue-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - uses: bamiyanapp/dev-standards/.github/actions/merge-pr@v2.114.1
+        with:
+          github-token: ${{ secrets.BOT_TOKEN != '' && secrets.BOT_TOKEN || secrets.GITHUB_TOKEN }}

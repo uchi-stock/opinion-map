@@ -1,0 +1,26 @@
+name: CI
+run-name: >-
+  CI (${{ github.event_name == 'pull_request' && 'PR' || 'push-to-main' }})
+  ${{ github.event.head_commit.message || github.event.pull_request.title }}
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  ci:
+    name: "CI"
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v2.114.1
+    with:
+      # 現状はドキュメントのみ。技術スタック決定後にパッケージを追加する
+      packages: "[]"
+      # CI成功後にPRをsquash mergeする（マージ可否の最終判断はCIに委ねる）
+      enable_auto_merge: true
+    secrets: inherit

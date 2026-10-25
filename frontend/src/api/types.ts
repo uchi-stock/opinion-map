@@ -58,3 +58,34 @@ export interface SessionRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AnalysisStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface AnalysisCluster {
+  id: string;
+  level: number;
+  parentId: string | null;
+  title: string;
+  summary: string;
+  opinionIds: string[];
+}
+
+export interface AnalysisResult {
+  overview: string;
+  clusters: AnalysisCluster[];
+  /** 分析の入力にあったのに、どのクラスタにも入らなかった投稿 */
+  unclassifiedOpinionIds: string[];
+}
+
+export interface AnalysisRun {
+  id: string;
+  sessionId: string;
+  status: AnalysisStatus;
+  requestedAt: string;
+  completedAt?: string;
+  providerName: string;
+  inputCount: number;
+  newOpinionCount: number;
+  error?: { code: string; summary: string };
+  result?: AnalysisResult;
+}

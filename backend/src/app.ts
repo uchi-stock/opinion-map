@@ -8,6 +8,8 @@ import {
 import { createAdminAuthenticator } from "./lib/auth.js";
 import { AppError, badRequest, notFound, unauthorized } from "./lib/errors.js";
 import type { Repositories } from "./repositories/types.js";
+import type { AnalysisProvider } from "./analysis/types.js";
+import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import { createOpinionService } from "./services/opinionService.js";
 import { createSessionService } from "./services/sessionService.js";
@@ -31,6 +33,9 @@ export interface AppOptions {
   adminToken: string | undefined;
   /** CORS で許可するオリジン。未指定なら、ヘッダーを付けない */
   allowedOrigin?: string;
+  /** 分析基盤。未指定なら、分析のAPIは使えない（503） */
+  analysisProvider?: AnalysisProvider;
+  analysisTimeoutMs?: number;
   opinionMaxLength?: number;
   now?: () => Date;
   newId?: () => string;
@@ -57,6 +62,15 @@ export function createApp(options: AppOptions) {
   const sessions = createSessionService(ctx);
   const opinions = createOpinionService(ctx);
   const isAdminRequest = createAdminAuthenticator(options.adminToken);
+  const analyses = options.analysisProvider
+    ? createAnalysisService(ctx, options.analysisProvider, {
+        ...(options.analysisTimeoutMs === undefined ? {} : { timeoutMs: options.analysisTimeoutMs }),
+      })
+    : undefined;
+  const requireAnalyses = () => {
+    if (!analyses) throw new AppError(503, "analysis_unavailable", "分析基盤が設定されていません");
+    return analyses;
+  };
 
   const routes: Route[] = [
     {
@@ -115,6 +129,33 @@ export function createApp(options: AppOptions) {
       pattern: /^\/sessions\/(?<id>[^/]+)$/,
       admin: false,
       handle: async ({ params }) => ({ status: 200, data: await opinions.getPublicSession(params["id"]!) }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
+      admin: true,
+      handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().start(params["id"]!) }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
+      admin: true,
+      handle: async ({ params }) => ({
+        status: 200,
+        data: { analyses: await requireAnalyses().list(params["id"]!) },
+      }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/analyses\/(?<id>[^/]+)$/,
+      admin: true,
+      handle: async ({ params }) => ({ status: 200, data: await requireAnalyses().get(params["id"]!) }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/analyses\/(?<id>[^/]+)\/retry$/,
+      admin: true,
+      handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().retry(params["id"]!) }),
     },
     {
       method: "POST",

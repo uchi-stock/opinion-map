@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
+import type { AdminOpinion, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
@@ -86,12 +86,77 @@ function SessionContent({
         {[...opinions].reverse().map((o) => (
           <div key={o.id} id={opinionAnchor(o.id)}>
             <OpinionCard opinion={o} />
+            <ModerationControls api={api} opinion={o} describeError={describeError} onChanged={reload} />
           </div>
         ))}
       </section>
       <hr />
       <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
     </>
+  );
+}
+
+/** 不適切な投稿の非表示・再表示・削除。削除は元に戻せない */
+function ModerationControls({
+  api,
+  opinion,
+  describeError,
+  onChanged,
+}: {
+  api: AdminApi;
+  opinion: AdminOpinion;
+  describeError: (e: unknown) => string;
+  onChanged: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hidden = opinion.status === "hidden";
+
+  async function run(status: "active" | "hidden" | "deleted") {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.moderateOpinion(opinion.id, status);
+      setConfirming(false);
+      await onChanged();
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-2 ms-1 small">
+      {hidden && <span className="badge text-bg-warning me-2">非表示中</span>}
+      {confirming ? (
+        <>
+          <span className="me-2">削除すると、元に戻せません。</span>
+          <button type="button" className="btn btn-sm btn-danger me-2" disabled={busy} onClick={() => void run("deleted")}>
+            削除する
+          </button>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setConfirming(false)}>
+            やめる
+          </button>
+        </>
+      ) : (
+        <>
+          <button type="button" className="btn btn-link btn-sm p-0 me-3" disabled={busy} onClick={() => void run(hidden ? "active" : "hidden")}>
+            {hidden ? "表示に戻す" : "非表示にする"}
+          </button>
+          <button type="button" className="btn btn-link btn-sm p-0 text-danger" disabled={busy} onClick={() => setConfirming(true)}>
+            削除する
+          </button>
+        </>
+      )}
+      {error && (
+        <div className="alert alert-danger mt-1 mb-0" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 

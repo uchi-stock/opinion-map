@@ -1,6 +1,9 @@
 import { toPublicOpinion, type EventRecord, type OpinionRecord, type PublicOpinion, type SessionRecord } from "../domain/types.js";
 import type { OpinionInput } from "../domain/validation.js";
-import { forbidden, notFound } from "../lib/errors.js";
+import { AppError, forbidden, notFound } from "../lib/errors.js";
+import { safeEqual } from "../lib/auth.js";
+import { sha256Hex } from "../lib/hash.js";
+import type { OpinionEdit } from "../domain/validation.js";
 import type { ServiceContext } from "./context.js";
 
 export interface PublicSession {
@@ -18,7 +21,55 @@ function isAccepting(event: EventRecord, session: SessionRecord): boolean {
   return event.status === "active" && session.status === "active";
 }
 
-export function createOpinionService(ctx: ServiceContext) {
+/** 1つのセッションが、一定時間に受け付ける投稿の数。誰が書いたかは見ず、全体の量だけを抑える */
+export interface OpinionRateLimit {
+  max: number;
+  windowSeconds: number;
+}
+export const DEFAULT_RATE_LIMIT: OpinionRateLimit = { max: 120, windowSeconds: 60 };
+
+/** 運営者が付けられる状態 */
+export type ModerationStatus = "active" | "hidden" | "deleted";
+
+/** 運営者向けの投稿。非表示かどうかを含む */
+export interface AdminOpinion extends PublicOpinion {
+  status: "active" | "hidden";
+}
+
+export const DELETED_BODY_PLACEHOLDER = "";
+
+export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRateLimit = DEFAULT_RATE_LIMIT) {
+  /** 削除した投稿の本文を、過去の分析の入力の記録からも消す */
+  async function scrubFromAnalyses(sessionId: string, opinionId: string): Promise<void> {
+    for (const run of await ctx.repos.analyses.listBySession(sessionId)) {
+      if (!run.input.opinions.some((o) => o.id === opinionId)) continue;
+      await ctx.repos.analyses.update({
+        ...run,
+        input: {
+          ...run.input,
+          opinions: run.input.opinions.map((o) => (o.id === opinionId ? { ...o, body: DELETED_BODY_PLACEHOLDER } : o)),
+        },
+      });
+    }
+  }
+
+  async function erase(opinion: OpinionRecord): Promise<OpinionRecord> {
+    const next: OpinionRecord = { ...opinion, status: "deleted", body: DELETED_BODY_PLACEHOLDER, updatedAt: ctx.now().toISOString() };
+    delete next.editKeyHash;
+    await ctx.repos.opinions.update(next);
+    await scrubFromAnalyses(opinion.sessionId, opinion.id);
+    return next;
+  }
+
+  /** 鍵が合う、公開中の投稿を返す。存在しない場合も同じエラーにして、IDの存在を教えない */
+  async function authorize(id: string, editKey: string): Promise<OpinionRecord> {
+    const opinion = await ctx.repos.opinions.get(id);
+    const denied = forbidden("invalid_edit_key", "編集用の鍵が合いません");
+    if (!opinion || opinion.status === "deleted" || !opinion.editKeyHash) throw denied;
+    if (!safeEqual(await sha256Hex(editKey), opinion.editKeyHash)) throw denied;
+    return opinion;
+  }
+
   /** 下書きのイベント・セッションは、参加者には存在しないものとして扱う */
   async function loadForParticipant(sessionId: string): Promise<{ event: EventRecord; session: SessionRecord }> {
     const session = await ctx.repos.sessions.get(sessionId);
@@ -49,6 +100,13 @@ export function createOpinionService(ctx: ServiceContext) {
       if (!isAccepting(event, session)) {
         throw forbidden("not_accepting", "このセッションは、いま投稿を受け付けていません");
       }
+      // 再送(同じ送信ID)は、頻度の制限の対象にしない
+      if (!(await ctx.repos.opinions.findBySubmission(sessionId, input.submissionId))) {
+        const since = new Date(ctx.now().getTime() - rateLimit.windowSeconds * 1000).toISOString();
+        if ((await ctx.repos.opinions.countCreatedSince(sessionId, since)) >= rateLimit.max) {
+          throw new AppError(429, "rate_limited", "投稿が集中しています。少し待ってから、もう一度送ってください");
+        }
+      }
       const at = ctx.now().toISOString();
       const record: OpinionRecord = {
         id: ctx.newId(),
@@ -57,6 +115,7 @@ export function createOpinionService(ctx: ServiceContext) {
         body: input.body,
         kind: input.kind,
         status: "active",
+        ...(input.editKey ? { editKeyHash: await sha256Hex(input.editKey) } : {}),
         createdAt: at,
         updatedAt: at,
       };
@@ -72,12 +131,46 @@ export function createOpinionService(ctx: ServiceContext) {
       return { hidden: false, opinions: list.map(toPublicOpinion) };
     },
 
-    /** 運営者向けの一覧。設定にかかわらず、すべて返す */
-    async listForAdmin(sessionId: string): Promise<PublicOpinion[]> {
+    /** 運営者向けの一覧。設定にかかわらず、非表示のものも含めて返す */
+    async listForAdmin(sessionId: string): Promise<AdminOpinion[]> {
       const session = await ctx.repos.sessions.get(sessionId);
       if (!session) throw notFound("セッション");
-      const list = await ctx.repos.opinions.listBySession(sessionId);
-      return list.map(toPublicOpinion);
+      const list = await ctx.repos.opinions.listManageableBySession(sessionId);
+      return list.map((o) => ({ ...toPublicOpinion(o), status: o.status === "hidden" ? "hidden" : "active" }));
+    },
+
+    /** 投稿者による編集。受け付け中のセッションだけ。分析の入力の記録は変えない */
+    async edit(id: string, input: OpinionEdit): Promise<PublicOpinion> {
+      const opinion = await authorize(id, input.editKey);
+      const { event, session } = await loadForParticipant(opinion.sessionId);
+      if (!isAccepting(event, session)) {
+        throw forbidden("not_accepting", "このセッションは、いま投稿を受け付けていません");
+      }
+      const next: OpinionRecord = {
+        ...opinion,
+        body: input.body,
+        kind: input.kind ?? opinion.kind,
+        updatedAt: ctx.now().toISOString(),
+      };
+      await ctx.repos.opinions.update(next);
+      return toPublicOpinion(next);
+    },
+
+    /** 投稿者による削除。セッションの状態にかかわらず、できる */
+    async deleteByAuthor(id: string, editKey: string): Promise<void> {
+      await erase(await authorize(id, editKey));
+    },
+
+    /** 運営者による、非表示・再表示・削除。削除は元に戻せない */
+    async moderate(id: string, status: ModerationStatus): Promise<{ id: string; status: ModerationStatus }> {
+      const opinion = await ctx.repos.opinions.get(id);
+      if (!opinion || opinion.status === "deleted") throw notFound("投稿");
+      if (status === "deleted") {
+        await erase(opinion);
+      } else {
+        await ctx.repos.opinions.update({ ...opinion, status, updatedAt: ctx.now().toISOString() });
+      }
+      return { id, status };
     },
   };
 }

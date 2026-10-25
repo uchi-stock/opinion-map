@@ -23,10 +23,22 @@ export interface OpinionList {
   opinions: PublicOpinion[];
 }
 
+export interface AdminOpinionList {
+  hidden: boolean;
+  opinions: AdminOpinion[];
+}
+
 export interface OpinionSubmission {
   body: string;
   kind: OpinionKind;
   submissionId: string;
+  /** 投稿者があとで編集・削除するための鍵。ブラウザにだけ保存する */
+  editKey?: string;
+}
+
+/** 運営者向けの投稿。非表示かどうかを含む */
+export interface AdminOpinion extends PublicOpinion {
+  status: "active" | "hidden";
 }
 
 export interface OpinionResult {

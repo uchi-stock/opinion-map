@@ -6,7 +6,7 @@ import type {
   Insight,
   InsightContent,
   OperatorToken,
-  OpinionList,
+  AdminOpinionList,
   SessionFormat,
   SessionRecord,
   SessionStatus,
@@ -51,11 +51,14 @@ export function createAdminApi(token: string) {
     ): Promise<SessionRecord> {
       return send("PATCH", `/sessions/${enc(id)}`, patch);
     },
-    listOpinions(sessionId: string): Promise<OpinionList> {
+    listOpinions(sessionId: string): Promise<AdminOpinionList> {
       return send("GET", `/sessions/${enc(sessionId)}/opinions`);
     },
     async listAnalyses(sessionId: string): Promise<AnalysisRun[]> {
       return (await send<{ analyses: AnalysisRun[] }>("GET", `/sessions/${enc(sessionId)}/analyses`)).analyses;
+    },
+    moderateOpinion(id: string, status: "active" | "hidden" | "deleted"): Promise<{ id: string; status: string }> {
+      return send("POST", `/opinions/${enc(id)}/moderation`, { status });
     },
     async listInsights(analysisId: string): Promise<Insight[]> {
       return (await send<{ insights: Insight[] }>("GET", `/analyses/${enc(analysisId)}/insights`)).insights;

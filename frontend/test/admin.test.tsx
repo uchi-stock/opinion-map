@@ -76,6 +76,14 @@ function fakeAdminBackend(initial: { events?: EventRecord[]; sessions?: SessionR
     }
     m = /^\/sessions\/([^/]+)\/opinions$/.exec(path);
     if (method === "GET" && m) return json({ hidden: false, opinions: state.opinions });
+    m = /^\/opinions\/([^/]+)\/moderation$/.exec(path);
+    if (method === "POST" && m) {
+      state.opinions =
+        body.status === "deleted"
+          ? state.opinions.filter((o) => o.id !== m![1])
+          : state.opinions.map((o) => (o.id === m![1] ? ({ ...o, status: body.status } as typeof o) : o));
+      return json({ id: m[1], status: body.status });
+    }
     return json({ error: { code: "not_found", message: "ページが見つかりません" } }, 404);
   });
   return { state, calls, mock };
@@ -330,6 +338,30 @@ describe("セッションの画面", () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="nope" />);
     expect(await screen.findByRole("alert")).toHaveTextContent("セッションが見つかりません");
+  });
+
+  it("不適切な投稿を、非表示にして、表示に戻せる", async () => {
+    const { calls } = fakeAdminBackend({ opinions: [opinion("o1", "問題のある意見")] });
+    const user = userEvent.setup();
+    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    await user.click(await screen.findByRole("button", { name: "非表示にする" }));
+    expect(await screen.findByText("非表示中")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/opinions/o1/moderation")?.body).toEqual({ status: "hidden" });
+    await user.click(screen.getByRole("button", { name: "表示に戻す" }));
+    await waitFor(() => expect(screen.queryByText("非表示中")).toBeNull());
+    expect(calls.filter((c) => c.path === "/opinions/o1/moderation").at(-1)?.body).toEqual({ status: "active" });
+  });
+
+  it("削除は、確認のあとにだけ実行する", async () => {
+    const { calls } = fakeAdminBackend({ opinions: [opinion("o1", "消したい意見")] });
+    const user = userEvent.setup();
+    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    await user.click(await screen.findByRole("button", { name: "削除する" }));
+    expect(calls.some((c) => c.path.endsWith("/moderation"))).toBe(false);
+    expect(screen.getByText(/元に戻せません/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "削除する" }));
+    await waitFor(() => expect(screen.queryByText("消したい意見")).toBeNull());
+    expect(calls.find((c) => c.path.endsWith("/moderation"))?.body).toEqual({ status: "deleted" });
   });
 
   it("意見の本文に含まれるスクリプトは、実行されない", async () => {

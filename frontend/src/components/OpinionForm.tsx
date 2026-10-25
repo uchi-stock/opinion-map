@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { ApiError, postOpinion as defaultPostOpinion } from "../api/client.ts";
 import type { OpinionKind, OpinionResult, OpinionSubmission } from "../api/types.ts";
+import { newEditKey, rememberMyOpinion } from "../lib/myOpinions.ts";
 import { newSubmissionId } from "../lib/submissionId.ts";
 import { charLength, KIND_LABELS } from "../lib/text.ts";
 
@@ -24,7 +25,7 @@ export function OpinionForm({ sessionId, maxLength = DEFAULT_MAX_LENGTH, onSubmi
   // 状態の更新を待たずに、連打を防ぐ
   const inFlight = useRef(false);
   // 通信に失敗して結果が分からないとき、同じ内容の再送が重複しないよう、同じ送信IDを使う
-  const lastAttempt = useRef<{ id: string; body: string; kind: OpinionKind } | null>(null);
+  const lastAttempt = useRef<{ id: string; editKey: string; body: string; kind: OpinionKind } | null>(null);
   const textId = useId();
   const counterId = useId();
 
@@ -43,11 +44,18 @@ export function OpinionForm({ sessionId, maxLength = DEFAULT_MAX_LENGTH, onSubmi
 
     const previous = lastAttempt.current;
     const reuse = previous && previous.body === trimmed && previous.kind === kind;
-    const attempt = reuse ? previous : { id: newSubmissionId(), body: trimmed, kind };
+    const attempt = reuse ? previous : { id: newSubmissionId(), editKey: newEditKey(), body: trimmed, kind };
     lastAttempt.current = attempt;
 
     try {
-      const result = await postOpinion(sessionId, { body: trimmed, kind, submissionId: attempt.id });
+      const result = await postOpinion(sessionId, {
+        body: trimmed,
+        kind,
+        submissionId: attempt.id,
+        editKey: attempt.editKey,
+      });
+      // 自分の投稿を、あとで編集・削除できるよう、鍵をこのブラウザにだけ残す
+      rememberMyOpinion(result.opinion.id, attempt.editKey);
       lastAttempt.current = null;
       setBody("");
       setDone(true);

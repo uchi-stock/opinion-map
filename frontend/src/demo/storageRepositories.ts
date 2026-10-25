@@ -106,10 +106,29 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         write(d);
         return { opinion, created: true };
       },
+      async findBySubmission(sessionId, submissionId) {
+        return read().opinions.find((o) => o.sessionId === sessionId && o.submissionId === submissionId);
+      },
+      async get(id) {
+        return read().opinions.find((o) => o.id === id);
+      },
+      async update(opinion) {
+        const d = read();
+        d.opinions = d.opinions.map((o) => (o.id === opinion.id ? opinion : o));
+        write(d);
+      },
       async listBySession(sessionId) {
         return read()
           .opinions.filter((o) => o.sessionId === sessionId && o.status === "active")
           .sort(byCreatedAt);
+      },
+      async listManageableBySession(sessionId) {
+        return read()
+          .opinions.filter((o) => o.sessionId === sessionId && o.status !== "deleted")
+          .sort(byCreatedAt);
+      },
+      async countCreatedSince(sessionId, sinceIso) {
+        return read().opinions.filter((o) => o.sessionId === sessionId && o.createdAt >= sinceIso).length;
       },
     },
     analyses: {

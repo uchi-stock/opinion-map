@@ -159,7 +159,18 @@ export interface OpinionInput {
   body: string;
   kind: OpinionKind;
   submissionId: string;
+  editKey?: string;
 }
+
+/** 編集・削除の鍵。ブラウザが作る、推測できない乱数（128ビット以上） */
+const EDIT_KEY = /^[A-Za-z0-9_-]{22,128}$/;
+export function parseEditKey(value: unknown): string {
+  if (typeof value !== "string" || !EDIT_KEY.test(value)) {
+    throw badRequest("invalid_edit_key", "編集用の鍵が正しくありません");
+  }
+  return value;
+}
+
 export function parseOpinionCreate(body: unknown, maxLength = DEFAULT_OPINION_MAX_LENGTH): OpinionInput {
   const obj = asObject(body);
   const submissionId = obj["submissionId"];
@@ -170,5 +181,31 @@ export function parseOpinionCreate(body: unknown, maxLength = DEFAULT_OPINION_MA
     body: text(obj, "body", "意見", maxLength, { required: true })!,
     kind: oneOf(obj, "kind", "投稿の種類", OPINION_KINDS, { required: true })!,
     submissionId,
+    ...(obj["editKey"] === undefined ? {} : { editKey: parseEditKey(obj["editKey"]) }),
   };
+}
+
+export interface OpinionEdit {
+  editKey: string;
+  body: string;
+  kind?: OpinionKind;
+}
+export function parseOpinionEdit(body: unknown, maxLength = DEFAULT_OPINION_MAX_LENGTH): OpinionEdit {
+  const obj = asObject(body);
+  const kind = oneOf(obj, "kind", "投稿の種類", OPINION_KINDS, { required: false });
+  return {
+    editKey: parseEditKey(obj["editKey"]),
+    body: text(obj, "body", "意見", maxLength, { required: true })!,
+    ...(kind === undefined ? {} : { kind }),
+  };
+}
+
+export function parseEditKeyBody(body: unknown): string {
+  return parseEditKey(asObject(body)["editKey"]);
+}
+
+export const MODERATION_STATUSES = ["active", "hidden", "deleted"] as const;
+export function parseModeration(body: unknown): (typeof MODERATION_STATUSES)[number] {
+  const status = oneOf(asObject(body), "status", "状態", MODERATION_STATUSES, { required: true });
+  return status!;
 }

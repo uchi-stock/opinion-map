@@ -45,6 +45,9 @@ npm run dev
 | `GET /sessions/:id` | 問いなどの表示用の情報 | 不要 |
 | `POST /sessions/:id/opinions` | 意見を投稿する | 不要 |
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |
+| `PATCH /opinions/:id` | 自分の投稿を編集する（編集用の鍵が必要） | 鍵 |
+| `POST /opinions/:id/delete` | 自分の投稿を削除する（編集用の鍵が必要） | 鍵 |
+| `POST /opinions/:id/moderation` | 投稿を非表示・再表示・削除する（status は active / hidden / deleted） | 運営者 |
 | `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
 | `GET /sessions/:id/analyses` | 分析の一覧 | 運営者 |
 | `GET /analyses/:id` | 分析の状態と結果 | 運営者 |
@@ -62,6 +65,14 @@ npm run dev
 - 案は、作った時点では採用されていない（`approved: false`）。自動で使われない
 - 出力は検証し、形が違えば保存せず 502 を返す
 - 意見は、データとして渡す。意見の中の指示には従わないよう、プロンプトで指示する
+
+## 投稿の頻度制限と、編集・削除
+
+方式と理由は[ADR-0003](../docs/decisions/ADR-0003-spam-and-author-control.md)を参照する。
+
+- セッションごとに、1分に120件を超える投稿は、429を返す（`opinionRateLimit` で変えられる）
+- 投稿時に `editKey`（128ビット以上の乱数）を送ると、あとで編集・削除できる。サーバーにはハッシュだけを保存する
+- 削除した投稿は、本文を消し、過去の分析の入力の記録からも消す
 
 ## 設計上の決まり
 

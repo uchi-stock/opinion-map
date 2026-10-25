@@ -1,7 +1,10 @@
 import {
   parseEventCreate,
   parseEventPatch,
+  parseEditKeyBody,
+  parseModeration,
   parseOpinionCreate,
+  parseOpinionEdit,
   parseSessionCreate,
   parseSessionPatch,
 } from "./domain/validation.js";
@@ -14,7 +17,7 @@ import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
-import { createOpinionService } from "./services/opinionService.js";
+import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
 import { createSessionService } from "./services/sessionService.js";
 
 export interface HttpRequest {
@@ -42,6 +45,8 @@ export interface AppOptions {
   /** 共通点・相違点・問いの案を作るLLM。未指定なら、そのAPIは使えない（503） */
   insightProvider?: InsightProvider;
   opinionMaxLength?: number;
+  /** セッションごとの投稿頻度の上限。未指定なら、1分に120件 */
+  opinionRateLimit?: OpinionRateLimit;
   now?: () => Date;
   newId?: () => string;
 }
@@ -76,13 +81,17 @@ export function createApp(options: AppOptions) {
   };
   const events = createEventService(ctx);
   const sessions = createSessionService(ctx);
-  const opinions = createOpinionService(ctx);
+  const opinions = createOpinionService(ctx, options.opinionRateLimit);
   const operatorTokens = createOperatorTokenService(ctx);
   const authenticate = createAuthenticator(options.adminToken, options.repos.operatorTokens);
   const eventOfSession = async (p: Params) => (await options.repos.sessions.get(p["id"]!))?.eventId;
   const eventOfAnalysis = async (p: Params) => {
     const run = await options.repos.analyses.get(p["id"]!);
     return run ? (await options.repos.sessions.get(run.sessionId))?.eventId : undefined;
+  };
+  const eventOfOpinion = async (p: Params) => {
+    const opinion = await options.repos.opinions.get(p["id"]!);
+    return opinion ? (await options.repos.sessions.get(opinion.sessionId))?.eventId : undefined;
   };
   const eventOfEvent = async (p: Params) => p["id"];
   const analyses = options.analysisProvider
@@ -276,6 +285,34 @@ export function createApp(options: AppOptions) {
         const result = await opinions.submit(params["id"]!, input);
         return { status: result.created ? 201 : 200, data: { opinion: result.opinion, duplicate: !result.created } };
       },
+    },
+    {
+      method: "PATCH",
+      pattern: /^\/opinions\/(?<id>[^/]+)$/,
+      admin: false,
+      handle: async ({ params, body }) => ({
+        status: 200,
+        data: { opinion: await opinions.edit(params["id"]!, parseOpinionEdit(body, options.opinionMaxLength)) },
+      }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/opinions\/(?<id>[^/]+)\/delete$/,
+      admin: false,
+      handle: async ({ params, body }) => {
+        await opinions.deleteByAuthor(params["id"]!, parseEditKeyBody(body));
+        return { status: 200, data: { deleted: true } };
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/opinions\/(?<id>[^/]+)\/moderation$/,
+      admin: true,
+      eventIdOf: eventOfOpinion,
+      handle: async ({ params, body }) => ({
+        status: 200,
+        data: await opinions.moderate(params["id"]!, parseModeration(body)),
+      }),
     },
     {
       method: "GET",

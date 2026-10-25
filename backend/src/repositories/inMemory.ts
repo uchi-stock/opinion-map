@@ -58,11 +58,31 @@ export function createInMemoryRepositories(): Repositories {
         bySubmission.set(key, opinion.id);
         return { opinion: { ...opinion }, created: true };
       },
+      async findBySubmission(sessionId, submissionId) {
+        const id = bySubmission.get(`${sessionId}#${submissionId}`);
+        return id ? { ...opinions.get(id)! } : undefined;
+      },
+      async get(id) {
+        const o = opinions.get(id);
+        return o ? { ...o } : undefined;
+      },
+      async update(opinion) {
+        opinions.set(opinion.id, { ...opinion });
+      },
       async listBySession(sessionId) {
         return [...opinions.values()]
           .filter((o) => o.sessionId === sessionId && o.status === "active")
           .map((o) => ({ ...o }))
           .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      },
+      async listManageableBySession(sessionId) {
+        return [...opinions.values()]
+          .filter((o) => o.sessionId === sessionId && o.status !== "deleted")
+          .map((o) => ({ ...o }))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      },
+      async countCreatedSince(sessionId, sinceIso) {
+        return [...opinions.values()].filter((o) => o.sessionId === sessionId && o.createdAt >= sinceIso).length;
       },
     },
     analyses: {

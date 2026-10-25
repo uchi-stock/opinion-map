@@ -26,7 +26,16 @@ export interface OpinionRepository {
    * 実装は、確認と作成を不可分に行うこと（DynamoDB では条件付き書き込み）。
    */
   createIfAbsent(opinion: OpinionRecord): Promise<{ opinion: OpinionRecord; created: boolean }>;
+  /** 同じ送信IDの投稿があれば返す（重複の確認に使う） */
+  findBySubmission(sessionId: string, submissionId: string): Promise<OpinionRecord | undefined>;
+  get(id: string): Promise<OpinionRecord | undefined>;
+  update(opinion: OpinionRecord): Promise<void>;
+  /** 公開中（active）の投稿だけ。古い順。参加者の表示と分析の入力に使う */
   listBySession(sessionId: string): Promise<OpinionRecord[]>;
+  /** 運営者向け。公開中と、非表示（hidden）の投稿。削除済みは含まない。古い順 */
+  listManageableBySession(sessionId: string): Promise<OpinionRecord[]>;
+  /** 指定の時刻以降に作られた投稿の数。状態にかかわらず数える（頻度の制限に使う） */
+  countCreatedSince(sessionId: string, sinceIso: string): Promise<number>;
 }
 
 export interface AnalysisRunRepository {

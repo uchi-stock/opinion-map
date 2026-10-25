@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, getSession, listOpinions } from "../api/client.ts";
 import type { OpinionList, OpinionResult, PublicSession } from "../api/types.ts";
 import { OpinionCard } from "../components/OpinionCard.tsx";
+import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
 import { OpinionForm } from "../components/OpinionForm.tsx";
+import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 
 type SessionState =
   | { status: "loading" }
@@ -22,6 +24,8 @@ function errorMessage(e: unknown): string {
 export function ParticipantPage({ sessionId }: { sessionId: string }) {
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [listState, setListState] = useState<ListState>({ status: "loading" });
+  // 自分の投稿の鍵。このブラウザにだけある
+  const [mine, setMine] = useState<Record<string, string>>(() => loadMyOpinions());
 
   const loadSession = useCallback(async () => {
     setSessionState({ status: "loading" });
@@ -47,6 +51,13 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
   }, [loadSession, loadList]);
 
   function handleSubmitted(_result: OpinionResult) {
+    setMine(loadMyOpinions());
+    void loadList();
+  }
+
+  function handleDeleted(id: string) {
+    forgetMyOpinion(id);
+    setMine(loadMyOpinions());
     void loadList();
   }
 
@@ -104,6 +115,7 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
                 運営者が、AIを使って意見を分析することがあります。そのために、外部のAIサービスへ送信される場合があります。
                 AIの結果は参考情報であり、運営者が確認します。
               </li>
+              <li>自分の投稿は、投稿したこのブラウザから、編集・削除できます。</li>
               <li>個人が特定される情報は書かないでください。</li>
             </ul>
           </div>
@@ -138,7 +150,20 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
             <p className="text-body-secondary">まだ投稿はありません。</p>
           )}
           {listState.status === "ready" &&
-            [...listState.list.opinions].reverse().map((o) => <OpinionCard key={o.id} opinion={o} />)}
+            [...listState.list.opinions].reverse().map((o) => (
+              <div key={o.id}>
+                <OpinionCard opinion={o} />
+                {mine[o.id] && (
+                  <MyOpinionActions
+                    opinion={o}
+                    editKey={mine[o.id]!}
+                    canEdit={session.acceptingOpinions}
+                    onEdited={() => void loadList()}
+                    onDeleted={handleDeleted}
+                  />
+                )}
+              </div>
+            ))}
         </section>
       )}
     </main>

@@ -1,0 +1,15 @@
+{
+  "name": "opinion-map サンプル評価",
+  "question": "オンラインイベントで、参加者の意見の違いを対話につなげるには、何が必要ですか？",
+  "input": "sample",
+  "model": "gemini-2.5-flash",
+  "provider": "gemini",
+  "is_embedded_at_local": false,
+  "extraction": {
+    "workers": 3,
+    "limit": 100
+  },
+  "hierarchical_clustering": {
+    "cluster_nums": [4, 8]
+  }
+}

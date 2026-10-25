@@ -4,7 +4,7 @@
 
 Opinion Mapは、オンラインカンファレンスやワークショップで参加者の意見を集めるアプリです。共通点・相違点を可視化し、より深い対話につなげるオープンソースのブロードリスニングツールを目指します。
 
-> 状態: 構想段階です。技術スタック・分析基盤は未決定で、検証を進めています。
+> 状態: 開発の初期段階です。参加者が意見を投稿し、カードで見る機能ができています。分析の機能は、これから作ります。
 
 ## Goals
 
@@ -14,6 +14,8 @@ Opinion Mapは、オンラインカンファレンスやワークショップで
 - 講演、ワークショップ、Open Space Technology（OST）を横断して使えるようにする
 
 ## Core Features（予定）
+
+実装済みなのは、匿名での意見投稿（ログイン不要）です。
 
 - 匿名での意見投稿（ログイン不要）
 - AIによる意見のクラスタリング
@@ -32,6 +34,41 @@ Opinion Mapは、オンラインカンファレンスやワークショップで
 7. 分析はファシリテーターが明示的に実行する
 8. 個人情報は必要以上に収集しない。参加者投稿は初期設定で匿名とする
 
+## ローカルで試す
+
+Node.js 22以上が必要である。
+
+1. バックエンドを起動する。データはメモリ上にあり、再起動すると消える。
+
+   ```sh
+   cd backend
+   npm ci
+   npm run dev
+   ```
+
+   起動時に、「セッションID」が表示される。
+
+2. 別のターミナルで、フロントエンドを起動する。
+
+   ```sh
+   cd frontend
+   npm ci
+   npm run dev
+   ```
+
+3. ブラウザで `http://localhost:5173/s/<セッションID>` を開く。
+
+詳しくは、[backend](backend/README.md) と [frontend](frontend/README.md) を参照する。
+
+## 構成
+
+| ディレクトリ | 内容 |
+| --- | --- |
+| `backend/` | イベント・セッション・投稿のAPI（TypeScript） |
+| `frontend/` | 参加者の画面（React + Vite） |
+| `docs/` | 調査結果と意思決定の記録 |
+| `eval/kouchou/` | 広聴AIの分析品質を評価するためのサンプルと設定 |
+
 ## Philosophy
 
 The goal is not just to collect opinions or find consensus, but to turn diverse perspectives into meaningful dialogue and new insights.
@@ -43,4 +80,4 @@ The goal is not just to collect opinions or find consensus, but to turn diverse 
 
 ## License
 
-[MIT License](LICENSE)。ライセンスは暫定です。分析基盤に使うOSSの調査結果次第で見直す場合があります。
+[MIT License](LICENSE)。広聴AIは改造せず、別のサービスとして使います。改造する場合や、非公開・商用にする場合は、ライセンスの扱いを見直します（[ADR-0001](docs/decisions/ADR-0001-analysis-provider.md)）。

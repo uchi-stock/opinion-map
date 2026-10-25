@@ -1,3 +1,4 @@
+import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { EventRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 
 /**
@@ -27,8 +28,21 @@ export interface OpinionRepository {
   listBySession(sessionId: string): Promise<OpinionRecord[]>;
 }
 
+export interface AnalysisRunRepository {
+  /**
+   * 同じセッションに、進行中（queued か running）の実行がなければ作る。あれば、その実行を返す。
+   * 重複した実行を防ぐため、確認と作成は不可分に行うこと（DynamoDB では条件付き書き込み）。
+   */
+  createIfNoActive(run: AnalysisRunRecord): Promise<{ run: AnalysisRunRecord; created: boolean }>;
+  get(id: string): Promise<AnalysisRunRecord | undefined>;
+  update(run: AnalysisRunRecord): Promise<void>;
+  /** 古い順 */
+  listBySession(sessionId: string): Promise<AnalysisRunRecord[]>;
+}
+
 export interface Repositories {
   events: EventRepository;
   sessions: SessionRepository;
   opinions: OpinionRepository;
+  analyses: AnalysisRunRepository;
 }

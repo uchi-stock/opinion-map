@@ -1,3 +1,4 @@
+import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { EventRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
@@ -7,6 +8,7 @@ export function createInMemoryRepositories(): Repositories {
   const sessions = new Map<string, SessionRecord>();
   const opinions = new Map<string, OpinionRecord>();
   const bySubmission = new Map<string, string>();
+  const analyses = new Map<string, AnalysisRunRecord>();
 
   return {
     events: {
@@ -58,6 +60,29 @@ export function createInMemoryRepositories(): Repositories {
           .filter((o) => o.sessionId === sessionId && o.status === "active")
           .map((o) => ({ ...o }))
           .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      },
+    },
+    analyses: {
+      async createIfNoActive(run) {
+        const active = [...analyses.values()].find(
+          (r) => r.sessionId === run.sessionId && (r.status === "queued" || r.status === "running"),
+        );
+        if (active) return { run: structuredClone(active), created: false };
+        analyses.set(run.id, structuredClone(run));
+        return { run: structuredClone(run), created: true };
+      },
+      async get(id) {
+        const r = analyses.get(id);
+        return r ? structuredClone(r) : undefined;
+      },
+      async update(run) {
+        analyses.set(run.id, structuredClone(run));
+      },
+      async listBySession(sessionId) {
+        return [...analyses.values()]
+          .filter((r) => r.sessionId === sessionId)
+          .map((r) => structuredClone(r))
+          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
       },
     },
   };

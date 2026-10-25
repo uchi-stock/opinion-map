@@ -1,3 +1,4 @@
+import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
 import type { EventRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 
@@ -7,11 +8,12 @@ interface Data {
   events: EventRecord[];
   sessions: SessionRecord[];
   opinions: OpinionRecord[];
+  analyses: AnalysisRunRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -30,6 +32,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         events: parsed.events ?? [],
         sessions: parsed.sessions ?? [],
         opinions: parsed.opinions ?? [],
+        analyses: parsed.analyses ?? [],
       };
     } catch {
       // 読めないとき（保存先が使えない、内容が壊れている）は、メモリ上の内容を使う
@@ -102,6 +105,31 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         return read()
           .opinions.filter((o) => o.sessionId === sessionId && o.status === "active")
           .sort(byCreatedAt);
+      },
+    },
+    analyses: {
+      async createIfNoActive(run) {
+        const d = read();
+        const active = d.analyses.find(
+          (r) => r.sessionId === run.sessionId && (r.status === "queued" || r.status === "running"),
+        );
+        if (active) return { run: active, created: false };
+        d.analyses.push(run);
+        write(d);
+        return { run, created: true };
+      },
+      async get(id) {
+        return read().analyses.find((r) => r.id === id);
+      },
+      async update(run) {
+        const d = read();
+        d.analyses = d.analyses.map((r) => (r.id === run.id ? run : r));
+        write(d);
+      },
+      async listBySession(sessionId) {
+        return read()
+          .analyses.filter((r) => r.sessionId === sessionId)
+          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
       },
     },
   };

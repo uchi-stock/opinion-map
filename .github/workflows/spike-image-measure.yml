@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: digitaldemocracy2030/kouchou-ai
-          ref: 7fff37a
+          ref: 7fff37a486bbc9e6f7b8c646e58b1aea5a99b95b
       - name: build
         run: |
           s=$(date +%s)

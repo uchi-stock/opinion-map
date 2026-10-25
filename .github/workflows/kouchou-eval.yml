@@ -38,11 +38,14 @@ jobs:
           fi
       - name: 広聴AIの分析パッケージを入れる
         # PyPI版(0.1.x)は新しいgoogle-genaiの埋め込み応答に未対応のため、
-        # 対応済みのmainのコミットを固定して入れる
+        # 対応済みのmainのコミットを固定して入れる。
+        # polars 2.0ではread_csvの引数(missing_utf8_is_empty_string)が使えず
+        # 集計で失敗するため、1.xに固定する
         run: >-
           pip install
           'kouchou-ai-analysis-core[gemini,embeddings,clustering] @
           git+https://github.com/digitaldemocracy2030/kouchou-ai.git@7fff37a486bbc9e6f7b8c646e58b1aea5a99b95b#subdirectory=packages/analysis-core'
+          'polars<2'
       - name: 実行計画を確認する
         run: >-
           kouchou-analyze

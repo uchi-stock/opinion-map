@@ -19,6 +19,8 @@ jobs:
     name: "CI"
     uses: bamiyanapp/dev-standards/.github/workflows/reusable-ci.yml@v2.114.1
     with:
+      # reusable-ci.ymlの必須入力。上のuses:のタグと必ず一致させる
+      self_ref: v2.114.1
       # 現状はドキュメントのみ。技術スタック決定後にパッケージを追加する
       packages: "[]"
       # CI成功後にPRをsquash mergeする（マージ可否の最終判断はCIに委ねる）

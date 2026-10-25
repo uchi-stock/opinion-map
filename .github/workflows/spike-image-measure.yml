@@ -1,0 +1,33 @@
+name: spike-image-measure
+on:
+  push:
+    branches: [spike/image-measure]
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: digitaldemocracy2030/kouchou-ai
+          ref: 7fff37a
+      - name: build
+        run: |
+          s=$(date +%s)
+          docker build -f apps/api/Dockerfile --build-arg ENVIRONMENT=production -t kouchou-api .
+          echo "BUILD_SECONDS=$(( $(date +%s) - s ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          bytes=$(docker image inspect kouchou-api --format '{{.Size}}')
+          echo "IMAGE_MB=$(( bytes / 1024 / 1024 ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker history kouchou-api --format '{{.Size}}\t{{.CreatedBy}}' | head -8 | cut -c1-120
+      - name: boot
+        run: |
+          docker run -d --name k -p 8000:8000 -e ADMIN_API_KEY=admin -e PUBLIC_API_KEY=public kouchou-api \
+            python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+          s=$(date +%s.%N)
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:8000/ >/dev/null; then break; fi
+            sleep 1
+          done
+          e=$(date +%s.%N)
+          echo "BOOT_SECONDS=$(echo "$e - $s" | bc)" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker stats --no-stream --format 'MEM_AFTER_BOOT={{.MemUsage}}' k | tee -a "$GITHUB_STEP_SUMMARY"
+          docker logs k 2>&1 | tail -5

@@ -85,6 +85,7 @@ The goal is not just to collect opinions or find consensus, but to turn diverse 
 
 - [分析基盤候補OSSのライセンスと保守状況](docs/oss-candidates-license.md)
 - [ADR-0001: 分析基盤に広聴AIを別プロセスのHTTP APIとして使う](docs/decisions/ADR-0001-analysis-provider.md)
+- [ADR-0002: 運営者の認証にイベントごとの失効できるトークンを使う](docs/decisions/ADR-0002-operator-auth.md)
 
 ## License
 

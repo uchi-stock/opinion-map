@@ -1,5 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
-import type { EventRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
 /** テストとローカル開発用。プロセスが終わると消える */
@@ -9,6 +9,7 @@ export function createInMemoryRepositories(): Repositories {
   const opinions = new Map<string, OpinionRecord>();
   const bySubmission = new Map<string, string>();
   const analyses = new Map<string, AnalysisRunRecord>();
+  const operatorTokens = new Map<string, OperatorTokenRecord>();
 
   return {
     events: {
@@ -83,6 +84,28 @@ export function createInMemoryRepositories(): Repositories {
           .filter((r) => r.sessionId === sessionId)
           .map((r) => structuredClone(r))
           .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+      },
+    },
+    operatorTokens: {
+      async create(token) {
+        operatorTokens.set(token.id, { ...token });
+      },
+      async get(id) {
+        const t = operatorTokens.get(id);
+        return t ? { ...t } : undefined;
+      },
+      async getByHash(tokenHash) {
+        const t = [...operatorTokens.values()].find((x) => x.tokenHash === tokenHash);
+        return t ? { ...t } : undefined;
+      },
+      async listByEvent(eventId) {
+        return [...operatorTokens.values()]
+          .filter((t) => t.eventId === eventId)
+          .map((t) => ({ ...t }))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      },
+      async update(token) {
+        operatorTokens.set(token.id, { ...token });
       },
     },
   };

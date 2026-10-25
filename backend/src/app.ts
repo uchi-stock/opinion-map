@@ -5,12 +5,13 @@ import {
   parseSessionCreate,
   parseSessionPatch,
 } from "./domain/validation.js";
-import { createAdminAuthenticator } from "./lib/auth.js";
-import { AppError, badRequest, notFound, unauthorized } from "./lib/errors.js";
+import { createAuthenticator, type Principal } from "./lib/auth.js";
+import { AppError, badRequest, forbidden, notFound, unauthorized } from "./lib/errors.js";
 import type { Repositories } from "./repositories/types.js";
 import type { AnalysisProvider } from "./analysis/types.js";
 import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
+import { createOperatorTokenService } from "./services/operatorTokenService.js";
 import { createOpinionService } from "./services/opinionService.js";
 import { createSessionService } from "./services/sessionService.js";
 
@@ -49,7 +50,18 @@ interface Route {
   method: string;
   pattern: RegExp;
   admin: boolean;
-  handle: (ctx: { params: Params; body: unknown; isAdmin: boolean }) => Promise<{ status: number; data: unknown }>;
+  /** true なら、オーナーだけが使える。false か未指定なら、担当のイベントの運営者も使える */
+  ownerOnly?: boolean;
+  /** true なら、どの運営者でも使える（対象のイベントを持たない操作） */
+  anyOperator?: boolean;
+  /** 操作の対象が属するイベントのID。運営者が、担当外のイベントを操作しないよう確認するのに使う */
+  eventIdOf?: (params: Params) => Promise<string | undefined>;
+  handle: (ctx: {
+    params: Params;
+    body: unknown;
+    isAdmin: boolean;
+    principal: Principal | null;
+  }) => Promise<{ status: number; data: unknown }>;
 }
 
 export function createApp(options: AppOptions) {
@@ -61,7 +73,14 @@ export function createApp(options: AppOptions) {
   const events = createEventService(ctx);
   const sessions = createSessionService(ctx);
   const opinions = createOpinionService(ctx);
-  const isAdminRequest = createAdminAuthenticator(options.adminToken);
+  const operatorTokens = createOperatorTokenService(ctx);
+  const authenticate = createAuthenticator(options.adminToken, options.repos.operatorTokens);
+  const eventOfSession = async (p: Params) => (await options.repos.sessions.get(p["id"]!))?.eventId;
+  const eventOfAnalysis = async (p: Params) => {
+    const run = await options.repos.analyses.get(p["id"]!);
+    return run ? (await options.repos.sessions.get(run.sessionId))?.eventId : undefined;
+  };
+  const eventOfEvent = async (p: Params) => p["id"];
   const analyses = options.analysisProvider
     ? createAnalysisService(ctx, options.analysisProvider, {
         ...(options.analysisTimeoutMs === undefined ? {} : { timeoutMs: options.analysisTimeoutMs }),
@@ -80,21 +99,62 @@ export function createApp(options: AppOptions) {
       handle: async () => ({ status: 200, data: { status: "ok" } }),
     },
     {
+      method: "GET",
+      pattern: /^\/me$/,
+      admin: true,
+      anyOperator: true,
+      handle: async ({ principal }) => ({
+        status: 200,
+        data: principal?.kind === "operator" ? { role: "operator", eventId: principal.eventId } : { role: "owner" },
+      }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/events\/(?<id>[^/]+)\/operator-tokens$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async ({ params, body }) => ({
+        status: 201,
+        data: await operatorTokens.issue(params["id"]!, (body as { label?: unknown } | undefined)?.label),
+      }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/events\/(?<id>[^/]+)\/operator-tokens$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async ({ params }) => ({ status: 200, data: { tokens: await operatorTokens.list(params["id"]!) } }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/operator-tokens\/(?<id>[^/]+)\/revoke$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async ({ params }) => ({ status: 200, data: await operatorTokens.revoke(params["id"]!) }),
+    },
+    {
       method: "POST",
       pattern: /^\/events$/,
       admin: true,
+      ownerOnly: true,
       handle: async ({ body }) => ({ status: 201, data: await events.create(parseEventCreate(body)) }),
     },
     {
       method: "GET",
       pattern: /^\/events$/,
       admin: true,
-      handle: async () => ({ status: 200, data: { events: await events.list() } }),
+      anyOperator: true,
+      handle: async ({ principal }) => {
+        const all = await events.list();
+        const visible = principal?.kind === "operator" ? all.filter((e) => e.id === principal.eventId) : all;
+        return { status: 200, data: { events: visible } };
+      },
     },
     {
       method: "PATCH",
       pattern: /^\/events\/(?<id>[^/]+)$/,
       admin: true,
+      eventIdOf: eventOfEvent,
       handle: async ({ params, body }) => ({
         status: 200,
         data: await events.update(params["id"]!, parseEventPatch(body)),
@@ -104,6 +164,7 @@ export function createApp(options: AppOptions) {
       method: "POST",
       pattern: /^\/events\/(?<id>[^/]+)\/sessions$/,
       admin: true,
+      eventIdOf: eventOfEvent,
       handle: async ({ params, body }) => ({
         status: 201,
         data: await sessions.create(params["id"]!, parseSessionCreate(body)),
@@ -113,12 +174,14 @@ export function createApp(options: AppOptions) {
       method: "GET",
       pattern: /^\/events\/(?<id>[^/]+)\/sessions$/,
       admin: true,
+      eventIdOf: eventOfEvent,
       handle: async ({ params }) => ({ status: 200, data: { sessions: await sessions.listByEvent(params["id"]!) } }),
     },
     {
       method: "PATCH",
       pattern: /^\/sessions\/(?<id>[^/]+)$/,
       admin: true,
+      eventIdOf: eventOfSession,
       handle: async ({ params, body }) => ({
         status: 200,
         data: await sessions.update(params["id"]!, parseSessionPatch(body)),
@@ -134,12 +197,14 @@ export function createApp(options: AppOptions) {
       method: "POST",
       pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
       admin: true,
+      eventIdOf: eventOfSession,
       handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().start(params["id"]!) }),
     },
     {
       method: "GET",
       pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
       admin: true,
+      eventIdOf: eventOfSession,
       handle: async ({ params }) => ({
         status: 200,
         data: { analyses: await requireAnalyses().list(params["id"]!) },
@@ -149,12 +214,14 @@ export function createApp(options: AppOptions) {
       method: "GET",
       pattern: /^\/analyses\/(?<id>[^/]+)$/,
       admin: true,
+      eventIdOf: eventOfAnalysis,
       handle: async ({ params }) => ({ status: 200, data: await requireAnalyses().get(params["id"]!) }),
     },
     {
       method: "POST",
       pattern: /^\/analyses\/(?<id>[^/]+)\/retry$/,
       admin: true,
+      eventIdOf: eventOfAnalysis,
       handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().retry(params["id"]!) }),
     },
     {
@@ -171,7 +238,10 @@ export function createApp(options: AppOptions) {
       method: "GET",
       pattern: /^\/sessions\/(?<id>[^/]+)\/opinions$/,
       admin: false,
-      handle: async ({ params, isAdmin }) => {
+      handle: async ({ params, principal }) => {
+        // 運営者は、担当のイベントのセッションだけ、すべての投稿を見られる
+        const eventId = principal ? await eventOfSession(params) : undefined;
+        const isAdmin = principal?.kind === "owner" || (principal?.kind === "operator" && principal.eventId === eventId);
         if (isAdmin) {
           return { status: 200, data: { hidden: false, opinions: await opinions.listForAdmin(params["id"]!) } };
         }
@@ -226,7 +296,8 @@ export function createApp(options: AppOptions) {
         return { statusCode: 204, headers: baseHeaders(), body: "" };
       }
       const path = request.path.length > 1 ? request.path.replace(/\/+$/, "") : request.path;
-      const isAdmin = isAdminRequest(request.headers);
+      const principal = await authenticate(request.headers);
+      const isAdmin = principal !== null;
 
       let pathMatched = false;
       for (const route of routes) {
@@ -234,9 +305,15 @@ export function createApp(options: AppOptions) {
         if (!match) continue;
         pathMatched = true;
         if (route.method !== method) continue;
-        if (route.admin && !isAdmin) throw unauthorized();
+        if (route.admin && !principal) throw unauthorized();
         const params: Params = { ...(match.groups ?? {}) };
-        const result = await route.handle({ params, body: parseBody(request.body), isAdmin });
+        if (route.admin && principal?.kind === "operator") {
+          if (route.ownerOnly) throw forbidden("owner_only", "この操作はオーナーだけができます");
+          if (!route.anyOperator && (!route.eventIdOf || (await route.eventIdOf(params)) !== principal.eventId)) {
+            throw forbidden("wrong_event", "このイベントを操作する権限がありません");
+          }
+        }
+        const result = await route.handle({ params, body: parseBody(request.body), isAdmin, principal });
         return respond(result.status, result.data);
       }
       if (pathMatched) throw new AppError(405, "method_not_allowed", "このメソッドは使えません");

@@ -3,6 +3,7 @@ import type {
   AnalysisRun,
   EventRecord,
   EventStatus,
+  OperatorToken,
   OpinionList,
   SessionFormat,
   SessionRecord,
@@ -53,6 +54,15 @@ export function createAdminApi(token: string) {
     },
     async listAnalyses(sessionId: string): Promise<AnalysisRun[]> {
       return (await send<{ analyses: AnalysisRun[] }>("GET", `/sessions/${enc(sessionId)}/analyses`)).analyses;
+    },
+    async listOperatorTokens(eventId: string): Promise<OperatorToken[]> {
+      return (await send<{ tokens: OperatorToken[] }>("GET", `/events/${enc(eventId)}/operator-tokens`)).tokens;
+    },
+    issueOperatorToken(eventId: string, label: string): Promise<OperatorToken & { token: string }> {
+      return send("POST", `/events/${enc(eventId)}/operator-tokens`, { label });
+    },
+    revokeOperatorToken(id: string): Promise<OperatorToken> {
+      return send("POST", `/operator-tokens/${enc(id)}/revoke`);
     },
     startAnalysis(sessionId: string): Promise<AnalysisRun> {
       return send("POST", `/sessions/${enc(sessionId)}/analyses`);

@@ -1,4 +1,5 @@
 import { FakeAnalysisProvider } from "../../../backend/src/analysis/fakeProvider.ts";
+import { FakeInsightProvider } from "../../../backend/src/insights/fakeProvider.ts";
 import { createApp, type App } from "../../../backend/src/app.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 import { apiBaseUrl } from "../api/client.ts";
@@ -76,6 +77,7 @@ export async function installDemoApi(options: DemoOptions = {}) {
     repos,
     adminToken: DEMO_ADMIN_TOKEN,
     // 本物の分析ではない。取りこぼしの表示を確かめられるよう、最後の投稿を結果から外す
+    insightProvider: new FakeInsightProvider(),
     analysisProvider: new FakeAnalysisProvider((_o, i, total) => total > 2 && i === total - 1),
   });
   await seedIfEmpty(app, repos);

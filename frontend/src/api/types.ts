@@ -97,3 +97,22 @@ export interface OperatorToken {
   createdAt: string;
   revokedAt?: string;
 }
+
+export interface InsightContent {
+  commonPoints: string[];
+  differences: string[];
+  premiseDifferences: string[];
+  questions: string[];
+}
+
+export interface Insight {
+  id: string;
+  analysisRunId: string;
+  clusterId: string;
+  providerName: string;
+  /** AIの出力。変更しない */
+  ai: InsightContent;
+  /** ファシリテーターの編集。AIの出力とは別に持つ */
+  edited?: InsightContent;
+  approved: boolean;
+}

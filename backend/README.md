@@ -45,6 +45,23 @@ npm run dev
 | `GET /sessions/:id` | 問いなどの表示用の情報 | 不要 |
 | `POST /sessions/:id/opinions` | 意見を投稿する | 不要 |
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |
+| `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
+| `GET /sessions/:id/analyses` | 分析の一覧 | 運営者 |
+| `GET /analyses/:id` | 分析の状態と結果 | 運営者 |
+| `POST /analyses/:id/retry` | 失敗した分析を再実行する | 運営者 |
+| `POST /analyses/:id/clusters/:clusterId/insights` | 共通点・相違点・問いの案をAIで作る | 運営者 |
+| `GET /analyses/:id/insights` | 案の一覧 | 運営者 |
+| `PATCH /insights/:id` | 案を編集する、採用を切り替える | 運営者 |
+
+## 共通点・相違点・問いの案
+
+完了した分析のクラスタごとに、AIが案を作る。環境変数 `GEMINI_API_KEY` があるときだけ使える（ローカルサーバー）。
+未設定のときは 503 を返す。
+
+- AIの出力（`ai`）は変更しない。ファシリテーターの編集は `edited` に別に保存する
+- 案は、作った時点では採用されていない（`approved: false`）。自動で使われない
+- 出力は検証し、形が違えば保存せず 502 を返す
+- 意見は、データとして渡す。意見の中の指示には従わないよう、プロンプトで指示する
 
 ## 設計上の決まり
 

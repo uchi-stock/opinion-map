@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { createApp } from "./app.js";
+import { GeminiInsightProvider } from "./insights/geminiProvider.js";
 import { createInMemoryRepositories } from "./repositories/inMemory.js";
 
 /**
@@ -9,7 +10,14 @@ import { createInMemoryRepositories } from "./repositories/inMemory.js";
 const port = Number(process.env["PORT"] ?? 8787);
 const adminToken = process.env["ADMIN_TOKEN"] ?? "local-dev-admin-token";
 const repos = createInMemoryRepositories();
-const app = createApp({ repos, adminToken, allowedOrigin: process.env["ALLOWED_ORIGIN"] ?? "*" });
+const geminiKey = process.env["GEMINI_API_KEY"];
+const app = createApp({
+  repos,
+  adminToken,
+  allowedOrigin: process.env["ALLOWED_ORIGIN"] ?? "*",
+  // 共通点・相違点・問いの案は、キーがあるときだけ使える
+  ...(geminiKey ? { insightProvider: new GeminiInsightProvider({ apiKey: geminiKey }) } : {}),
+});
 
 async function seed(): Promise<string> {
   const call = (method: string, path: string, body?: unknown) =>

@@ -3,6 +3,8 @@ import type {
   AnalysisRun,
   EventRecord,
   EventStatus,
+  Insight,
+  InsightContent,
   OperatorToken,
   OpinionList,
   SessionFormat,
@@ -54,6 +56,15 @@ export function createAdminApi(token: string) {
     },
     async listAnalyses(sessionId: string): Promise<AnalysisRun[]> {
       return (await send<{ analyses: AnalysisRun[] }>("GET", `/sessions/${enc(sessionId)}/analyses`)).analyses;
+    },
+    async listInsights(analysisId: string): Promise<Insight[]> {
+      return (await send<{ insights: Insight[] }>("GET", `/analyses/${enc(analysisId)}/insights`)).insights;
+    },
+    generateInsight(analysisId: string, clusterId: string): Promise<Insight> {
+      return send("POST", `/analyses/${enc(analysisId)}/clusters/${enc(clusterId)}/insights`);
+    },
+    updateInsight(id: string, patch: { edited?: InsightContent; approved?: boolean }): Promise<Insight> {
+      return send("PATCH", `/insights/${enc(id)}`, patch);
     },
     async listOperatorTokens(eventId: string): Promise<OperatorToken[]> {
       return (await send<{ tokens: OperatorToken[] }>("GET", `/events/${enc(eventId)}/operator-tokens`)).tokens;

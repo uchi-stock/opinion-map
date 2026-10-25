@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-function baseUrl(): string {
+export function apiBaseUrl(): string {
   const configured = import.meta.env["VITE_API_BASE_URL"] as string | undefined;
   return (configured ?? "/api").replace(/\/+$/, "");
 }
@@ -20,7 +20,7 @@ function baseUrl(): string {
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${baseUrl()}${path}`, init);
+    response = await fetch(`${apiBaseUrl()}${path}`, init);
   } catch {
     throw new ApiError(0, "network_error", "通信に失敗しました。電波の良い場所で、もう一度お試しください。");
   }

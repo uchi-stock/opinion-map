@@ -34,11 +34,31 @@ npm run dev
 `/api` へのリクエストは、バックエンド（`http://localhost:8787`）へ中継される。
 中継先は、環境変数 `VITE_DEV_API_TARGET` で変えられる。
 
+## デモ版
+
+サーバーなしで、ブラウザの中だけで動くデモ版を作れる。
+本物のバックエンドのコードを、そのままブラウザで動かす。
+
+- データは、見る人のブラウザの `localStorage` に保存する。他の人とは共有されない
+- 運営者のトークンは「demo」で、入力済みの状態になる
+- はじめに、公開済みのイベントとセッション、サンプルの意見を作る
+- 画面の上に、デモ版であることと、「最初からやり直す」ボタンを表示する
+
+```sh
+VITE_DEMO=true VITE_BASE=/opinion-map/ npm run build
+```
+
+GitHub Pages には、`.github/workflows/pages.yml` で公開する。
+Actions の「デモ版の公開」を手動で実行するか、`main` へ push すると公開される。
+初回は、リポジトリの Settings → Pages で、Source を「GitHub Actions」にする。
+
 ## 環境変数
 
 | 名前 | 用途 | 初期値 |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | ビルドしたアプリが呼ぶAPIのURL | `/api` |
+| `VITE_DEMO` | `true` のとき、デモ版としてビルドする | なし |
+| `VITE_BASE` | サイトの途中のパスから配信するときの、基準パス（例: `/opinion-map/`） | `/` |
 
 ## 設計上の決まり
 

@@ -1,0 +1,63 @@
+name: デモ版の公開
+run-name: デモ版の公開 (${{ github.event_name }})
+
+# フロントエンドを、ブラウザの中だけで動くデモ版としてビルドし、GitHub Pages に公開する。
+# サーバーは使わない。データは、見る人のブラウザの中にだけ保存される。
+# GITHUB_TOKEN によるマージでは push のイベントが起きないため、手動実行（workflow_dispatch）も使う。
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - "backend/src/**"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: "ビルドする"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 依存パッケージをインストールする
+        working-directory: frontend
+        run: npm ci
+      - name: デモ版をビルドする
+        working-directory: frontend
+        env:
+          VITE_DEMO: "true"
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+      - name: 存在しないパスを index.html で受けるようにする
+        # GitHub Pages は、存在しないパスに 404.html を返す。同じ中身にして、/s/<ID> などを直接開けるようにする
+        run: cp frontend/dist/index.html frontend/dist/404.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: frontend/dist
+
+  deploy:
+    name: "公開する"
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

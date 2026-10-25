@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { EVENT_STATUS_LABELS } from "../../lib/labels.ts";
+import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
 export function AdminEventsPage() {
@@ -58,7 +59,7 @@ function EventsContent({
           state.data.map((event) => (
             <a
               key={event.id}
-              href={`/admin/events/${encodeURIComponent(event.id)}`}
+              href={withBase(`/admin/events/${encodeURIComponent(event.id)}`)}
               className="card mb-2 text-decoration-none"
             >
               <div className="card-body py-2 d-flex justify-content-between align-items-center">

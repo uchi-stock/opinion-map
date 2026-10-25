@@ -8,6 +8,8 @@ const rootPackage = JSON.parse(readFileSync(new URL("../package.json", import.me
 };
 
 export default defineConfig({
+  // GitHub Pages のように、サイトの途中のパスから配信するときに指定する（例: /opinion-map/）
+  base: process.env["VITE_BASE"] ?? "/",
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify(rootPackage.version),

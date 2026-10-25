@@ -1,3 +1,4 @@
+import { withBase } from "./paths.ts";
 import type { EventStatus, SessionFormat, SessionStatus } from "../api/types.ts";
 
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
@@ -19,5 +20,5 @@ export const FORMAT_LABELS: Record<SessionFormat, string> = {
 };
 
 export function participantUrl(sessionId: string): string {
-  return `${window.location.origin}/s/${encodeURIComponent(sessionId)}`;
+  return `${window.location.origin}${withBase(`/s/${encodeURIComponent(sessionId)}`)}`;
 }

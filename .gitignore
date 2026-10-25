@@ -31,3 +31,5 @@ Thumbs.db
 # commit skill が下書きに使う一時ファイル
 commit_msg*.txt
 # --- dev-standards managed: end ---
+dist-lambda/
+.serverless/

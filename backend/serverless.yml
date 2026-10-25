@@ -1,0 +1,197 @@
+# Opinion Map の本番構成(API Gateway + Lambda + DynamoDB、S3 + CloudFront)。
+# 1つのスタックにまとめる。CloudFront が、同じドメインで、画面(S3)と API(/api/*)を配信する。
+# 同じドメインなので、CORS の設定は要らない。
+# デプロイ: npm run bundle のあとに、npx osls deploy(.github/workflows/deploy.yml が行う)
+service: opinion-map
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${opt:region, 'ap-northeast-1'}
+  stage: ${opt:stage, 'prod'}
+  architecture: arm64
+  memorySize: 512
+  timeout: 29
+  httpApi:
+    payload: "2.0"
+  environment:
+    TABLE_NAME: !Ref Table
+    # CloudFront が /api/* を転送するため、先頭の /api を取り除いて処理する
+    API_PREFIX: /api
+    # オーナーのトークン。必須。GitHub の Secrets から渡す
+    ADMIN_TOKEN: ${env:ADMIN_TOKEN}
+    # 共通点・相違点・問いの案に使う。なければ、そのAPIは使えない(503)
+    GEMINI_API_KEY: ${env:GEMINI_API_KEY, ''}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          # TransactWriteItems は、中身の操作(Put・Delete)の権限で許可される
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+          Resource:
+            - !GetAtt Table.Arn
+            - !Sub "${Table.Arn}/index/gsi1"
+
+package:
+  patterns:
+    - "!**"
+    - dist-lambda/handler.mjs
+
+functions:
+  api:
+    handler: dist-lambda/handler.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+
+resources:
+  Resources:
+    Table:
+      Type: AWS::DynamoDB::Table
+      # データを失わないよう、スタックを消しても残す
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: gsi1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        # 分析のロックの失効に使う
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+
+    FrontendBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+
+    FrontendOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: ${self:service}-${self:provider.stage}-frontend
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    # 画面のパス(/s/<ID> や /admin など)を、index.html で返す。
+    # CloudFront のエラーレスポンスで 404 を置き換える方式は、API の 404 も置き換えてしまうため、使わない
+    SpaRewriteFunction:
+      Type: AWS::CloudFront::Function
+      Properties:
+        Name: ${self:service}-${self:provider.stage}-spa-rewrite
+        AutoPublish: true
+        FunctionConfig:
+          Comment: 拡張子のないパスを index.html にする
+          Runtime: cloudfront-js-2.0
+        FunctionCode: |
+          function handler(event) {
+            var request = event.request;
+            var last = request.uri.split('/').pop();
+            if (last.indexOf('.') === -1) {
+              request.uri = '/index.html';
+            }
+            return request;
+          }
+
+    Distribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: ${self:service}-${self:provider.stage}
+          DefaultRootObject: index.html
+          HttpVersion: http2and3
+          PriceClass: PriceClass_200
+          Origins:
+            - Id: FrontendOrigin
+              DomainName: !GetAtt FrontendBucket.RegionalDomainName
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+              OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
+            - Id: ApiOrigin
+              DomainName: !Sub "${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+              CustomOriginConfig:
+                OriginProtocolPolicy: https-only
+                OriginSSLProtocols:
+                  - TLSv1.2
+          DefaultCacheBehavior:
+            TargetOriginId: FrontendOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            Compress: true
+            # マネージドポリシー: CachingOptimized、SecurityHeadersPolicy
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b4bc4d7d
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt SpaRewriteFunction.FunctionARN
+          CacheBehaviors:
+            - PathPattern: api/*
+              TargetOriginId: ApiOrigin
+              ViewerProtocolPolicy: https-only
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              Compress: true
+              # マネージドポリシー: CachingDisabled(APIは保存しない)、AllViewerExceptHostHeader(Authorization を転送する)
+              CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+
+    # CloudFront(このディストリビューション)からの読み取りだけを許可する
+    FrontendBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref FrontendBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: cloudfront.amazonaws.com
+              Action: s3:GetObject
+              Resource: !Sub "${FrontendBucket.Arn}/*"
+              Condition:
+                StringEquals:
+                  AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+
+  Outputs:
+    SiteUrl:
+      Value: !Sub "https://${Distribution.DomainName}"
+    FrontendBucketName:
+      Value: !Ref FrontendBucket
+    DistributionId:
+      Value: !Ref Distribution
+    TableName:
+      Value: !Ref Table

@@ -20,7 +20,7 @@ jobs:
           docker history kouchou-api --format '{{.Size}}\t{{.CreatedBy}}' | head -8 | cut -c1-120
       - name: boot
         run: |
-          docker run -d --name k -p 8000:8000 -e ADMIN_API_KEY=admin -e PUBLIC_API_KEY=public kouchou-api \
+          docker run -d --name kapi -p 8000:8000 -e ADMIN_API_KEY=admin -e PUBLIC_API_KEY=public kouchou-api \
             python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
           s=$(date +%s.%N)
           for i in $(seq 1 120); do
@@ -29,5 +29,5 @@ jobs:
           done
           e=$(date +%s.%N)
           echo "BOOT_SECONDS=$(echo "$e - $s" | bc)" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker stats --no-stream --format 'MEM_AFTER_BOOT={{.MemUsage}}' k | tee -a "$GITHUB_STEP_SUMMARY"
-          docker logs k 2>&1 | tail -5
+          docker stats --no-stream --format 'MEM_AFTER_BOOT={{.MemUsage}}' kapi | tee -a "$GITHUB_STEP_SUMMARY"
+          docker logs kapi 2>&1 | tail -5

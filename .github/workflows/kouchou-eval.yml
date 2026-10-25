@@ -1,7 +1,13 @@
 name: 広聴AI評価
-run-name: 広聴AI評価 (${{ github.event.inputs.note || 'manual' }})
+run-name: 広聴AI評価 (${{ github.event.inputs.note || github.event_name }})
 
 on:
+  # botの自動マージはpushとして扱われずworkflowが登録されないことがあるため、
+  # eval配下を変更したPRでも実行できるようにする
+  pull_request:
+    paths:
+      - "eval/kouchou/**"
+      - ".github/workflows/kouchou-eval.yml"
   workflow_dispatch:
     inputs:
       note:

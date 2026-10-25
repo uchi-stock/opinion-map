@@ -1,11 +1,13 @@
 export class AppError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-  ) {
+  readonly status: number;
+  readonly code: string;
+
+  // 型だけで消去できる書き方にする（フロントエンドのデモ版が、同じコードをビルドするため）
+  constructor(status: number, code: string, message: string) {
     super(message);
     this.name = "AppError";
+    this.status = status;
+    this.code = code;
   }
 }
 

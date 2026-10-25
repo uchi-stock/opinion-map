@@ -21,8 +21,7 @@ jobs:
     with:
       # reusable-ci.ymlの必須入力。上のuses:のタグと必ず一致させる
       self_ref: v2.114.1
-      # フロントエンドを追加したら、ここに追記する
-      packages: '[{"dir":"backend","node_version":"22"}]'
+      packages: '[{"dir":"backend","node_version":"22"},{"dir":"frontend","node_version":"22","build":true}]'
       # CI単独でのマージは止める。広聴AI評価の完了を待つgate jobがマージする
       # （dev-standardsの「1 job per app」パターン、docs/cicd-pipeline-specification.md参照）
       enable_auto_merge: false

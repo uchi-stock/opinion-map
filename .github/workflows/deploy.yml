@@ -71,6 +71,9 @@ jobs:
             done
             problems=1
           fi
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::warning::GEMINI_API_KEY が設定されていません。分析と、共通点・相違点の案は、動きません。"
+          fi
           if [ -n "$SESSION_SECRET" ] && [ "${#SESSION_SECRET}" -lt 32 ]; then
             echo "::error::SESSION_SECRET は32文字以上にしてください(いまは ${#SESSION_SECRET} 文字)。"
             problems=1
@@ -104,6 +107,22 @@ jobs:
             echo "失敗して残っていたスタックを削除しました。"
           fi
 
+      - name: 分析のタスクを置くネットワークを調べる
+        # 広聴AIのタスクは、既定のVPCの公開サブネットに置く(NATなしで、イメージの取得とLLMの呼び出しをするため)。
+        # セキュリティグループは、既定のものを使う。入口は、同じグループの中からだけで、インターネットからは入れない。
+        # 調べられないときは、分析の設定を空にする(分析のAPIは503になる)
+        run: |
+          vpc=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query "Vpcs[0].VpcId" --output text 2>/dev/null || echo None)
+          if [ "$vpc" = "None" ] || [ -z "$vpc" ]; then
+            echo "::warning::既定のVPCを調べられませんでした(権限不足、または既定のVPCがない)。分析は使えません。"
+            exit 0
+          fi
+          subnets=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc" Name=default-for-az,Values=true --query "Subnets[].SubnetId" --output text | tr '\t' ',')
+          sg=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc" Name=group-name,Values=default --query "SecurityGroups[0].GroupId" --output text)
+          echo "VPC: $vpc / サブネット: $subnets / セキュリティグループ: $sg"
+          echo "TASK_SUBNETS=$subnets" >> "$GITHUB_ENV"
+          echo "TASK_SECURITY_GROUP=$sg" >> "$GITHUB_ENV"
+
       - name: インフラとバックエンドをデプロイする
         working-directory: backend
         run: npx osls deploy --stage prod
@@ -117,7 +136,18 @@ jobs:
             echo "site_url=$(get SiteUrl)"
             echo "bucket=$(get FrontendBucketName)"
             echo "distribution_id=$(get DistributionId)"
+            echo "runner_repository=$(get RunnerRepositoryUri)"
           } >> "$GITHUB_OUTPUT"
+
+      - name: 広聴AIのランナーのイメージを作って置く
+        env:
+          RUNNER_REPOSITORY: ${{ steps.outputs.outputs.runner_repository }}
+        run: |
+          registry="${RUNNER_REPOSITORY%%/*}"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          docker build -t "${RUNNER_REPOSITORY}:latest" kouchou-runner
+          docker push "${RUNNER_REPOSITORY}:latest"
+          echo "ランナーのイメージを置きました: ${RUNNER_REPOSITORY}:latest" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 画面をビルドする
         working-directory: frontend

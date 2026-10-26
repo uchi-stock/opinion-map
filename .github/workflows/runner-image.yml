@@ -1,0 +1,37 @@
+name: ランナーのイメージの確認
+run-name: ランナーのイメージの確認 (${{ github.event_name }})
+
+# 広聴AIのランナー(kouchou-runner/)を変えたPRで、イメージを作れるか、起動できるかを確かめる。
+# 本番へは置かない(置くのは、デプロイのワークフロー)。
+on:
+  # CI(ci.yml)から呼び出す。完了を待ってからPRをマージするため、このworkflow単独のpull_requestトリガーは持たない
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: "作って確かめる"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: エントリポイントの単体テスト
+        working-directory: kouchou-runner
+        run: python -m unittest -v test_entrypoint
+      - name: イメージを作る
+        run: |
+          start=$(date +%s)
+          docker build -t runner kouchou-runner
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "IMAGE_MB=$(( $(docker image inspect runner --format '{{.Size}}') / 1024 / 1024 ))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: 広聴AIの CLI が起動できる
+        run: docker run --rm --entrypoint kouchou-analyze runner --help | head -20
+      - name: 依存が読み込める(torch なしで、クラスタリングとGeminiのライブラリ)
+        run: |
+          docker run --rm --entrypoint python runner -c "import analysis_core, google.genai, sklearn, umap, polars, boto3; print('ok')"

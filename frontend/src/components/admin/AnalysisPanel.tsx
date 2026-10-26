@@ -209,6 +209,11 @@ export function AnalysisPanel({
             状態: <strong>{STATUS_LABELS[run.status]}</strong>（対象{run.inputCount}件
             {run.newOpinionCount > 0 && `、この後に${run.newOpinionCount}件が増えています`}）
           </p>
+          {active && (
+            <p className="small text-body-secondary">
+              AIが分析しています。数分かかります。このまま、画面を開いておいてください。
+            </p>
+          )}
           {run.status === "failed" && (
             <div className="alert alert-danger" role="alert">
               分析に失敗しました。{run.error?.summary}

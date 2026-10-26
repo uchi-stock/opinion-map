@@ -115,4 +115,15 @@ describe("AnalysisPanel", () => {
     await vi.waitFor(() => expect(screen.queryByRole("button", { name: /共通点・相違点を考える/ })).toBeNull());
     expect(api.listInsights).toHaveBeenCalled();
   });
+
+  it("分析中は、待ち時間の目安を出す", async () => {
+    const running = run({ status: "running", result: undefined });
+    const api = fakeApi({
+      listAnalyses: vi.fn(async () => [running]),
+      getAnalysis: vi.fn(async () => running),
+    });
+    render(<AnalysisPanel api={api} sessionId="s1" opinions={opinions} describeError={String} />);
+    expect(await screen.findByText(/数分かかります/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /分析する/ })).toBeDisabled();
+  });
 });

@@ -27,7 +27,7 @@ jobs:
       enable_auto_merge: false
     secrets: inherit
 
-  # eval配下を変更したPRだけ、広聴AI評価を実行する
+  # eval配下を変更したPRだけ広聴AI評価を、kouchou-runner配下を変更したPRだけランナーのイメージの確認を実行する
   changes:
     name: "評価対象の変更を判定する"
     if: github.event_name == 'pull_request'
@@ -36,6 +36,7 @@ jobs:
       contents: read
     outputs:
       eval: ${{ steps.diff.outputs.eval }}
+      runner: ${{ steps.diff.outputs.runner }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -51,6 +52,11 @@ jobs:
           else
             echo "eval=false" >> "$GITHUB_OUTPUT"
           fi
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE '^(kouchou-runner/|\.github/workflows/runner-image\.yml$)'; then
+            echo "runner=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "runner=false" >> "$GITHUB_OUTPUT"
+          fi
 
   eval:
     name: "広聴AI評価"
@@ -59,16 +65,23 @@ jobs:
     uses: ./.github/workflows/kouchou-eval.yml
     secrets: inherit
 
-  # CIと評価の両方が成功してからマージする。評価は対象外ならスキップを成功とみなす
+  runner-image:
+    name: "ランナーのイメージの確認"
+    needs: changes
+    if: needs.changes.outputs.runner == 'true'
+    uses: ./.github/workflows/runner-image.yml
+
+  # CI・評価・イメージの確認が成功してからマージする。評価とイメージの確認は、対象外ならスキップを成功とみなす
   gate:
     name: "自動マージ"
-    needs: [ci, changes, eval]
+    needs: [ci, changes, eval, runner-image]
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
       needs.ci.result == 'success' &&
       needs.changes.result == 'success' &&
-      (needs.eval.result == 'success' || needs.eval.result == 'skipped')
+      (needs.eval.result == 'success' || needs.eval.result == 'skipped') &&
+      (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write

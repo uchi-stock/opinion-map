@@ -36,6 +36,8 @@ npm run dev
 
 | メソッド・パス | 用途 | 認証 |
 | --- | --- | --- |
+| `POST /auth/session` | Google の ID トークンを、オーナーのセッショントークンに交換する | Google のトークン |
+| `GET /me` | ログイン中の権限 | 運営者 |
 | `POST /events` | イベントを作る（下書き） | 運営者 |
 | `GET /events` | イベント一覧 | 運営者 |
 | `PATCH /events/:id` | イベントを編集する（状態は draft / active / archived） | 運営者 |
@@ -99,7 +101,8 @@ npm run dev
 | 名前 | 用途 |
 | --- | --- |
 | `TABLE_NAME` | DynamoDB のテーブル名（必須） |
-| `ADMIN_TOKEN` | オーナーのトークン |
+| `GOOGLE_CLIENT_ID`・`SESSION_SECRET`・`OWNER_EMAILS` | オーナーの Google ログイン。3つ揃うと有効 |
+| `ADMIN_TOKEN` | オーナーの合言葉（任意） |
 | `ALLOWED_ORIGIN` | CORS で許可するオリジン |
 | `GEMINI_API_KEY` | 共通点・相違点・問いの案に使う |
 

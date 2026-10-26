@@ -18,8 +18,13 @@ provider:
     TABLE_NAME: !Ref Table
     # CloudFront が /api/* を転送するため、先頭の /api を取り除いて処理する
     API_PREFIX: /api
-    # オーナーのトークン。必須。GitHub の Secrets から渡す
-    ADMIN_TOKEN: ${env:ADMIN_TOKEN}
+    # オーナーのログイン。GitHub の Secrets・Variables から渡す
+    # Googleアカウントでのログイン(GOOGLE_CLIENT_ID・SESSION_SECRET・OWNER_EMAILS の3つが揃うと有効)
+    GOOGLE_CLIENT_ID: ${env:GOOGLE_OAUTH_CLIENT_ID, ''}
+    SESSION_SECRET: ${env:SESSION_SECRET, ''}
+    OWNER_EMAILS: ${env:OWNER_EMAILS, ''}
+    # 合言葉でのログイン(任意)。Googleログインを使うなら、なくてよい
+    ADMIN_TOKEN: ${env:ADMIN_TOKEN, ''}
     # 共通点・相違点・問いの案に使う。なければ、そのAPIは使えない(503)
     GEMINI_API_KEY: ${env:GEMINI_API_KEY, ''}
   iam:

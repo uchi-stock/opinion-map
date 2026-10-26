@@ -4,7 +4,11 @@ run-name: 本番へデプロイ (${{ github.sha }})
 # 手動で実行する(Actions 画面の「Run workflow」。スマホのブラウザからも実行できる)。
 # 流れ: バックエンドをバンドル → osls deploy(DynamoDB・Lambda・API Gateway・S3・CloudFront)
 #       → 画面をビルドして S3 へ → CloudFront のキャッシュを消す → 動作を確かめる
-# 必要な Secrets: AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、ADMIN_TOKEN(オーナーのトークン)
+# 必要な Secrets: AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY
+# オーナーのログイン(どちらか。両方でもよい):
+#   Googleログイン: GOOGLE_OAUTH_CLIENT_ID、SESSION_SECRET(32文字以上)、OWNER_EMAILS(カンマ区切り)
+#     GOOGLE_OAUTH_CLIENT_ID と OWNER_EMAILS は、Secrets と Variables のどちらでもよい
+#   合言葉: ADMIN_TOKEN
 # 任意: GEMINI_API_KEY(共通点・相違点・問いの案)、Variables の AWS_REGION(既定 ap-northeast-1)
 on:
   workflow_dispatch:
@@ -27,19 +31,38 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
       ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+      GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID || vars.GOOGLE_OAUTH_CLIENT_ID }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      OWNER_EMAILS: ${{ secrets.OWNER_EMAILS || vars.OWNER_EMAILS }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       STACK_NAME: opinion-map-prod
     steps:
-      - name: 必要な Secrets を確認する
+      - name: 必要な設定を確認する
+        # 値は出さない。足りない名前だけを出す
         run: |
-          missing=0
-          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY ADMIN_TOKEN; do
+          problems=0
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
             if [ -z "${!name}" ]; then
               echo "::error::Secrets に ${name} が設定されていません。"
-              missing=1
+              problems=1
             fi
           done
-          exit "$missing"
+          google=1
+          for name in GOOGLE_OAUTH_CLIENT_ID SESSION_SECRET OWNER_EMAILS; do
+            [ -z "${!name}" ] && google=0
+          done
+          if [ "$google" = 0 ] && [ -z "$ADMIN_TOKEN" ]; then
+            echo "::error::オーナーのログインがありません。GOOGLE_OAUTH_CLIENT_ID・SESSION_SECRET・OWNER_EMAILS の3つ、または ADMIN_TOKEN を設定してください。"
+            for name in GOOGLE_OAUTH_CLIENT_ID SESSION_SECRET OWNER_EMAILS; do
+              [ -z "${!name}" ] && echo "::warning::${name} が設定されていません。"
+            done
+            problems=1
+          fi
+          if [ -n "$SESSION_SECRET" ] && [ "${#SESSION_SECRET}" -lt 32 ]; then
+            echo "::error::SESSION_SECRET は32文字以上にしてください(いまは ${#SESSION_SECRET} 文字)。"
+            problems=1
+          fi
+          exit "$problems"
 
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -73,6 +96,9 @@ jobs:
 
       - name: 画面をビルドする
         working-directory: frontend
+        env:
+          # クライアントIDは公開してよい値。ログインのボタンを出すために使う
+          VITE_GOOGLE_CLIENT_ID: ${{ env.GOOGLE_OAUTH_CLIENT_ID }}
         run: |
           npm ci
           npm run build
@@ -104,9 +130,18 @@ jobs:
           retry "curl -sS --max-time 20 '$SITE_URL/api/health' | grep -q '\"status\":\"ok\"'" && check "API(/api/health)" ok || check "API(/api/health)" ng
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE_URL/api/events" || true)
           [ "$code" = "401" ] && check "トークンなしの運営者API は 401" ok || check "トークンなしの運営者API は 401(実際: $code)" ng
-          # DynamoDB まで届くことを、読み取りだけで確かめる(データは作らない)
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$SITE_URL/api/events" || true)
-          [ "$code" = "200" ] && check "オーナーのトークンで、DynamoDB から一覧を読める" ok || check "オーナーのトークンで、DynamoDB から一覧を読める(実際: $code)" ng
+          # DynamoDB まで届くことを、公開のAPIで確かめる(存在しないセッションは 404。接続できなければ 500)
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$SITE_URL/api/sessions/smoke-test-none" || true)
+          [ "$code" = "404" ] && check "DynamoDB を読める(存在しないセッションは 404)" ok || check "DynamoDB を読める(存在しないセッションは 404、実際: $code)" ng
+          if [ -n "$GOOGLE_OAUTH_CLIENT_ID" ]; then
+            # 設定されていれば 401(トークンなし)。未設定なら 503
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$SITE_URL/api/auth/session" || true)
+            [ "$code" = "401" ] && check "Googleログインが有効" ok || check "Googleログインが有効(実際: $code)" ng
+          fi
+          if [ -n "$ADMIN_TOKEN" ]; then
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -H "Authorization: Bearer $ADMIN_TOKEN" "$SITE_URL/api/events" || true)
+            [ "$code" = "200" ] && check "合言葉で、運営者の一覧を読める" ok || check "合言葉で、運営者の一覧を読める(実際: $code)" ng
+          fi
 
           {
             echo ""

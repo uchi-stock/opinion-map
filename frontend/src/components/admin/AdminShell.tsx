@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { createAdminApi, type AdminApi } from "../../api/admin.ts";
 import { ApiError } from "../../api/client.ts";
+import { GoogleLoginButton } from "./GoogleLoginButton.tsx";
 import { clearAdminToken, loadAdminToken, saveAdminToken } from "../../lib/adminToken.ts";
 
 export interface AdminContext {
@@ -15,6 +16,9 @@ interface Props {
   children: (context: AdminContext) => ReactNode;
 }
 
+/** Googleログインのクライアントを指定するビルド設定。未設定なら、ボタンを出さない */
+const GOOGLE_CLIENT_ID = (import.meta.env["VITE_GOOGLE_CLIENT_ID"] as string | undefined) ?? "";
+
 function TokenForm({ notice, onSubmit }: { notice: string | null; onSubmit: (token: string) => void }) {
   const [value, setValue] = useState("");
   function handle(event: FormEvent) {
@@ -23,6 +27,14 @@ function TokenForm({ notice, onSubmit }: { notice: string | null; onSubmit: (tok
   }
   return (
     <form onSubmit={handle}>
+      {GOOGLE_CLIENT_ID && (
+        <>
+          <p>オーナーは、Googleアカウントでログインします。</p>
+          <GoogleLoginButton clientId={GOOGLE_CLIENT_ID} onLogin={onSubmit} />
+          <hr />
+          <p>運営者のリンクのトークンや、合言葉でも入れます。</p>
+        </>
+      )}
       <p>運営者のトークンを入力してください。このブラウザにだけ保存されます。</p>
       <label htmlFor="admin-token" className="form-label fw-bold">
         運営者のトークン

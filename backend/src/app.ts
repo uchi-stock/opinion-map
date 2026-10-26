@@ -9,6 +9,8 @@ import {
   parseSessionPatch,
 } from "./domain/validation.js";
 import { createAuthenticator, type Principal } from "./lib/auth.js";
+import { createGoogleVerifier } from "./lib/googleAuth.js";
+import { signSession } from "./lib/jwt.js";
 import { AppError, badRequest, forbidden, notFound, unauthorized } from "./lib/errors.js";
 import type { Repositories } from "./repositories/types.js";
 import type { AnalysisProvider } from "./analysis/types.js";
@@ -45,11 +47,29 @@ export interface AppOptions {
   /** 共通点・相違点・問いの案を作るLLM。未指定なら、そのAPIは使えない（503） */
   insightProvider?: InsightProvider;
   opinionMaxLength?: number;
+  /**
+   * Googleアカウントでのオーナーのログイン。未指定なら、POST /auth/session は使えない(503)。
+   * ownerEmails に載っているメールアドレスだけが、オーナーになれる。
+   */
+  ownerLogin?: OwnerLoginOptions;
   /** セッションごとの投稿頻度の上限。未指定なら、1分に120件 */
   opinionRateLimit?: OpinionRateLimit;
   now?: () => Date;
   newId?: () => string;
 }
+
+export interface OwnerLoginOptions {
+  googleClientId: string;
+  /** セッショントークンの署名鍵。32文字以上 */
+  sessionSecret: string;
+  ownerEmails: readonly string[];
+  /** セッションの有効期間(秒)。既定は7日 */
+  sessionSeconds?: number;
+  fetch?: typeof fetch;
+}
+
+export const DEFAULT_SESSION_SECONDS = 7 * 24 * 60 * 60;
+export const MIN_SESSION_SECRET_LENGTH = 32;
 
 /** リクエスト本文の上限（バイト）。投稿は短い文章なので、小さく抑える */
 export const MAX_BODY_BYTES = 16 * 1024;
@@ -70,6 +90,7 @@ interface Route {
     body: unknown;
     isAdmin: boolean;
     principal: Principal | null;
+    headers: Record<string, string | undefined>;
   }) => Promise<{ status: number; data: unknown }>;
 }
 
@@ -83,7 +104,17 @@ export function createApp(options: AppOptions) {
   const sessions = createSessionService(ctx);
   const opinions = createOpinionService(ctx, options.opinionRateLimit);
   const operatorTokens = createOperatorTokenService(ctx);
-  const authenticate = createAuthenticator(options.adminToken, options.repos.operatorTokens);
+  const login = options.ownerLogin;
+  const ownerEmails = (login?.ownerEmails ?? []).map((e) => e.trim().toLowerCase()).filter((e) => e !== "");
+  if (login && login.sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
+    throw new Error(`sessionSecret は${MIN_SESSION_SECRET_LENGTH}文字以上にしてください`);
+  }
+  const verifyGoogle = login
+    ? createGoogleVerifier({ clientId: login.googleClientId, ...(login.fetch ? { fetch: login.fetch } : {}), now: ctx.now })
+    : undefined;
+  const authenticate = createAuthenticator(options.adminToken, options.repos.operatorTokens, {
+    ...(login ? { session: { secret: login.sessionSecret, ownerEmails, now: ctx.now } } : {}),
+  });
   const eventOfSession = async (p: Params) => (await options.repos.sessions.get(p["id"]!))?.eventId;
   const eventOfAnalysis = async (p: Params) => {
     const run = await options.repos.analyses.get(p["id"]!);
@@ -121,13 +152,35 @@ export function createApp(options: AppOptions) {
       handle: async () => ({ status: 200, data: { status: "ok" } }),
     },
     {
+      // Googleのトークンを、オーナーのセッショントークンに交換する。ログイン時の1回だけ使う
+      method: "POST",
+      pattern: /^\/auth\/session$/,
+      admin: false,
+      handle: async ({ headers }) => {
+        if (!login || !verifyGoogle) throw new AppError(503, "login_unavailable", "Googleログインが設定されていません");
+        const header = headers["authorization"];
+        if (!header || !header.startsWith("Bearer ")) throw unauthorized();
+        const identity = await verifyGoogle(header.slice("Bearer ".length));
+        if (!ownerEmails.includes(identity.email.toLowerCase())) {
+          throw forbidden("not_owner", "このアカウントは、運営者として登録されていません");
+        }
+        const iat = Math.floor(ctx.now().getTime() / 1000);
+        const exp = iat + (login.sessionSeconds ?? DEFAULT_SESSION_SECONDS);
+        const token = await signSession({ sub: identity.sub, email: identity.email, iat, exp }, login.sessionSecret);
+        return { status: 200, data: { token, email: identity.email, expiresAt: new Date(exp * 1000).toISOString() } };
+      },
+    },
+    {
       method: "GET",
       pattern: /^\/me$/,
       admin: true,
       anyOperator: true,
       handle: async ({ principal }) => ({
         status: 200,
-        data: principal?.kind === "operator" ? { role: "operator", eventId: principal.eventId } : { role: "owner" },
+        data:
+          principal?.kind === "operator"
+            ? { role: "operator", eventId: principal.eventId }
+            : { role: "owner", ...(principal?.email ? { email: principal.email } : {}) },
       }),
     },
     {
@@ -393,7 +446,7 @@ export function createApp(options: AppOptions) {
             throw forbidden("wrong_event", "このイベントを操作する権限がありません");
           }
         }
-        const result = await route.handle({ params, body: parseBody(request.body), isAdmin, principal });
+        const result = await route.handle({ params, body: parseBody(request.body), isAdmin, principal, headers: request.headers });
         return respond(result.status, result.data);
       }
       if (pathMatched) throw new AppError(405, "method_not_allowed", "このメソッドは使えません");

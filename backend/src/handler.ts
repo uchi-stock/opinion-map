@@ -13,6 +13,8 @@ import { createDynamoRepositories } from "./repositories/dynamoRepositories.js";
  * - ADMIN_TOKEN: オーナーのトークン（未設定なら、運営者のAPIはすべて拒否される）
  * - ALLOWED_ORIGIN: CORS で許可するオリジン（API Gateway 側で設定する場合は不要）
  * - API_PREFIX: パスの先頭から取り除く部分(CloudFront が /api/* を転送する構成で、"/api")
+ * - GOOGLE_CLIENT_ID、SESSION_SECRET、OWNER_EMAILS: Googleアカウントでのオーナーのログイン。
+ *   3つとも設定されているときだけ有効になる。OWNER_EMAILS はカンマ区切り
  * - GEMINI_API_KEY: 共通点・相違点・問いの案を作るために使う（未設定なら、そのAPIは503）
  */
 const tableName = process.env["TABLE_NAME"];
@@ -24,11 +26,17 @@ const client = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 const geminiKey = process.env["GEMINI_API_KEY"];
 const allowedOrigin = process.env["ALLOWED_ORIGIN"];
 const apiPrefix = process.env["API_PREFIX"];
+const googleClientId = process.env["GOOGLE_CLIENT_ID"];
+const sessionSecret = process.env["SESSION_SECRET"];
+const ownerEmails = (process.env["OWNER_EMAILS"] ?? "").split(",");
 
 const app = createApp({
   repos: createDynamoRepositories(new DynamoKvStore(client, tableName)),
   adminToken: process.env["ADMIN_TOKEN"],
   ...(allowedOrigin ? { allowedOrigin } : {}),
+  ...(googleClientId && sessionSecret && ownerEmails.some((e) => e.trim() !== "")
+    ? { ownerLogin: { googleClientId, sessionSecret, ownerEmails } }
+    : {}),
   ...(geminiKey ? { insightProvider: new GeminiInsightProvider({ apiKey: geminiKey }) } : {}),
 });
 

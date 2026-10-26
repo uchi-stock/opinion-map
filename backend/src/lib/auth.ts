@@ -1,22 +1,10 @@
 import { sha256Hex } from "./hash.js";
+import { verifySession } from "./jwt.js";
 import type { OperatorTokenRepository } from "../repositories/types.js";
 
-/**
- * 文字列を、一致するまでの時間が内容に左右されにくい方法で比較する。
- * Node.js固有の機能に頼らないので、ブラウザでも動く（デモ版で使う）。
- * 長さが違う場合も、短いほうを0で埋めて、最後まで比較する。
- */
-export function safeEqual(a: string, b: string): boolean {
-  const encoder = new TextEncoder();
-  const x = encoder.encode(a);
-  const y = encoder.encode(b);
-  const length = Math.max(x.length, y.length);
-  let diff = x.length ^ y.length;
-  for (let i = 0; i < length; i++) {
-    diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
-  }
-  return diff === 0;
-}
+import { safeEqual } from "./safeEqual.js";
+
+export { safeEqual };
 
 /**
  * 運営者の認証。環境変数の ADMIN_TOKEN と、Bearer トークンを比較する。
@@ -34,7 +22,7 @@ export function createAdminAuthenticator(adminToken: string | undefined) {
 }
 
 /** 認証された運営者。オーナーはすべてを操作でき、運営者は、割り当てられたイベントだけを操作できる */
-export type Principal = { kind: "owner" } | { kind: "operator"; eventId: string; tokenId: string };
+export type Principal = { kind: "owner"; email?: string } | { kind: "operator"; eventId: string; tokenId: string };
 
 export const OPERATOR_TOKEN_PREFIX = "opm_";
 
@@ -47,6 +35,10 @@ export const OPERATOR_TOKEN_PREFIX = "opm_";
 export function createAuthenticator(
   ownerToken: string | undefined,
   tokens: Pick<OperatorTokenRepository, "getByHash">,
+  options: {
+    /** Googleのログインで発行したセッショントークンを、オーナーとして受け付ける */
+    session?: { secret: string; ownerEmails: readonly string[]; now?: () => Date };
+  } = {},
 ) {
   const owner = ownerToken && ownerToken.length > 0 ? ownerToken : undefined;
   return async (headers: Record<string, string | undefined>): Promise<Principal | null> => {
@@ -54,6 +46,15 @@ export function createAuthenticator(
     if (!header || !header.startsWith("Bearer ")) return null;
     const presented = header.slice("Bearer ".length);
     if (owner !== undefined && safeEqual(presented, owner)) return { kind: "owner" };
+    if (options.session && presented.split(".").length === 3) {
+      const nowSeconds = Math.floor((options.session.now ?? (() => new Date()))().getTime() / 1000);
+      const claims = await verifySession(presented, options.session.secret, nowSeconds);
+      // 発行後にオーナーの一覧から外されたメールアドレスは、期限内でも受け付けない
+      if (claims && options.session.ownerEmails.includes(claims.email.toLowerCase())) {
+        return { kind: "owner", email: claims.email };
+      }
+      return null;
+    }
     if (!presented.startsWith(OPERATOR_TOKEN_PREFIX)) return null;
     const record = await tokens.getByHash(await sha256Hex(presented));
     if (!record || record.revokedAt) return null;

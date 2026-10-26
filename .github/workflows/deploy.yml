@@ -6,7 +6,8 @@ run-name: 本番へデプロイ (${{ github.sha }})
 #       → 画面をビルドして S3 へ → CloudFront のキャッシュを消す → 動作を確かめる
 # 必要な Secrets: AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY
 # オーナーのログイン(どちらか。両方でもよい):
-#   Googleログイン: GOOGLE_OAUTH_CLIENT_ID、SESSION_SECRET(32文字以上)、OWNER_EMAILS(カンマ区切り)
+#   Googleログイン: GOOGLE_OAUTH_CLIENT_ID、OWNER_EMAILS(カンマ区切り)
+#     SESSION_SECRET(32文字以上)は任意。なければ、AWS のシークレットキーから作る
 #     GOOGLE_OAUTH_CLIENT_ID と OWNER_EMAILS は、Secrets と Variables のどちらでもよい
 #   合言葉: ADMIN_TOKEN
 # 任意: GEMINI_API_KEY(共通点・相違点・問いの案)、Variables の AWS_REGION(既定 ap-northeast-1)
@@ -37,6 +38,18 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       STACK_NAME: opinion-map-prod
     steps:
+      - name: SESSION_SECRET がなければ、AWS のシークレットキーから作る
+        # 登録の手間を省くための既定。SESSION_SECRET を登録すれば、そちらを使う。
+        # 同じキーからは、いつも同じ値になる(セッションがデプロイで切れない)。
+        # キーを入れ替えると値が変わり、発行済みのセッションは使えなくなる(ログインし直す)
+        run: |
+          if [ -z "$SESSION_SECRET" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            derived=$(printf 'opinion-map-session-secret' | openssl dgst -sha256 -hmac "$AWS_SECRET_ACCESS_KEY" -r | cut -d' ' -f1)
+            echo "::add-mask::${derived}"
+            echo "SESSION_SECRET=${derived}" >> "$GITHUB_ENV"
+            echo "SESSION_SECRET が未登録のため、AWS のシークレットキーから作りました。"
+          fi
+
       - name: 必要な設定を確認する
         # 値は出さない。足りない名前だけを出す
         run: |

@@ -28,12 +28,13 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 | Secret | `AWS_ACCESS_KEY_ID` | デプロイに使う IAM ユーザーのキー |
 | Secret | `AWS_SECRET_ACCESS_KEY` | 同上 |
 | Secret または Variable | `GOOGLE_OAUTH_CLIENT_ID` | Google ログインのクライアントID |
-| Secret | `SESSION_SECRET` | ログイン後のセッションの署名鍵。32文字以上のランダムな文字列 |
+| Secret（任意） | `SESSION_SECRET` | ログイン後のセッションの署名鍵。32文字以上のランダムな文字列。なければ、AWS のシークレットキーから自動で作る |
 | Secret または Variable | `OWNER_EMAILS` | オーナーにする Google アカウントのメールアドレス。カンマ区切り |
 | Secret（任意） | `ADMIN_TOKEN` | 合言葉でのログイン。Google ログインを使うなら不要 |
 | Secret（任意） | `GEMINI_API_KEY` | 共通点・相違点・問いの案に使う |
 | Variable（任意） | `AWS_REGION` | 既定は `ap-northeast-1` |
 
+- `SESSION_SECRET` を自動で作る場合、AWS のキーを入れ替えると値が変わる。発行済みのセッションは使えなくなり、ログインし直しになる
 - `OWNER_EMAILS` に載っていないアカウントは、Google でログインできても、オーナーになれない
 - `OWNER_EMAILS` から外すと、発行済みのセッションも、その場で使えなくなる
 - `ADMIN_TOKEN` は、AWS の Lambda の環境変数に平文で入る。AWS のコンソールを見られる人は、読める

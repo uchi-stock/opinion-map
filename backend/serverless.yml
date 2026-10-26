@@ -27,6 +27,14 @@ provider:
     ADMIN_TOKEN: ${env:ADMIN_TOKEN, ''}
     # 共通点・相違点・問いの案に使う。なければ、そのAPIは使えない(503)
     GEMINI_API_KEY: ${env:GEMINI_API_KEY, ''}
+    # 広聴AIをFargateで動かす設定。サブネットとセキュリティグループは、デプロイのワークフローが
+    # 既定のVPCから調べて渡す。空なら、分析のAPIは使えない(503)
+    ANALYSIS_BUCKET: !Ref AnalysisBucket
+    ANALYSIS_CLUSTER: !Ref AnalysisCluster
+    ANALYSIS_TASK_DEFINITION: !Ref RunnerTaskDefinition
+    ANALYSIS_CONTAINER: runner
+    ANALYSIS_SUBNETS: ${env:TASK_SUBNETS, ''}
+    ANALYSIS_SECURITY_GROUPS: ${env:TASK_SECURITY_GROUP, ''}
   iam:
     role:
       statements:
@@ -40,6 +48,30 @@ provider:
           Resource:
             - !GetAtt Table.Arn
             - !Sub "${Table.Arn}/index/gsi1"
+        # 分析のタスクを起動し、状態を見る。入力と結果は S3 で受け渡す
+        - Effect: Allow
+          Action:
+            - ecs:RunTask
+          Resource: !Ref RunnerTaskDefinition
+          Condition:
+            ArnEquals:
+              ecs:cluster: !GetAtt AnalysisCluster.Arn
+        - Effect: Allow
+          Action:
+            - ecs:DescribeTasks
+          Resource: !Sub "arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task/${AnalysisCluster}/*"
+        - Effect: Allow
+          Action:
+            - iam:PassRole
+          Resource:
+            - !GetAtt RunnerExecutionRole.Arn
+            - !GetAtt RunnerTaskRole.Arn
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: !Sub "${AnalysisBucket.Arn}/analysis/*"
 
 package:
   patterns:
@@ -89,6 +121,117 @@ resources:
           Enabled: true
         PointInTimeRecoverySpecification:
           PointInTimeRecoveryEnabled: true
+
+    # --- 広聴AIの分析(Fargate のタスクを、分析1回ごとに起動する) ---
+
+    # 入力(投稿の本文を含む)と結果の受け渡し用。取り込んだらアプリが消す。消し忘れに備え、2日で消える
+    AnalysisBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        LifecycleConfiguration:
+          Rules:
+            - Id: expire-analysis-objects
+              Status: Enabled
+              Prefix: analysis/
+              ExpirationInDays: 2
+
+    RunnerRepository:
+      Type: AWS::ECR::Repository
+      Properties:
+        RepositoryName: ${self:service}-${self:provider.stage}-runner
+        EmptyOnDelete: true
+        ImageScanningConfiguration:
+          ScanOnPush: true
+        LifecyclePolicy:
+          LifecyclePolicyText: |
+            {"rules":[{"rulePriority":1,"description":"keep last 5","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
+
+    AnalysisCluster:
+      Type: AWS::ECS::Cluster
+      Properties:
+        ClusterName: ${self:service}-${self:provider.stage}
+
+    # ログに投稿の本文は出さない設計だが、念のため短く保つ
+    RunnerLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /ecs/${self:service}-${self:provider.stage}-runner
+        RetentionInDays: 7
+
+    # イメージの取得とログの書き込みに使う
+    RunnerExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ecs-tasks.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+
+    # タスクの中のプログラムが使う権限。分析用のバケットの中だけ
+    RunnerTaskRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ecs-tasks.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: analysis-bucket
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:GetObject
+                    - s3:PutObject
+                  Resource: !Sub "${AnalysisBucket.Arn}/analysis/*"
+
+    RunnerTaskDefinition:
+      Type: AWS::ECS::TaskDefinition
+      Properties:
+        Family: ${self:service}-${self:provider.stage}-runner
+        RequiresCompatibilities:
+          - FARGATE
+        NetworkMode: awsvpc
+        Cpu: "2048"
+        Memory: "4096"
+        ExecutionRoleArn: !GetAtt RunnerExecutionRole.Arn
+        TaskRoleArn: !GetAtt RunnerTaskRole.Arn
+        RuntimePlatform:
+          CpuArchitecture: X86_64
+          OperatingSystemFamily: LINUX
+        ContainerDefinitions:
+          - Name: runner
+            Image: !Sub "${RunnerRepository.RepositoryUri}:latest"
+            Essential: true
+            Environment:
+              - Name: ANALYSIS_BUCKET
+                Value: !Ref AnalysisBucket
+              - Name: GEMINI_API_KEY
+                Value: ${env:GEMINI_API_KEY, ''}
+            LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-group: !Ref RunnerLogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: runner
 
     FrontendBucket:
       Type: AWS::S3::Bucket
@@ -236,3 +379,11 @@ resources:
       Value: !Ref Distribution
     TableName:
       Value: !Ref Table
+    RunnerRepositoryUri:
+      Value: !GetAtt RunnerRepository.RepositoryUri
+    AnalysisClusterName:
+      Value: !Ref AnalysisCluster
+    AnalysisBucketName:
+      Value: !Ref AnalysisBucket
+    RunnerTaskDefinitionArn:
+      Value: !Ref RunnerTaskDefinition

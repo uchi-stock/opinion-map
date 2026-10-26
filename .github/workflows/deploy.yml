@@ -92,6 +92,18 @@ jobs:
           npm ci
           npm run bundle
 
+      - name: 作成に失敗して残ったスタックを片付ける
+        # 初回の作成に失敗したスタックは ROLLBACK_COMPLETE で残り、そのままでは更新できない。
+        # データがまだ無い(作成に失敗した)ときだけ、消して作り直す
+        run: |
+          status=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo NONE)
+          echo "スタックの状態: ${status}"
+          if [ "$status" = "ROLLBACK_COMPLETE" ]; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+            echo "失敗して残っていたスタックを削除しました。"
+          fi
+
       - name: インフラとバックエンドをデプロイする
         working-directory: backend
         run: npx osls deploy --stage prod

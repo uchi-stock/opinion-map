@@ -40,7 +40,6 @@ export function NotesOverview({
 
   return (
     <section aria-label="全テーマの記録">
-      <hr />
       <h2 className="h6">全テーマの記録</h2>
       <NotesView entries={state.data} showPublishState />
       <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={show}>

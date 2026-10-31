@@ -53,7 +53,6 @@ export function ProposalAdminSection({
 
   return (
     <section aria-label="議題の提案">
-      <hr />
       <h2 className="h6">議題の提案（OST）</h2>
       <p className="small text-body-secondary">
         参加者が議題を出し、いいねで関心を示します。承認すると、公開中のテーマができます。提案者は記録されません。

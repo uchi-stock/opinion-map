@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/uchi-stock/opinion-map/compare/v1.23.0...v1.24.0) (2026-10-31)
+
+
+### Features
+
+* split the heavy admin screens into single-purpose screens ([#154](https://github.com/uchi-stock/opinion-map/issues/154)) ([e335fde](https://github.com/uchi-stock/opinion-map/commit/e335fde92f9b53a61f3ddd7ed9aa284a269de675)), closes [#153](https://github.com/uchi-stock/opinion-map/issues/153)
+
 # [1.23.0](https://github.com/uchi-stock/opinion-map/compare/v1.22.0...v1.23.0) (2026-10-31)
 
 

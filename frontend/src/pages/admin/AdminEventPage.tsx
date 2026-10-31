@@ -2,13 +2,10 @@ import { useState } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import type { EventRecord, SessionRecord } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
-import { UsageSection } from "../../components/admin/UsageSection.tsx";
-import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
-import { NotesOverview } from "../../components/admin/NotesOverview.tsx";
-import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
 import { EVENT_STATUS_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
+import { useMe } from "../../lib/useMe.ts";
 
 export function AdminEventPage({ eventId }: { eventId: string }) {
   return (
@@ -78,16 +75,7 @@ function EventContent({
         )}
         </div>
       ))}
-      <UsageSection api={api} eventId={eventId} describeError={describeError} />
-      <NotesOverview api={api} eventId={eventId} eventName={state.data.event.name} describeError={describeError} />
-      <ProposalAdminSection
-        api={api}
-        event={state.data.event}
-        sessions={state.data.sessions}
-        describeError={describeError}
-        onChanged={reload}
-      />
-      <OperatorTokenSection api={api} eventId={eventId} describeError={describeError} />
+      <EventMenu api={api} event={state.data.event} />
     </>
   );
 }
@@ -107,7 +95,6 @@ function selectedOpenIds(event: EventRecord): string[] | undefined {
 
 /** イベントの名前、状態、説明(固定の表示)。編集と招待URLは、別の画面へのリンクにする */
 function EventSummary({ event }: { event: EventRecord }) {
-  const base = withBase(`/admin/events/${encodeURIComponent(event.id)}`);
   return (
     <section aria-label="イベントの情報">
       <div className="d-flex justify-content-between align-items-start gap-2">
@@ -124,15 +111,45 @@ function EventSummary({ event }: { event: EventRecord }) {
       {event.status !== "active" && (
         <p className="small text-body-secondary mb-2">参加者に見えるのは、「公開中」のイベントだけです。編集の画面で、状態を切り替えます。</p>
       )}
-      <div className="d-flex flex-wrap gap-2">
-        <a className="btn btn-sm btn-outline-secondary" href={`${base}/edit`}>
-          編集
-        </a>
-        <a className="btn btn-sm btn-outline-secondary" href={`${base}/invite`}>
-          招待URLとQR
-        </a>
-      </div>
     </section>
+  );
+}
+
+/** このイベントでできることの入口。重い操作は、それぞれ別の画面で行う */
+function EventMenu({ api, event }: { api: AdminApi; event: EventRecord }) {
+  const me = useMe(api);
+  const base = withBase(`/admin/events/${encodeURIComponent(event.id)}`);
+  const items: { href: string; label: string; note: string; external?: boolean; ownerOnly?: boolean }[] = [
+    { href: `${base}/edit`, label: "編集", note: "名前、説明、状態" },
+    { href: `${base}/invite`, label: "招待URLとQR", note: "参加者に配るURL" },
+    { href: `${base}/proposals`, label: "議題の提案", note: "参加者の提案を、承認・却下する" },
+    { href: `${base}/notes`, label: "全テーマの記録", note: "結論と次の行動を、まとめて見る" },
+    { href: `${base}/usage`, label: "AIの利用状況", note: "今日の使用量と上限" },
+    { href: `${base}/operators`, label: "運営者のリンク", note: "このイベントだけを操作できるリンク", ownerOnly: true },
+    { href: withBase(`/e/${encodeURIComponent(event.id)}`), label: "参加者の画面を見る", note: "参加者に見える画面を、新しいタブで開く", external: true },
+  ];
+  return (
+    <nav aria-label="このイベントの操作" className="mt-4">
+      <h2 className="h6">このイベントの操作</h2>
+      <div className="list-group">
+        {items
+          .filter((item) => !(item.ownerOnly && me?.role === "operator"))
+          .map((item) => (
+            <a
+              key={item.href}
+              className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+              href={item.href}
+              {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+            >
+              <span>
+                {item.label}
+                <span className="d-block small text-body-secondary">{item.note}</span>
+              </span>
+              <span aria-hidden="true">›</span>
+            </a>
+          ))}
+      </div>
+    </nav>
   );
 }
 

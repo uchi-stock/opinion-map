@@ -1,4 +1,4 @@
-import type { NotesEntry, PublicSummaryResponse, Proposal, ProposalList, PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
+import type { NotesEntry, PublicEventSummary, PublicSummaryResponse, Proposal, ProposalList, PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -42,6 +42,11 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const enc = encodeURIComponent;
+
+/** 招待なしで見られる、公開中のイベント(トップページ用) */
+export async function listPublicEvents(): Promise<PublicEventSummary[]> {
+  return (await request<{ events: PublicEventSummary[] }>("/public/events")).events;
+}
 
 export function getPublicEvent(eventId: string): Promise<PublicEvent> {
   return request<PublicEvent>(`/events/${enc(eventId)}/public`);

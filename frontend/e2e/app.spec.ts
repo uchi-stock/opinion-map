@@ -12,6 +12,9 @@ test.describe("トップページ", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Opinion Map" })).toBeVisible();
     await expect(page.getByRole("region", { name: "サンプル" })).toBeVisible();
+    // 招待がなくても、公開中のイベントを選んで、入れる
+    const events = page.getByRole("region", { name: "公開中のイベント" });
+    await expect(events.getByRole("link").first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `top-${testInfo.project.name}`, `トップページ(${testInfo.project.name})`);
   });

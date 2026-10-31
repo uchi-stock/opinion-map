@@ -505,6 +505,13 @@ export function createApp(options: AppOptions) {
       }),
     },
     {
+      // 招待なしで、トップページに出す、公開中のイベントの一覧
+      method: "GET",
+      pattern: /^\/public\/events$/,
+      admin: false,
+      handle: async () => ({ status: 200, data: { events: await opinions.listPublicEvents() } }),
+    },
+    {
       method: "POST",
       pattern: /^\/sessions\/(?<id>[^/]+)\/presence$/,
       admin: false,

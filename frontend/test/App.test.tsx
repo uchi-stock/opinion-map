@@ -54,10 +54,9 @@ describe("バージョン表示", () => {
   });
 });
 
-describe("トップページのサンプル", () => {
-  it("盛り上がったサンプルのボードを見せ、サンプルと分かる表示と、招待リンクの案内も残す", () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+describe("トップページ", () => {
+  it("サンプルのボードは、サンプルと分かる表示で、APIなしで見せる(保存もしない)", async () => {
+    const fetchSpy = stubFetch((url) => (url.endsWith("/public/events") ? json({ events: [] }) : json({}, 404)));
     render(<App pathname="/" />);
     const sample = screen.getByRole("region", { name: "サンプル" });
     expect(within(sample).getByText("サンプル")).toBeInTheDocument();
@@ -65,8 +64,42 @@ describe("トップページのサンプル", () => {
     expect(within(sample).getAllByTestId("sticky-note").length).toBeGreaterThanOrEqual(10);
     // 少数意見も、サンプルに含める
     expect(within(sample).getByRole("region", { name: "どこにも入らなかった意見" })).toBeInTheDocument();
-    expect(screen.getByText(/運営者から共有されたURLを開いてください/)).toBeInTheDocument();
-    // APIを呼ばない
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // 呼ぶAPIは、公開中のイベントの一覧だけ
+    await screen.findByText(/いま公開中のイベントはありません/);
+    expect(fetchSpy.mock.calls.map(([url]) => String(url).replace(/^\/api/, ""))).toEqual(["/public/events"]);
+  });
+
+  it("公開中のイベントを、招待なしで、一覧に出し、選ぶと、イベントの画面へ移る", async () => {
+    stubFetch((url) =>
+      url.endsWith("/public/events")
+        ? json({
+            events: [
+              { id: "e2", name: "新しいイベント", description: "二つ目" },
+              { id: "e1", name: "最初のイベント", description: "" },
+            ],
+          })
+        : json({}, 404),
+    );
+    render(<App pathname="/" />);
+    const section = await screen.findByRole("region", { name: "公開中のイベント" });
+    const links = within(section).getAllByRole("link");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/e/e2", "/e/e1"]);
+    expect(within(links[0]!).getByText("新しいイベント")).toBeInTheDocument();
+    expect(within(links[0]!).getByText("二つ目")).toBeInTheDocument();
+    // 招待がなくても入れるので、「URLを開いてください」だけの案内は出さない
+    expect(screen.queryByText(/運営者から共有されたURLを開いてください。$/)).toBeNull();
+  });
+
+  it("公開中のイベントが無いときは、その旨と、招待URLの案内を出す", async () => {
+    stubFetch((url) => (url.endsWith("/public/events") ? json({ events: [] }) : json({}, 404)));
+    render(<App pathname="/" />);
+    expect(await screen.findByText(/いま公開中のイベントはありません。運営者から共有されたURLがあれば、それを開いてください/)).toBeInTheDocument();
+  });
+
+  it("一覧を読めなかったときも、トップページは壊れず、招待URLの案内を出す", async () => {
+    stubFetch((url) => (url.endsWith("/public/events") ? json({ error: { code: "server_error", message: "失敗" } }, 500) : json({}, 404)));
+    render(<App pathname="/" />);
+    expect(await screen.findByText("意見を投稿するには、運営者から共有されたURLを開いてください。")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "サンプル" })).toBeInTheDocument();
   });
 });

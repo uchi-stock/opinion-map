@@ -18,6 +18,13 @@ export interface PublicSession {
   viewers?: number | "few";
 }
 
+/** トップページに出す、公開中のイベント */
+export interface PublicEventSummary {
+  id: string;
+  name: string;
+  description: string;
+}
+
 /** 招待URL(イベントごとに1つ)から開く画面の情報 */
 export interface PublicEvent {
   id: string;

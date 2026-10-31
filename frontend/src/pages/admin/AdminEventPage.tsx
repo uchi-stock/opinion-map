@@ -234,6 +234,9 @@ function ThemeRadioGroup({
           すべて閉じる（どのテーマにも投稿できません）
         </label>
       </div>
+      <p className="small text-body-secondary mt-1 mb-0">
+        公開中のイベントは、トップページから、誰でも参加できます。不審な投稿が続くときは、「すべて閉じる」で、投稿を止められます（意見を見ることはできます）。
+      </p>
       {error && (
         <p className="text-danger small mt-1 mb-0" role="alert">
           {error}

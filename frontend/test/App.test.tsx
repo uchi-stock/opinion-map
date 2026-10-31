@@ -24,6 +24,11 @@ describe("ルーティング", () => {
     expect(screen.getByText(/更新日時:/)).toBeInTheDocument();
   });
 
+  it("トップページから、管理者ログイン(/admin)へ移れる", () => {
+    render(<App pathname="/" />);
+    expect(screen.getByRole("link", { name: "管理者ログイン" })).toHaveAttribute("href", "/admin");
+  });
+
   it("存在しないパスでは、見つからない旨を表示する", () => {
     render(<App pathname="/nowhere" />);
     expect(screen.getByText("ページが見つかりません")).toBeInTheDocument();

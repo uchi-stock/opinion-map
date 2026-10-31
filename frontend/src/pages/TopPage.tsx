@@ -1,3 +1,4 @@
+import { withBase } from "../lib/paths.ts";
 import { VersionInfo } from "../components/VersionInfo.tsx";
 
 export function TopPage() {
@@ -12,6 +13,11 @@ export function TopPage() {
       <div className="alert alert-info">
         意見を投稿するには、運営者から共有されたURLを開いてください。
       </div>
+      <p className="small">
+        <a href={withBase("/admin")} className="text-body-secondary">
+          管理者ログイン
+        </a>
+      </p>
       <VersionInfo />
     </main>
   );

@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/uchi-stock/opinion-map/compare/v1.10.0...v1.11.0) (2026-10-31)
+
+
+### Features
+
+* cap AI usage per event per day ([#82](https://github.com/uchi-stock/opinion-map/issues/82)) ([#107](https://github.com/uchi-stock/opinion-map/issues/107)) ([52aead0](https://github.com/uchi-stock/opinion-map/commit/52aead0ffad2bc540f3ef01e8b9bd119fafd79b5))
+
 # [1.10.0](https://github.com/uchi-stock/opinion-map/compare/v1.9.0...v1.10.0) (2026-10-31)
 
 

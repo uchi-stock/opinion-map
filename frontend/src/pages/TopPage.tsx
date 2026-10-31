@@ -1,3 +1,5 @@
+import { StickyBoard } from "../components/StickyBoard.tsx";
+import { SAMPLE_GROUPS, SAMPLE_THEME } from "../lib/sampleBoard.ts";
 import { withBase } from "../lib/paths.ts";
 import { VersionInfo } from "../components/VersionInfo.tsx";
 
@@ -13,6 +15,14 @@ export function TopPage() {
       <div className="alert alert-info">
         意見を投稿するには、運営者から共有されたURLを開いてください。
       </div>
+      <section aria-label="サンプル" className="mb-4">
+        <h2 className="h5">こんなふうに使います</h2>
+        <p className="small text-body-secondary mb-2">
+          <span className="badge text-bg-warning me-1">サンプル</span>
+          「{SAMPLE_THEME}」の例です。架空の意見で、操作しても、何も保存されません。
+        </p>
+        <StickyBoard groups={SAMPLE_GROUPS} />
+      </section>
       <p className="small">
         <a href={withBase("/admin")} className="text-body-secondary">
           管理者ログイン

@@ -69,4 +69,19 @@ test.describe("管理画面", () => {
     await expect(page.getByRole("form", { name: "テーマを作る" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
+
+  test("テーマのページは、意見とボードを最初に見せる", async ({ page }, testInfo) => {
+    await page.goto("/admin");
+    await page.locator('a[href^="/admin/events/"]').first().click();
+    await page.locator('a[href*="/sessions/"]:not([href$="/new"])').first().click();
+    const opinions = page.getByRole("region", { name: "投稿された意見" });
+    await expect(opinions).toBeVisible();
+    // 設定のフォームより前に、意見が出ている(画面の上のほうにある)
+    const top = await opinions.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    expect(top).toBeLessThan(700);
+    await page.getByRole("button", { name: "ボード" }).click();
+    await expect(page.getByTestId("sticky-note").first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `admin-theme-board-${testInfo.project.name}`, `テーマのページ・ボード(${testInfo.project.name})`);
+  });
 });

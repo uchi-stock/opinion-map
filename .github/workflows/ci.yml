@@ -44,6 +44,7 @@ jobs:
         CLAUDE.md
         backend/README.md
         frontend/README.md
+        eval/kouchou/README.md
       enable_dead_link_check: true
       dead_link_check_paths: |
         docs/**/*.md
@@ -51,6 +52,7 @@ jobs:
         CLAUDE.md
         backend/README.md
         frontend/README.md
+        eval/kouchou/README.md
       # コードの重複。まず報告だけ(しきい値0)。実測は0.6%と低いので、しきい値は後で決める
       # 循環依存と越境 import の検知。TypeScript まで見る検査は、下の architecture ジョブで行う
       enable_architecture_check: true

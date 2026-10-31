@@ -6,6 +6,32 @@ Opinion Mapは、オンラインカンファレンスやワークショップで
 
 > 状態: 開発の初期段階です。参加者が意見を投稿し、カードで見る機能ができています。分析の機能は、これから作ります。
 
+## ドキュメント目次
+
+### 使い方と画面
+
+- [画面遷移](docs/screen-flow.md)：画面の一覧と、画面どうしの行き来の図。
+- [デモ版を試す](#デモ版を試す)：サーバーなしで、スマホのブラウザから試す。
+- [ローカルで試す](#ローカルで試す)：手元で、バックエンドとフロントエンドを動かす。
+
+### 運用
+
+- [本番へのデプロイ](docs/deploy.md)：設定、障害の通知、費用の歯止め、依存の更新。
+
+### 開発
+
+- [backend](backend/README.md)：API、DynamoDB、テスト、静的解析。
+- [frontend](frontend/README.md)：画面、PWA、共通テーマ、E2Eテスト。
+- [広聴AIの分析品質評価](eval/kouchou/README.md)：サンプルの意見で、分析の品質を確かめる。
+
+### 設計と調査
+
+- [ADR-0001: 分析基盤に広聴AIを別プロセスのHTTP APIとして使う](docs/decisions/ADR-0001-analysis-provider.md)
+- [ADR-0002: 運営者の認証にイベントごとの失効できるトークンを使う](docs/decisions/ADR-0002-operator-auth.md)
+- [ADR-0003: 投稿の頻度制限と、投稿者・運営者による投稿の修正](docs/decisions/ADR-0003-spam-and-author-control.md)
+- [分析基盤候補OSSのライセンスと保守状況](docs/oss-candidates-license.md)
+- [広聴AIをイベント時だけ起動する方式の比較](docs/analysis-runtime-options.md)
+
 ## Goals
 
 - 誰もが気軽に意見を投稿できる参加型の場をつくる
@@ -81,16 +107,6 @@ Node.js 22以上が必要である。
 ## Philosophy
 
 The goal is not just to collect opinions or find consensus. It is to turn diverse perspectives into meaningful dialogue and new insights.
-
-## Docs
-
-- [分析基盤候補OSSのライセンスと保守状況](docs/oss-candidates-license.md)
-- [ADR-0001: 分析基盤に広聴AIを別プロセスのHTTP APIとして使う](docs/decisions/ADR-0001-analysis-provider.md)
-- [広聴AIをイベント時だけ起動する方式の比較](docs/analysis-runtime-options.md)
-- [本番へのデプロイ](docs/deploy.md)
-- [画面遷移](docs/screen-flow.md)
-- [ADR-0002: 運営者の認証にイベントごとの失効できるトークンを使う](docs/decisions/ADR-0002-operator-auth.md)
-- [ADR-0003: 投稿の頻度制限と、投稿者・運営者による投稿の修正](docs/decisions/ADR-0003-spam-and-author-control.md)
 
 ## License
 

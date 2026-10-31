@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/uchi-stock/opinion-map/compare/v1.0.0...v1.1.0) (2026-10-31)
+
+
+### Features
+
+* let participants react to opinions with a like ([#55](https://github.com/uchi-stock/opinion-map/issues/55)) ([#66](https://github.com/uchi-stock/opinion-map/issues/66)) ([84faccf](https://github.com/uchi-stock/opinion-map/commit/84faccffa9bcf9edae97c435359d929e77a08a6a))
+
 # 1.0.0 (2026-10-31)
 
 

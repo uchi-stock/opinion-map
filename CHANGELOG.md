@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/uchi-stock/opinion-map/compare/v1.6.0...v1.7.0) (2026-10-31)
+
+
+### Features
+
+* let participants propose topics and the facilitator approve them ([#94](https://github.com/uchi-stock/opinion-map/issues/94)) ([4ee43fd](https://github.com/uchi-stock/opinion-map/commit/4ee43fd3ee099c240a43a56ec2cadd94e6c85150)), closes [#89](https://github.com/uchi-stock/opinion-map/issues/89) [#84](https://github.com/uchi-stock/opinion-map/issues/84) [#88](https://github.com/uchi-stock/opinion-map/issues/88) [#88](https://github.com/uchi-stock/opinion-map/issues/88)
+
 # [1.6.0](https://github.com/uchi-stock/opinion-map/compare/v1.5.0...v1.6.0) (2026-10-31)
 
 

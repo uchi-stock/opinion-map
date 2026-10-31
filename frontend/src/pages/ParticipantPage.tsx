@@ -4,6 +4,8 @@ import type { OpinionList, OpinionResult, PublicSession } from "../api/types.ts"
 import { OpinionCard } from "../components/OpinionCard.tsx";
 import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
 import { ReactionButton } from "../components/ReactionButton.tsx";
+import { StickyBoard, ViewToggle, type ViewMode } from "../components/StickyBoard.tsx";
+import { groupByKind } from "../lib/board.ts";
 import { OpinionForm } from "../components/OpinionForm.tsx";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 
@@ -27,6 +29,7 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
   const [listState, setListState] = useState<ListState>({ status: "loading" });
   // 自分の投稿の鍵。このブラウザにだけある
   const [mine, setMine] = useState<Record<string, string>>(() => loadMyOpinions());
+  const [mode, setMode] = useState<ViewMode>("list");
 
   const loadSession = useCallback(async () => {
     setSessionState({ status: "loading" });
@@ -137,9 +140,12 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
         <section aria-label="投稿された意見">
           <div className="d-flex justify-content-between align-items-center mb-2">
             <h2 className="h5 mb-0">投稿された意見</h2>
-            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void loadList()}>
-              更新
-            </button>
+            <div className="d-flex gap-2">
+              <ViewToggle mode={mode} onChange={setMode} />
+              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void loadList()}>
+                更新
+              </button>
+            </div>
           </div>
           {listState.status === "loading" && <p role="status">読み込んでいます…</p>}
           {listState.status === "error" && (
@@ -150,7 +156,21 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
           {listState.status === "ready" && listState.list.opinions.length === 0 && (
             <p className="text-body-secondary">まだ投稿はありません。</p>
           )}
+          {listState.status === "ready" && mode === "board" && (
+            <StickyBoard
+              groups={groupByKind(listState.list.opinions)}
+              renderActions={(o) => (
+                <ReactionButton
+                  opinionId={o.id}
+                  count={o.reactionCount ?? 0}
+                  disabled={!session.acceptingOpinions}
+                  onChanged={() => void loadList()}
+                />
+              )}
+            />
+          )}
           {listState.status === "ready" &&
+            mode === "list" &&
             [...listState.list.opinions].reverse().map((o) => (
               <div key={o.id}>
                 <OpinionCard

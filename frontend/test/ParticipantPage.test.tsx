@@ -161,3 +161,20 @@ describe("参加者の画面", () => {
     );
   });
 });
+
+describe("ボード表示", () => {
+  it("一覧からボードに切り替えると、種類ごとに付箋が並ぶ", async () => {
+    stubFetch((url) =>
+      url.endsWith("/opinions")
+        ? json({ hidden: false, opinions: [opinion("o1", "駅から遠い", "experience"), opinion("o2", "予約はどうする？", "question")] })
+        : json(SESSION),
+    );
+    render(<ParticipantPage sessionId="s1" />);
+    expect(await screen.findByText("駅から遠い")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "ボード" }));
+    expect(await screen.findByTestId("sticky-board")).toBeInTheDocument();
+    expect(screen.getAllByTestId("sticky-note")).toHaveLength(2);
+    expect(screen.getByRole("region", { name: "経験" })).toBeInTheDocument();
+    expect(screen.queryByTestId("opinion-card")).toBeNull();
+  });
+});

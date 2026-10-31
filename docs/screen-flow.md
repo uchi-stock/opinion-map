@@ -71,7 +71,7 @@ flowchart TD
 
 </details>
 
-![画面遷移（参加者） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-1.png)
+![画面遷移（参加者） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-1.png?3cb5a0e22731bc178c4e7aee1898cb76bde3a5bc)
 
 - 参加者は、ログインなしで使う。
 - イベントの画面は、30秒ごとに自動で更新する。運営者がテーマを開閉すると、追従する。
@@ -106,7 +106,7 @@ flowchart TD
 
 </details>
 
-![画面遷移（運営者の入口とイベント） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-2.png)
+![画面遷移（運営者の入口とイベント） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-2.png?3cb5a0e22731bc178c4e7aee1898cb76bde3a5bc)
 
 - 下位の画面は、すべて「イベント」へ戻るリンクを持つ。
 - 運営者のトークンの人は、`/admin` を開くと、担当のイベントのページへ移る。
@@ -135,7 +135,7 @@ flowchart TD
 
 </details>
 
-![画面遷移（運営者のテーマ） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-3.png)
+![画面遷移（運営者のテーマ） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-3.png?3cb5a0e22731bc178c4e7aee1898cb76bde3a5bc)
 
 - テーマが下書きのときは、警告に「テーマの設定を開く」を添える。公開中にすると、参加者に見える。
 - 共通の枠（アカウントのアイコン、トップページへのリンク）は、すべての管理画面にある。アイコンから、ログアウトできる。

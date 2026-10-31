@@ -23,6 +23,7 @@ import { createDynamoRepositories } from "./repositories/dynamoRepositories.js";
  * - ANALYSIS_BUCKET、ANALYSIS_CLUSTER、ANALYSIS_TASK_DEFINITION、ANALYSIS_CONTAINER、
  *   ANALYSIS_SUBNETS、ANALYSIS_SECURITY_GROUPS(後ろ2つはカンマ区切り): 広聴AIをFargateで動かす設定。
  *   すべて揃っているときだけ、分析のAPIが使える(なければ503)
+ * - ANALYSIS_DAILY_LIMIT、INSIGHT_DAILY_LIMIT: AIの利用の、イベントごと・1日あたりの上限(分析は既定10、案の生成は既定100。0以上の整数)
  * - GEMINI_API_KEY: 共通点・相違点・問いの案を作るために使う（未設定なら、そのAPIは503）
  */
 const tableName = process.env["TABLE_NAME"];
@@ -64,10 +65,24 @@ const analysisProvider =
     : undefined;
 const ownerEmails = (process.env["OWNER_EMAILS"] ?? "").split(",");
 
+/** 環境変数の上限。0以上の整数だけを受け付け、不正な値は既定に戻す */
+const limitFromEnv = (name: string): number | undefined => {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+};
+const analysisDailyLimit = limitFromEnv("ANALYSIS_DAILY_LIMIT");
+const insightDailyLimit = limitFromEnv("INSIGHT_DAILY_LIMIT");
+
 const app = createApp({
   repos: createDynamoRepositories(new DynamoKvStore(client, tableName)),
   adminToken: process.env["ADMIN_TOKEN"],
   ...(allowedOrigin ? { allowedOrigin } : {}),
+  dailyLimits: {
+    ...(analysisDailyLimit === undefined ? {} : { analysis: analysisDailyLimit }),
+    ...(insightDailyLimit === undefined ? {} : { insight: insightDailyLimit }),
+  },
   ...(googleClientId && sessionSecret
     ? { ownerLogin: { googleClientId, sessionSecret, ownerEmails } }
     : {}),

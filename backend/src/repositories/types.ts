@@ -77,6 +77,16 @@ export interface ProposalRepository {
   listByEvent(eventId: string): Promise<ProposalRecord[]>;
 }
 
+export interface UsageRepository {
+  /**
+   * 1日あたりの利用を1回分、使う。上限に達していれば使わず、allowed を false にする。
+   * 並行して呼ばれても、上限を超えない(DynamoDB では、1回分ごとの印を、条件付きで作る)。
+   */
+  consume(scope: string, dayKey: string, limit: number): Promise<{ allowed: boolean; used: number }>;
+  /** いまの利用回数(読むだけ) */
+  used(scope: string, dayKey: string): Promise<number>;
+}
+
 export interface AdminRepository {
   get(email: string): Promise<AdminRecord | undefined>;
   /** 古い順 */
@@ -104,5 +114,6 @@ export interface Repositories {
   admins: AdminRepository;
   reactions: ReactionRepository;
   proposals: ProposalRepository;
+  usage: UsageRepository;
   insights: InsightRepository;
 }

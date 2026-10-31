@@ -14,6 +14,7 @@ export function createInMemoryRepositories(): Repositories {
   const admins = new Map<string, AdminRecord>();
   const reactions = new Map<string, ReactionRecord>();
   const proposals = new Map<string, ProposalRecord>();
+  const usage = new Map<string, number>();
   const reactionKey = (opinionId: string, voterHash: string) => `${opinionId}#${voterHash}`;
   const insights = new Map<string, InsightRecord>();
 
@@ -132,6 +133,18 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    usage: {
+      async consume(scope, dayKey, limit) {
+        const key = `${scope}#${dayKey}`;
+        const used = usage.get(key) ?? 0;
+        if (used >= limit) return { allowed: false, used };
+        usage.set(key, used + 1);
+        return { allowed: true, used: used + 1 };
+      },
+      async used(scope, dayKey) {
+        return usage.get(`${scope}#${dayKey}`) ?? 0;
       },
     },
     proposals: {

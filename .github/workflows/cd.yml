@@ -60,6 +60,9 @@ jobs:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       OWNER_EMAILS: ${{ secrets.OWNER_EMAILS || vars.OWNER_EMAILS }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # AIの利用の、イベントごと・1日あたりの上限。未登録なら既定(分析10、案の生成100)
+      ANALYSIS_DAILY_LIMIT: ${{ vars.ANALYSIS_DAILY_LIMIT }}
+      INSIGHT_DAILY_LIMIT: ${{ vars.INSIGHT_DAILY_LIMIT }}
       STACK_NAME: opinion-map-prod
     steps:
       - name: SESSION_SECRET がなければ、AWS のシークレットキーから作る

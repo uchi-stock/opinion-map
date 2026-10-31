@@ -174,6 +174,14 @@ export interface OperatorToken {
   revokedAt?: string;
 }
 
+/** AIの利用の、イベントごと・1日あたりの使用量と上限 */
+export interface UsageSummary {
+  day: string;
+  resetsAt: string;
+  analysis: { used: number; limit: number };
+  insight: { used: number; limit: number };
+}
+
 export interface InsightContent {
   commonPoints: string[];
   differences: string[];

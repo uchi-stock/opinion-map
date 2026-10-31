@@ -27,6 +27,8 @@ provider:
     ADMIN_TOKEN: ${env:ADMIN_TOKEN, ''}
     # 共通点・相違点・問いの案に使う。なければ、そのAPIは使えない(503)
     GEMINI_API_KEY: ${env:GEMINI_API_KEY, ''}
+    ANALYSIS_DAILY_LIMIT: ${env:ANALYSIS_DAILY_LIMIT, ''}
+    INSIGHT_DAILY_LIMIT: ${env:INSIGHT_DAILY_LIMIT, ''}
     # 広聴AIをFargateで動かす設定。サブネットとセキュリティグループは、デプロイのワークフローが
     # 既定のVPCから調べて渡す。空なら、分析のAPIは使えない(503)
     ANALYSIS_BUCKET: !Ref AnalysisBucket

@@ -4,6 +4,7 @@ import type { EventRecord, EventStatus, SessionFormat, SessionRecord } from "../
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
+import { UsageSection } from "../../components/admin/UsageSection.tsx";
 import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
 import { NotesOverview } from "../../components/admin/NotesOverview.tsx";
 import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
@@ -80,6 +81,7 @@ function EventContent({
         </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
+      <UsageSection api={api} eventId={eventId} describeError={describeError} />
       <NotesOverview api={api} eventId={eventId} eventName={state.data.event.name} describeError={describeError} />
       <ProposalAdminSection
         api={api}

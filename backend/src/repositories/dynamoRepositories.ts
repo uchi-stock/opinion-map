@@ -206,6 +206,32 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
         await store.put(tokenItem(token));
       },
     },
+    usage: {
+      // 1回分ごとに、番号つきの印(USAGE#範囲#日#番号)を、条件付きで作る。最初に作れた番号が、その回の番号になる。
+      // 上限までの番号がすべて使われていれば、上限に達している。同時に呼ばれても、同じ番号は2回作れない
+      async consume(scope, dayKey, limit) {
+        const day = `USAGE#${scope}#${dayKey}`;
+        // 結果整合の件数を、出発点の目安にする(古くても、あとで順に確かめる)
+        let n = Math.min(await store.countByGsi1(day), limit) + 1;
+        n = Math.max(1, n - 1);
+        for (; n <= limit; n++) {
+          try {
+            await store.put(
+              { pk: `${day}#${n}`, gsi1pk: day, gsi1sk: String(n).padStart(6, "0"), ttl: nowSeconds() + 3 * 24 * 60 * 60, data: { n } },
+              { type: "notExists" },
+            );
+            return { allowed: true, used: n };
+          } catch (error) {
+            const name = error instanceof Error ? `${error.name}:${error.message}` : "";
+            if (!name.includes("ConditionalCheckFailed")) throw error;
+          }
+        }
+        return { allowed: false, used: limit };
+      },
+      async used(scope, dayKey) {
+        return store.countByGsi1(`USAGE#${scope}#${dayKey}`);
+      },
+    },
     proposals: {
       async create(proposal) {
         await store.put(proposalItem(proposal), { type: "notExists" });

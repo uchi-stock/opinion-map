@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/uchi-stock/opinion-map/compare/v1.14.0...v1.15.0) (2026-10-31)
+
+
+### Features
+
+* tell participants when an event has not started yet ([#125](https://github.com/uchi-stock/opinion-map/issues/125)) ([8a46a7a](https://github.com/uchi-stock/opinion-map/commit/8a46a7a5ebcfe5be7483495ee4dfb562b41348e2)), closes [#124](https://github.com/uchi-stock/opinion-map/issues/124)
+
 # [1.14.0](https://github.com/uchi-stock/opinion-map/compare/v1.13.0...v1.14.0) (2026-10-31)
 
 

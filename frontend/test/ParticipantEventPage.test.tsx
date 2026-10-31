@@ -119,3 +119,17 @@ describe("自動更新", () => {
     }
   });
 });
+
+describe("テーマの一覧", () => {
+  it("公開中のテーマを、すべて、リストで見せる。投稿中と閲覧のみの印が付く", async () => {
+    backend();
+    render(<ParticipantEventPage eventId="e1" />);
+    await screen.findByText("Bの問い");
+    const nav = within(screen.getByRole("navigation", { name: "テーマの切り替え" }));
+    const items = nav.getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(within(items[0]!).getByText("閲覧のみ")).toBeInTheDocument();
+    expect(within(items[1]!).getByText("投稿中")).toBeInTheDocument();
+    expect(nav.getByText("テーマ（2件）")).toBeInTheDocument();
+  });
+});

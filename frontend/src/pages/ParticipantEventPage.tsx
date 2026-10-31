@@ -94,33 +94,39 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <p className="text-body-secondary small mb-1">{event.name}</p>
       <nav aria-label="テーマの切り替え" className="mb-3">
-        <div className="d-flex flex-wrap gap-2 align-items-center">
-          {event.sessions.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`btn btn-sm ${s.id === selected.id ? "btn-primary" : "btn-outline-primary"}`}
-              aria-pressed={s.id === selected.id}
-              onClick={() => setPicked(s.id)}
-            >
-              {s.title}
-              {s.isOpen ? (
-                <span className="badge text-bg-light ms-1">投稿中</span>
-              ) : (
-                <span className="badge text-bg-secondary ms-1">閲覧のみ</span>
-              )}
-              {s.opinionCount !== undefined && <span className="ms-1 small">（{s.opinionCount}件）</span>}
-              {s.viewers !== undefined && (
-                <span className="ms-1 small" aria-label="見ている人の目安">
-                  ・{s.viewers === "few" ? "見ている人は少数" : `見ている人は約${s.viewers}人`}
-                </span>
-              )}
-            </button>
-          ))}
-          <button type="button" className="btn btn-sm btn-outline-secondary ms-auto" onClick={() => void load()}>
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <h2 className="h6 mb-0">テーマ（{event.sessions.length}件）</h2>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void load()}>
             テーマを更新
           </button>
         </div>
+        <ul className="list-group">
+          {event.sessions.map((s) => (
+            <li key={s.id} className="list-group-item p-0">
+              <button
+                type="button"
+                className={`list-group-item list-group-item-action border-0 d-flex justify-content-between align-items-center gap-2 ${s.id === selected.id ? "active" : ""}`}
+                aria-pressed={s.id === selected.id}
+                onClick={() => setPicked(s.id)}
+              >
+                <span className="text-start">
+                  {s.title}
+                  {s.opinionCount !== undefined && <span className="ms-1 small">（{s.opinionCount}件）</span>}
+                  {s.viewers !== undefined && (
+                    <span className="ms-1 small" aria-label="見ている人の目安">
+                      ・{s.viewers === "few" ? "見ている人は少数" : `見ている人は約${s.viewers}人`}
+                    </span>
+                  )}
+                </span>
+                {s.isOpen ? (
+                  <span className="badge text-bg-light flex-shrink-0">投稿中</span>
+                ) : (
+                  <span className="badge text-bg-secondary flex-shrink-0">閲覧のみ</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
         {!selected.acceptingOpinions && (
           <p className="small text-body-secondary mt-2 mb-0">
             このテーマは、いま投稿を受け付けていません。意見を見ることはできます。

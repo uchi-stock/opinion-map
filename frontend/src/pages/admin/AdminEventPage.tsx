@@ -54,7 +54,7 @@ function EventContent({
       <InviteSection eventId={eventId} />
       <hr />
       <h2 className="h6">テーマ（セッション）</h2>
-      <CurrentThemeNote event={state.data.event} api={api} describeError={describeError} onChanged={reload} />
+      <ThemeRadioGroup event={state.data.event} sessions={state.data.sessions} api={api} describeError={describeError} onChanged={reload} />
       {state.data.sessions.length === 0 && <p className="text-body-secondary">まだセッションがありません。</p>}
       {state.data.sessions.map((session) => (
         <div key={session.id} className="mb-2">
@@ -70,14 +70,6 @@ function EventContent({
             <span className="badge text-bg-secondary">{SESSION_STATUS_LABELS[session.status]}</span>
           </div>
         </a>
-        <CurrentThemeButton
-          api={api}
-          event={state.data.event}
-          sessions={state.data.sessions}
-          session={session}
-          describeError={describeError}
-          onChanged={reload}
-        />
         </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
@@ -125,86 +117,35 @@ function selectedOpenIds(event: EventRecord): string[] | undefined {
   return undefined;
 }
 
-function CurrentThemeNote({
-  event,
-  api,
-  describeError,
-  onChanged,
-}: {
-  event: EventRecord;
-  api: AdminApi;
-  describeError: (e: unknown) => string;
-  onChanged: () => Promise<void>;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const selected = selectedOpenIds(event) !== undefined;
+const NONE = "__none__";
 
-  async function clear() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.updateEvent(event.id, { openSessionIds: null });
-      await onChanged();
-    } catch (e) {
-      setError(describeError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="small text-body-secondary mb-2">
-      <p className="mb-1">
-        {selected
-          ? "参加者が投稿できるのは、「開いている」テーマだけです。複数のテーマを同時に開けます。閉じたテーマは、見るだけになります。"
-          : "いまは、公開中のテーマすべてに投稿できます。テーマの下のボタンで、開くテーマを選ぶと、そのテーマだけに投稿できます。"}
-      </p>
-      {selected && (
-        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={busy} onClick={() => void clear()}>
-          選択を解除する（公開中のテーマすべてを開く）
-        </button>
-      )}
-      {error && (
-        <span className="text-danger ms-2" role="alert">
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/** 「開く」「閉じる」。公開中のテーマだけ。複数を同時に開ける */
-function CurrentThemeButton({
-  api,
+/** 投稿を受け付けるテーマ。公開中のテーマのどれか1つか、「すべて閉じる」を、ラジオボタンで選ぶ */
+function ThemeRadioGroup({
   event,
   sessions,
-  session,
+  api,
   describeError,
   onChanged,
 }: {
-  api: AdminApi;
   event: EventRecord;
   sessions: SessionRecord[];
-  session: SessionRecord;
+  api: AdminApi;
   describeError: (e: unknown) => string;
   onChanged: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const open = isOpenSession(event, sessions, session);
+  const selected = selectedOpenIds(event);
+  const publishedThemes = sessions.filter((s) => s.status !== "draft");
+  // 1つだけ開いているとき、そのテーマ。なにも開いていなければ「すべて閉じる」。それ以外(未選択、複数)は、どれも選ばれていない
+  const value = selected === undefined ? null : selected.length === 0 ? NONE : selected.length === 1 ? selected[0]! : null;
 
-  async function toggle() {
+  async function choose(next: string) {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      // 選択がまだ無いときは、いま開いているテーマ(公開中のすべて)を出発点にする
-      const current = new Set(sessions.filter((s) => isOpenSession(event, sessions, s)).map((s) => s.id));
-      if (open) current.delete(session.id);
-      else current.add(session.id);
-      await api.updateEvent(event.id, { openSessionIds: [...current] });
+      await api.updateEvent(event.id, { openSessionIds: next === NONE ? [] : [next] });
       await onChanged();
     } catch (e) {
       setError(describeError(e));
@@ -213,25 +154,56 @@ function CurrentThemeButton({
     }
   }
 
-  if (session.status === "draft") return null;
+  if (publishedThemes.length === 0) {
+    return <p className="small text-body-secondary mb-2">公開中のテーマがありません。テーマのページで「公開中」にすると、ここで選べます。</p>;
+  }
+
   return (
-    <div className="mt-1 ms-1 small">
-      <button
-        type="button"
-        className={`btn btn-sm ${open ? "btn-outline-secondary" : "btn-outline-primary"}`}
-        disabled={busy || session.status === "closed"}
-        onClick={() => void toggle()}
-        aria-label={`${session.title}を${open ? "閉じる" : "開く"}`}
-      >
-        {open ? "閉じる" : "開く"}
-      </button>
-      {session.status === "closed" && <span className="ms-2 text-body-secondary">終了したテーマです</span>}
+    <fieldset className="mb-3" disabled={busy}>
+      <legend className="fs-6 fw-bold">投稿を受け付けるテーマ</legend>
+      <p className="small text-body-secondary mb-2">
+        {selected === undefined
+          ? "いまは、公開中のテーマすべてに投稿できます。1つを選ぶと、そのテーマだけに投稿できます。"
+          : selected.length > 1
+            ? "いまは、複数のテーマが開いています。1つを選ぶと、そのテーマだけになります。"
+            : "選んだテーマにだけ投稿できます。ほかのテーマは、見るだけになります。"}
+      </p>
+      {publishedThemes.map((s) => (
+        <div className="form-check" key={s.id}>
+          <input
+            className="form-check-input"
+            type="radio"
+            name="open-theme"
+            id={`open-theme-${s.id}`}
+            checked={value === s.id}
+            disabled={s.status === "closed"}
+            onChange={() => void choose(s.id)}
+          />
+          <label className="form-check-label" htmlFor={`open-theme-${s.id}`}>
+            {s.title}
+            {s.status === "closed" && <span className="ms-2 text-body-secondary">（終了したテーマ）</span>}
+          </label>
+        </div>
+      ))}
+      <div className="form-check">
+        <input
+          className="form-check-input"
+          type="radio"
+          name="open-theme"
+          id="open-theme-none"
+          checked={value === NONE}
+          onChange={() => void choose(NONE)}
+        />
+        <label className="form-check-label" htmlFor="open-theme-none">
+          すべて閉じる（どのテーマにも投稿できません）
+        </label>
+      </div>
       {error && (
-        <span className="text-danger ms-2" role="alert">
+        <p className="text-danger small mt-1 mb-0" role="alert">
           {error}
-        </span>
+        </p>
       )}
-    </div>
+    </fieldset>
   );
 }
 

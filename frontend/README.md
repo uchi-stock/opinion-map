@@ -78,3 +78,14 @@ npm test
 npm run lint
 npm run build
 ```
+
+## E2Eテスト
+
+Playwright で、デモ版（バックエンドがブラウザの中で動く）を通して確かめる。AWS は要らない。
+
+- 実行: `npm run test:e2e`（デモ版のビルドと配信は、`playwright.config.ts` が行う）
+- 対象: トップページ、参加者の投稿・一覧・いいね、管理画面のイベント一覧
+- iPhone 相当の幅（iPhone 13）と、デスクトップの両方で実行する。横にはみ出していないことも確かめる
+- CI は chromium だけを入れるため、WebKit は使わない。iPhone は chromium で幅と操作を再現する
+- Google ログインの画面は、外部サービスのため対象外にしている
+- スクリーンショットは、PR のコメントと Job Summary に画像で出る。スマホで確認できる

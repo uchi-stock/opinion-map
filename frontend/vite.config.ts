@@ -29,6 +29,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./test/setup.ts"],
+    // e2e/ は Playwright が実行する
+    exclude: ["e2e/**", "node_modules/**", "dist*/**"],
     coverage: {
       provider: "v8",
       // 閾値の判定(CI)が、集計のJSONを読む。閾値を使うときは、設定側で出力する必要がある

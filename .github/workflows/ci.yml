@@ -29,6 +29,8 @@ jobs:
       enable_auto_merge: false
       # 静的チェック(dev-standardsの標準)。違反するコミットは、CIで止まる
       enable_standards_check: true
+      # 画面のE2E(Playwright。デモ版を使うのでAWSは不要)。スクリーンショットはPRのコメントとJob Summaryに画像で出る
+      enable_e2e_test: true
       # 秘密情報の検知(enable_secret_scan)は、gitleaks-action が組織のリポジトリでライセンスキーを要るため使わない。
       # 代わりに、下の secret-scan ジョブで gitleaks の CLI(OSS)を直接実行する(#97)
       enable_text_lint: true

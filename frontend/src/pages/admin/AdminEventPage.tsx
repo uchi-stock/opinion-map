@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { EventRecord, EventStatus, SessionFormat } from "../../api/types.ts";
+import type { EventRecord, EventStatus, SessionFormat, SessionRecord } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
+import { CopyField } from "../../components/admin/CopyField.tsx";
+import { QrCode } from "../../components/admin/QrCode.tsx";
 import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
-import { EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
+import { eventInviteUrl, EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
@@ -46,23 +48,123 @@ function EventContent({
     <>
       <EventForm api={api} event={state.data.event} describeError={describeError} onSaved={reload} />
       <hr />
-      <h2 className="h6">セッション</h2>
+      <InviteSection eventId={eventId} />
+      <hr />
+      <h2 className="h6">テーマ（セッション）</h2>
+      <CurrentThemeNote event={state.data.event} />
       {state.data.sessions.length === 0 && <p className="text-body-secondary">まだセッションがありません。</p>}
       {state.data.sessions.map((session) => (
+        <div key={session.id} className="mb-2">
         <a
-          key={session.id}
           href={withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(session.id)}`)}
-          className="card mb-2 text-decoration-none"
+          className="card text-decoration-none"
         >
           <div className="card-body py-2 d-flex justify-content-between align-items-center">
-            <span className="text-body">{session.title}</span>
+            <span className="text-body">
+              {session.title}
+              {state.data.event.currentSessionId === session.id && <span className="badge text-bg-primary ms-2">いまのテーマ</span>}
+            </span>
             <span className="badge text-bg-secondary">{SESSION_STATUS_LABELS[session.status]}</span>
           </div>
         </a>
+        <CurrentThemeButton
+          api={api}
+          event={state.data.event}
+          session={session}
+          describeError={describeError}
+          onChanged={reload}
+        />
+        </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
       <OperatorTokenSection api={api} eventId={eventId} describeError={describeError} />
     </>
+  );
+}
+
+/** 参加者に配る招待URL。イベントごとに1つで、テーマは運営者が切り替える */
+function InviteSection({ eventId }: { eventId: string }) {
+  const url = eventInviteUrl(eventId);
+  return (
+    <section aria-label="参加者の招待URL">
+      <h2 className="h6">参加者の招待URL</h2>
+      <p className="small text-body-secondary">
+        イベントごとに1つです。参加者はこのURLから、いまのテーマに投稿でき、すべてのテーマを見られます。
+      </p>
+      <CopyField label="招待URL" value={url} />
+      <div className="mb-3">
+        <QrCode value={url} label="招待URLのQRコード" />
+      </div>
+    </section>
+  );
+}
+
+function CurrentThemeNote({ event }: { event: EventRecord }) {
+  return (
+    <p className="small text-body-secondary">
+      {event.currentSessionId
+        ? "参加者が投稿できるのは、「いまのテーマ」だけです。切り替えるには、テーマの下のボタンを押します。"
+        : "いまのテーマが未設定です。公開中のテーマすべてに投稿できます。1つ選ぶと、そのテーマだけに投稿できます。"}
+    </p>
+  );
+}
+
+/** 「いまのテーマにする」「解除する」。公開中のテーマだけ選べる */
+function CurrentThemeButton({
+  api,
+  event,
+  session,
+  describeError,
+  onChanged,
+}: {
+  api: AdminApi;
+  event: EventRecord;
+  session: SessionRecord;
+  describeError: (e: unknown) => string;
+  onChanged: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isCurrent = event.currentSessionId === session.id;
+
+  async function change(currentSessionId: string | null) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateEvent(event.id, { currentSessionId });
+      await onChanged();
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (session.status === "draft") return null;
+  return (
+    <div className="mt-1 ms-1 small">
+      {isCurrent ? (
+        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={busy} onClick={() => void change(null)}>
+          いまのテーマを解除する
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-primary"
+          disabled={busy}
+          onClick={() => void change(session.id)}
+          aria-label={`${session.title}をいまのテーマにする`}
+        >
+          いまのテーマにする
+        </button>
+      )}
+      {error && (
+        <span className="text-danger ms-2" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
 

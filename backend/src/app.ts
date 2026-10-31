@@ -296,6 +296,12 @@ export function createApp(options: AppOptions) {
     },
     {
       method: "GET",
+      pattern: /^\/events\/(?<id>[^/]+)\/public$/,
+      admin: false,
+      handle: async ({ params }) => ({ status: 200, data: await opinions.getPublicEvent(params["id"]!) }),
+    },
+    {
+      method: "GET",
       pattern: /^\/sessions\/(?<id>[^/]+)$/,
       admin: false,
       handle: async ({ params }) => ({ status: 200, data: await opinions.getPublicSession(params["id"]!) }),

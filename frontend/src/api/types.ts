@@ -9,6 +9,18 @@ export interface PublicSession {
   eventName: string;
   acceptingOpinions: boolean;
   showOpinions: boolean;
+  eventId: string;
+  /** いま参加者が投稿できるテーマとして、運営者が選んでいるか */
+  isCurrent: boolean;
+}
+
+/** 招待URL(イベントごとに1つ)から開く画面の情報 */
+export interface PublicEvent {
+  id: string;
+  name: string;
+  description: string;
+  currentSessionId: string | null;
+  sessions: PublicSession[];
 }
 
 export interface PublicOpinion {
@@ -57,6 +69,7 @@ export interface EventRecord {
   name: string;
   description: string;
   status: EventStatus;
+  currentSessionId?: string;
   createdAt: string;
   updatedAt: string;
 }

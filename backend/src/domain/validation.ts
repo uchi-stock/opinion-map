@@ -87,6 +87,8 @@ export interface EventPatch {
   name?: string;
   description?: string;
   status?: EventStatus;
+  /** いまのテーマ。null で解除する(従来の動きに戻る) */
+  currentSessionId?: string | null;
 }
 export function parseEventPatch(body: unknown): EventPatch {
   const obj = asObject(body);
@@ -100,6 +102,13 @@ export function parseEventPatch(body: unknown): EventPatch {
   if (description !== undefined) patch.description = description;
   const status = oneOf(obj, "status", "イベントの状態", EVENT_STATUSES, { required: false });
   if (status !== undefined) patch.status = status;
+  if ("currentSessionId" in obj) {
+    const value = obj["currentSessionId"];
+    if (value !== null && (typeof value !== "string" || value.trim() === "" || value.length > 128)) {
+      throw badRequest("invalid_current_session", "いまのテーマの指定が正しくありません");
+    }
+    patch.currentSessionId = value as string | null;
+  }
   return patch;
 }
 

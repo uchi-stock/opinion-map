@@ -31,6 +31,10 @@ jobs:
       enable_standards_check: true
       # 画面のE2E(Playwright。デモ版を使うのでAWSは不要)。スクリーンショットはPRのコメントとJob Summaryに画像で出る
       enable_e2e_test: true
+      # mermaid図(画面遷移)を、PR差分ビューで見えるよう、画像にして埋め込む。図を足したら、ここに登録する
+      enable_mermaid_render: true
+      mermaid_doc_paths: |
+        docs/screen-flow.md
       # 秘密情報の検知(enable_secret_scan)は、gitleaks-action が組織のリポジトリでライセンスキーを要るため使わない。
       # 代わりに、下の secret-scan ジョブで gitleaks の CLI(OSS)を直接実行する(#97)
       enable_text_lint: true

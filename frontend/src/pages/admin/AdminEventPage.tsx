@@ -50,39 +50,10 @@ function EventContent({
         <h2 className="h6 mb-0">テーマ</h2>
         <a className="btn icon-btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`} aria-label="テーマを追加" title="テーマを追加">➕</a>
       </div>
-      <ThemeRadioGroup event={state.data.event} sessions={state.data.sessions} api={api} describeError={describeError} onChanged={reload} />
-      {state.data.sessions.length === 0 && <p className="text-body-secondary">まだテーマがありません。</p>}
-      {state.data.sessions.map((session) => (
-        <div key={session.id} className="mb-2">
-        <a
-          href={withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(session.id)}`)}
-          className="card text-decoration-none"
-        >
-          <div className="card-body py-2 d-flex justify-content-between align-items-center">
-            <span className="text-body">
-              {session.title}
-              {isOpenSession(state.data.event, state.data.sessions, session) && <span className="badge text-bg-primary ms-2">開いている</span>}
-            </span>
-            <span className={`badge ${session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
-              {SESSION_STATUS_LABELS[session.status]}
-            </span>
-          </div>
-        </a>
-        {session.status === "draft" && (
-          <p className="small text-warning-emphasis mb-1">参加者には見えません。テーマのページで「公開中」にすると見えます。</p>
-        )}
-        </div>
-      ))}
+      <ThemeList event={state.data.event} sessions={state.data.sessions} eventId={eventId} api={api} describeError={describeError} onChanged={reload} />
       <EventMenu api={api} event={state.data.event} />
     </>
   );
-}
-
-/** いま開いているテーマか。選ばれていなければ、公開中のテーマすべてが開いている */
-export function isOpenSession(event: EventRecord, sessions: SessionRecord[], session: SessionRecord): boolean {
-  if (session.status !== "active") return false;
-  const selected = selectedOpenIds(event);
-  return selected === undefined ? sessions.some((s) => s.id === session.id) : selected.includes(session.id);
 }
 
 function selectedOpenIds(event: EventRecord): string[] | undefined {
@@ -157,16 +128,21 @@ function EventMenu({ api, event }: { api: AdminApi; event: EventRecord }) {
 
 const NONE = "__none__";
 
-/** 投稿を受け付けるテーマ。公開中のテーマのどれか1つか、「すべて閉じる」を、ラジオボタンで選ぶ */
-function ThemeRadioGroup({
+/**
+ * テーマの一覧。1行に、ラジオボタン(投稿を受け付けるテーマ)、テーマ名(タップで、テーマのページへ)、状態を並べる。
+ * 選べるのは、公開中のテーマのどれか1つか、「すべて閉じる」。下書きには、ラジオを出さない。
+ */
+function ThemeList({
   event,
   sessions,
+  eventId,
   api,
   describeError,
   onChanged,
 }: {
   event: EventRecord;
   sessions: SessionRecord[];
+  eventId: string;
   api: AdminApi;
   describeError: (e: unknown) => string;
   onChanged: () => Promise<void>;
@@ -174,9 +150,10 @@ function ThemeRadioGroup({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selected = selectedOpenIds(event);
-  const publishedThemes = sessions.filter((s) => s.status !== "draft");
   // 1つだけ開いているとき、そのテーマ。なにも開いていなければ「すべて閉じる」。それ以外(未選択、複数)は、どれも選ばれていない
   const value = selected === undefined ? null : selected.length === 0 ? NONE : selected.length === 1 ? selected[0]! : null;
+  const hasDraft = sessions.some((s) => s.status === "draft");
+  const hasPublished = sessions.some((s) => s.status !== "draft");
 
   async function choose(next: string) {
     if (busy) return;
@@ -192,52 +169,60 @@ function ThemeRadioGroup({
     }
   }
 
-  if (publishedThemes.length === 0) {
-    return <p className="small text-body-secondary mb-2">公開中のテーマがありません。テーマのページで「公開中」にすると、ここで選べます。</p>;
-  }
+  if (sessions.length === 0) return <p className="text-body-secondary">まだテーマがありません。</p>;
 
   return (
-    <fieldset className="mb-3" disabled={busy}>
-      <legend className="fs-6 fw-bold">投稿を受け付けるテーマ</legend>
-      <p className="small text-body-secondary mb-2">
-        {selected === undefined
-          ? "いまは、公開中のテーマすべてに投稿できます。1つを選ぶと、そのテーマだけに投稿できます。"
-          : selected.length > 1
-            ? "いまは、複数のテーマが開いています。1つを選ぶと、そのテーマだけになります。"
-            : "選んだテーマにだけ投稿できます。ほかのテーマは、見るだけになります。"}
-      </p>
-      {publishedThemes.map((s) => (
-        <div className="form-check" key={s.id}>
-          <input
-            className="form-check-input"
-            type="radio"
-            name="open-theme"
-            id={`open-theme-${s.id}`}
-            checked={value === s.id}
-            disabled={s.status === "closed"}
-            onChange={() => void choose(s.id)}
-          />
-          <label className="form-check-label" htmlFor={`open-theme-${s.id}`}>
-            {s.title}
-            {s.status === "closed" && <span className="ms-2 text-body-secondary">（終了したテーマ）</span>}
+    <fieldset disabled={busy} className="mb-3">
+      <legend className="visually-hidden">投稿を受け付けるテーマ</legend>
+      <div className="list-group">
+        {sessions.map((s) => (
+          <div className="list-group-item d-flex align-items-center gap-2" key={s.id}>
+            {s.status === "draft" ? (
+              <span className="flex-shrink-0" style={{ width: "1.25em" }} aria-hidden="true" />
+            ) : (
+              <input
+                className="form-check-input mt-0 flex-shrink-0"
+                type="radio"
+                name="open-theme"
+                aria-label={s.title}
+                title="ここに投稿を受け付ける"
+                checked={value === s.id}
+                disabled={s.status === "closed"}
+                onChange={() => void choose(s.id)}
+              />
+            )}
+            <a
+              className="flex-grow-1 text-body text-decoration-none text-break"
+              href={withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(s.id)}`)}
+            >
+              {s.title}
+            </a>
+            <span className={`badge flex-shrink-0 ${s.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
+              {SESSION_STATUS_LABELS[s.status]}
+            </span>
+          </div>
+        ))}
+        {hasPublished && (
+          <label className="list-group-item d-flex align-items-center gap-2 mb-0">
+            <input
+              className="form-check-input mt-0 flex-shrink-0"
+              type="radio"
+              name="open-theme"
+              aria-label="すべて閉じる（どのテーマにも投稿できません）"
+              checked={value === NONE}
+              onChange={() => void choose(NONE)}
+            />
+            <span aria-hidden="true">🔒 すべて閉じる</span>
           </label>
-        </div>
-      ))}
-      <div className="form-check">
-        <input
-          className="form-check-input"
-          type="radio"
-          name="open-theme"
-          id="open-theme-none"
-          checked={value === NONE}
-          onChange={() => void choose(NONE)}
-        />
-        <label className="form-check-label" htmlFor="open-theme-none">
-          すべて閉じる（どのテーマにも投稿できません）
-        </label>
+        )}
       </div>
-      <p className="small text-body-secondary mt-1 mb-0">
-        公開中のイベントは、トップページから、誰でも参加できます。不審な投稿が続くときは、「すべて閉じる」で、投稿を止められます（意見を見ることはできます）。
+      <p className="small text-body-secondary mt-2 mb-0">
+        {selected === undefined
+          ? "いまは、公開中のテーマすべてに投稿できます。ラジオで選ぶと、そのテーマだけになります。"
+          : selected.length > 1
+            ? "いまは、複数のテーマが開いています。ラジオで1つを選ぶと、そのテーマだけになります。"
+            : "選んだテーマにだけ投稿できます。不審な投稿が続くときは、「すべて閉じる」で止められます。"}
+        {hasDraft && " 下書きは、参加者に見えません。テーマのページの設定で「公開中」にします。"}
       </p>
       {error && (
         <p className="text-danger small mt-1 mb-0" role="alert">
@@ -247,4 +232,3 @@ function ThemeRadioGroup({
     </fieldset>
   );
 }
-

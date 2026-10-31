@@ -4,6 +4,7 @@ import type { EventRecord, EventStatus, SessionFormat, SessionRecord } from "../
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
+import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
 import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
 import { eventInviteUrl, EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -78,6 +79,13 @@ function EventContent({
         </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
+      <ProposalAdminSection
+        api={api}
+        event={state.data.event}
+        sessions={state.data.sessions}
+        describeError={describeError}
+        onChanged={reload}
+      />
       <OperatorTokenSection api={api} eventId={eventId} describeError={describeError} />
     </>
   );

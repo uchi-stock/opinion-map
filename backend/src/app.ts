@@ -3,6 +3,8 @@ import {
   parseEventPatch,
   parseEditKeyBody,
   parseReaction,
+  parseProposalCreate,
+  parseProposalDecision,
   parseModeration,
   parseOpinionCreate,
   parseOpinionEdit,
@@ -19,6 +21,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { createProposalService } from "./services/proposalService.js";
 import { createAdminService } from "./services/adminService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
 import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
@@ -106,6 +109,7 @@ export function createApp(options: AppOptions) {
   const sessions = createSessionService(ctx);
   const opinions = createOpinionService(ctx, options.opinionRateLimit);
   const operatorTokens = createOperatorTokenService(ctx);
+  const proposals = createProposalService(ctx);
   const login = options.ownerLogin;
   const admins = createAdminService(ctx, login?.ownerEmails ?? []);
   if (login && login.sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
@@ -292,6 +296,45 @@ export function createApp(options: AppOptions) {
       handle: async ({ params, body }) => ({
         status: 200,
         data: await sessions.update(params["id"]!, parseSessionPatch(body)),
+      }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/events\/(?<id>[^/]+)\/proposals$/,
+      admin: false,
+      handle: async ({ params, body }) => {
+        const result = await proposals.submit(params["id"]!, parseProposalCreate(body));
+        return { status: result.created ? 201 : 200, data: { proposal: result.proposal, duplicate: !result.created } };
+      },
+    },
+    {
+      method: "GET",
+      pattern: /^\/events\/(?<id>[^/]+)\/proposals$/,
+      admin: false,
+      handle: async ({ params, principal }) => {
+        // 運営者は、担当のイベントの提案を、すべて見られる
+        const isAdmin = principal?.kind === "owner" || (principal?.kind === "operator" && principal.eventId === params["id"]);
+        if (isAdmin) return { status: 200, data: { accepting: true, proposals: await proposals.listForAdmin(params["id"]!) } };
+        return { status: 200, data: await proposals.listForParticipant(params["id"]!) };
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/proposals\/(?<id>[^/]+)\/reaction$/,
+      admin: false,
+      handle: async ({ params, body }) => {
+        const { voterId, reacted } = parseReaction(body);
+        return { status: 200, data: await proposals.react(params["id"]!, voterId, reacted) };
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/proposals\/(?<id>[^/]+)\/decision$/,
+      admin: true,
+      eventIdOf: (p) => proposals.eventIdOf(p["id"]!),
+      handle: async ({ params, body }) => ({
+        status: 200,
+        data: await proposals.decide(params["id"]!, parseProposalDecision(body)),
       }),
     },
     {

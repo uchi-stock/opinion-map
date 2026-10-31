@@ -1,6 +1,6 @@
 import type { InsightRecord } from "../../../backend/src/insights/types.ts";
 import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
-import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 
 export const DEMO_DATA_KEY = "opinion-map-demo-data";
@@ -13,12 +13,13 @@ interface Data {
   operatorTokens: OperatorTokenRecord[];
   admins: AdminRecord[];
   reactions: ReactionRecord[];
+  proposals: ProposalRecord[];
   insights: InsightRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], insights: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -41,6 +42,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         operatorTokens: parsed.operatorTokens ?? [],
         admins: parsed.admins ?? [],
         reactions: parsed.reactions ?? [],
+        proposals: parsed.proposals ?? [],
         insights: parsed.insights ?? [],
       };
     } catch {
@@ -181,6 +183,26 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         const d = read();
         d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
         write(d);
+      },
+    },
+    proposals: {
+      async create(proposal) {
+        const d = read();
+        d.proposals.push(proposal);
+        write(d);
+      },
+      async get(id) {
+        return read().proposals.find((p) => p.id === id);
+      },
+      async update(proposal) {
+        const d = read();
+        d.proposals = d.proposals.map((p) => (p.id === proposal.id ? proposal : p));
+        write(d);
+      },
+      async listByEvent(eventId) {
+        return read()
+          .proposals.filter((p) => p.eventId === eventId)
+          .sort(byCreatedAt);
       },
     },
     reactions: {

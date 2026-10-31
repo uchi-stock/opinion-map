@@ -26,6 +26,25 @@ export interface PublicEvent {
   sessions: PublicSession[];
 }
 
+export type ProposalStatus = "pending" | "approved" | "rejected" | "merged";
+
+/** 参加者が出した議題の提案。提案者の情報は持たない */
+export interface Proposal {
+  id: string;
+  title: string;
+  description: string;
+  status: ProposalStatus;
+  /** 承認でできたテーマ、または統合先のテーマ */
+  sessionId?: string;
+  reactionCount: number;
+  createdAt: string;
+}
+
+export interface ProposalList {
+  accepting: boolean;
+  proposals: Proposal[];
+}
+
 export interface PublicOpinion {
   id: string;
   body: string;
@@ -74,6 +93,8 @@ export interface EventRecord {
   status: EventStatus;
   currentSessionId?: string;
   openSessionIds?: string[];
+  acceptingProposals?: boolean;
+  showPendingProposals?: boolean;
   createdAt: string;
   updatedAt: string;
 }

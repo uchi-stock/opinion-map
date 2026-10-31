@@ -1,6 +1,6 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
-import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
 /** テストとローカル開発用。プロセスが終わると消える */
@@ -13,6 +13,7 @@ export function createInMemoryRepositories(): Repositories {
   const operatorTokens = new Map<string, OperatorTokenRecord>();
   const admins = new Map<string, AdminRecord>();
   const reactions = new Map<string, ReactionRecord>();
+  const proposals = new Map<string, ProposalRecord>();
   const reactionKey = (opinionId: string, voterHash: string) => `${opinionId}#${voterHash}`;
   const insights = new Map<string, InsightRecord>();
 
@@ -131,6 +132,24 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    proposals: {
+      async create(proposal) {
+        proposals.set(proposal.id, { ...proposal });
+      },
+      async get(id) {
+        const p = proposals.get(id);
+        return p ? { ...p } : undefined;
+      },
+      async update(proposal) {
+        proposals.set(proposal.id, { ...proposal });
+      },
+      async listByEvent(eventId) {
+        return [...proposals.values()]
+          .filter((p) => p.eventId === eventId)
+          .map((p) => ({ ...p }))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       },
     },
     reactions: {

@@ -11,11 +11,14 @@ export function ReactionButton({
   count,
   disabled,
   onChanged,
+  react = reactToOpinion,
 }: {
   opinionId: string;
   count: number;
   disabled: boolean;
   onChanged: (count: number) => void;
+  /** いいねを送る関数。提案へのいいねでは、提案用のものを渡す */
+  react?: (id: string, voterId: string, reacted: boolean) => Promise<{ reacted: boolean; count: number }>;
 }) {
   const [reacted, setReacted] = useState(() => loadReacted().has(opinionId));
   const [busy, setBusy] = useState(false);
@@ -26,7 +29,7 @@ export function ReactionButton({
     setBusy(true);
     setError(null);
     try {
-      const result = await reactToOpinion(opinionId, getVoterId(), !reacted);
+      const result = await react(opinionId, getVoterId(), !reacted);
       const ids = loadReacted();
       if (result.reacted) ids.add(opinionId);
       else ids.delete(opinionId);

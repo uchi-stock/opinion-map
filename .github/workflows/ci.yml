@@ -21,7 +21,9 @@ jobs:
     with:
       # reusable-ci.ymlの必須入力。上のuses:のタグと必ず一致させる
       self_ref: v2.114.1
-      packages: '[{"dir":"backend","node_version":"22"},{"dir":"frontend","node_version":"22","build":true}]'
+      # カバレッジの閾値は、実測(backend 約94%、frontend 約91%)に近い値から始め、80%の目標を下回らない範囲で上げていく(下げない)。
+      # functions は、V8 の集計が揺れやすいので、判定の対象にしない
+      packages: '[{"dir":"backend","node_version":"22","coverage_threshold":88,"coverage_metrics":"lines,statements,branches"},{"dir":"frontend","node_version":"22","build":true,"coverage_threshold":85,"coverage_metrics":"lines,statements,branches"}]'
       # CI単独でのマージは止める。広聴AI評価の完了を待つgate jobがマージする
       # （dev-standardsの「1 job per app」パターン、docs/cicd-pipeline-specification.md参照）
       enable_auto_merge: false

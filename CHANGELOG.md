@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/uchi-stock/opinion-map/compare/v1.30.0...v1.31.0) (2026-10-31)
+
+
+### Features
+
+* テーマに任意の制限時間を付け、時間が来たら締め切って分析する ([#183](https://github.com/uchi-stock/opinion-map/issues/183)) ([cf5c7fa](https://github.com/uchi-stock/opinion-map/commit/cf5c7fa799028e478ac3842f94a07385f0271b4b)), closes [#177](https://github.com/uchi-stock/opinion-map/issues/177)
+
 # [1.30.0](https://github.com/uchi-stock/opinion-map/compare/v1.29.0...v1.30.0) (2026-10-31)
 
 

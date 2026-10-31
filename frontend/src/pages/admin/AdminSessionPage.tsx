@@ -105,6 +105,15 @@ function SessionContent({
         initial={session.notes}
         initialPublished={session.notesPublished === true}
         describeError={describeError}
+        draftSource={
+          latest?.run.result
+            ? {
+                overview: latest.run.result.overview,
+                clusterTitles: latest.run.result.clusters.filter((c) => c.level === Math.min(...latest.run.result!.clusters.map((x) => x.level))).map((c) => c.title),
+                questions: latest.insights.flatMap((i) => (i.edited ?? i.ai).questions),
+              }
+            : null
+        }
       />
       <hr />
       <ViewTabs view={view} onChange={setView} summaryAvailable={latest !== null} />

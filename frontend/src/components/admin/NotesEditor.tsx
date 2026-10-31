@@ -3,6 +3,18 @@ import type { AdminApi } from "../../api/admin.ts";
 import type { SessionNotes } from "../../api/types.ts";
 
 const MAX_ITEMS = 20;
+const CONCLUSION_MAX = 1000;
+const ITEM_MAX = 200;
+
+/** 要約から作る下書きの元。運営者の画面が、最新の分析から渡す */
+export interface NotesDraftSource {
+  overview: string;
+  clusterTitles: string[];
+  /** 案(共通点・相違点・問い)の、問いの部分。編集があれば、編集後 */
+  questions: string[];
+}
+
+const clip = (s: string, max: number) => Array.from(s).slice(0, max).join("");
 
 /**
  * テーマごとの議論の記録(結論、次の行動、未解決の問い)。運営者と担当の人が書く。
@@ -14,19 +26,39 @@ export function NotesEditor({
   initial,
   initialPublished,
   describeError,
+  draftSource,
 }: {
   api: AdminApi;
   sessionId: string;
   initial: SessionNotes | undefined;
   initialPublished: boolean;
   describeError: (e: unknown) => string;
+  draftSource?: NotesDraftSource | null;
 }) {
   const [conclusion, setConclusion] = useState(initial?.conclusion ?? "");
   const [actions, setActions] = useState(initial?.nextActions ?? []);
   const [questions, setQuestions] = useState((initial?.openQuestions ?? []).join("\n"));
   const [published, setPublished] = useState(initialPublished);
+  // 要約から取り込んだ下書きを、確認して保存するまでの印
+  const [draftImported, setDraftImported] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  /**
+   * 要約から、結論と未解決の問いの下書きを取り込む。保存はしない。公開の状態も変えない。
+   * AIの文は、運営者が確認して保存するまで、参加者には出ない。既にある内容は消さず、後ろに足す。
+   */
+  function importDraft() {
+    if (!draftSource) return;
+    const parts = [draftSource.overview.trim(), draftSource.clusterTitles.length > 0 ? `主なまとまり: ${draftSource.clusterTitles.join("、")}` : ""].filter((p) => p !== "");
+    const draft = parts.join("\n");
+    if (draft !== "") setConclusion((c) => clip(c.trim() === "" ? draft : `${c.trim()}\n\n${draft}`, CONCLUSION_MAX));
+    const existing = questions.split("\n").map((q) => q.trim()).filter((q) => q !== "");
+    const added = draftSource.questions.map((q) => clip(q.trim(), ITEM_MAX)).filter((q) => q !== "" && !existing.includes(q));
+    setQuestions([...existing, ...added].slice(0, MAX_ITEMS).join("\n"));
+    setDraftImported(true);
+    setMessage(null);
+  }
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +72,7 @@ export function NotesEditor({
         openQuestions: questions.split("\n").map((q) => q.trim()).filter((q) => q !== ""),
         published,
       });
+      setDraftImported(false);
       setMessage({ kind: "ok", text: published ? "保存して、公開しました。" : "保存しました。参加者には見えません。" });
     } catch (err) {
       setMessage({ kind: "error", text: describeError(err) });
@@ -54,11 +87,21 @@ export function NotesEditor({
       <p className="small text-body-secondary">
         このテーマで出た結論と、次の行動を残します。担当は名前の文字列だけで、個人が特定される情報は書かないでください。
       </p>
+      {draftSource && (
+        <button type="button" className="btn btn-sm btn-outline-secondary mb-2" onClick={importDraft}>
+          要約から下書きを取り込む
+        </button>
+      )}
+      {draftImported && (
+        <div className="alert alert-warning small" role="status">
+          AIによる下書きを取り込みました。内容を確認して、直してから保存してください。保存するまで、記録は変わらず、公開の状態も変わりません。
+        </div>
+      )}
       <form onSubmit={save} aria-label="記録の保存">
         <label htmlFor="notes-conclusion" className="form-label fw-bold">
           結論
         </label>
-        <textarea id="notes-conclusion" className="form-control mb-3" rows={3} value={conclusion} onChange={(e) => setConclusion(e.target.value)} />
+        <textarea id="notes-conclusion" className={`form-control mb-3${draftImported ? " border-warning" : ""}`} rows={3} value={conclusion} onChange={(e) => setConclusion(e.target.value)} />
         <div className="fw-bold mb-1">次の行動</div>
         {actions.map((a, i) => (
           <div key={i} className="d-flex gap-2 mb-2">
@@ -91,7 +134,7 @@ export function NotesEditor({
         <label htmlFor="notes-questions" className="form-label fw-bold d-block">
           未解決の問い（1行に1つ）
         </label>
-        <textarea id="notes-questions" className="form-control mb-3" rows={3} value={questions} onChange={(e) => setQuestions(e.target.value)} />
+        <textarea id="notes-questions" className={`form-control mb-3${draftImported ? " border-warning" : ""}`} rows={3} value={questions} onChange={(e) => setQuestions(e.target.value)} />
         <div className="form-check mb-3">
           <input id="notes-published" type="checkbox" className="form-check-input" checked={published} onChange={(e) => setPublished(e.target.checked)} />
           <label htmlFor="notes-published" className="form-check-label">

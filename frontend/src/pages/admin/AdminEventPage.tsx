@@ -1,14 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { EventRecord, EventStatus, SessionFormat, SessionRecord } from "../../api/types.ts";
+import type { EventRecord, SessionRecord } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
-import { CopyField } from "../../components/admin/CopyField.tsx";
-import { QrCode } from "../../components/admin/QrCode.tsx";
 import { UsageSection } from "../../components/admin/UsageSection.tsx";
 import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
 import { NotesOverview } from "../../components/admin/NotesOverview.tsx";
 import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
-import { eventInviteUrl, EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
+import { EVENT_STATUS_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
@@ -40,6 +38,7 @@ function EventContent({
     [api, eventId],
   );
 
+  const eventPath = withBase(`/admin/events/${encodeURIComponent(eventId)}`);
   if (state.status === "loading") return <p role="status">読み込んでいます…</p>;
   if (state.status === "error")
     return (
@@ -49,11 +48,13 @@ function EventContent({
     );
   return (
     <>
-      <EventForm api={api} event={state.data.event} describeError={describeError} onSaved={reload} />
-      <hr />
-      <InviteSection eventId={eventId} />
-      <hr />
-      <h2 className="h6">テーマ（セッション）</h2>
+      <EventSummary event={state.data.event} />
+      <div className="d-flex justify-content-between align-items-center mt-3 mb-2">
+        <h2 className="h6 mb-0">テーマ（セッション）</h2>
+        <a className="btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`}>
+          テーマを追加
+        </a>
+      </div>
       <ThemeRadioGroup event={state.data.event} sessions={state.data.sessions} api={api} describeError={describeError} onChanged={reload} />
       {state.data.sessions.length === 0 && <p className="text-body-secondary">まだセッションがありません。</p>}
       {state.data.sessions.map((session) => (
@@ -77,7 +78,6 @@ function EventContent({
         )}
         </div>
       ))}
-      <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
       <UsageSection api={api} eventId={eventId} describeError={describeError} />
       <NotesOverview api={api} eventId={eventId} eventName={state.data.event.name} describeError={describeError} />
       <ProposalAdminSection
@@ -92,23 +92,6 @@ function EventContent({
   );
 }
 
-/** 参加者に配る招待URL。イベントごとに1つで、テーマは運営者が切り替える */
-function InviteSection({ eventId }: { eventId: string }) {
-  const url = eventInviteUrl(eventId);
-  return (
-    <section aria-label="参加者の招待URL">
-      <h2 className="h6">参加者の招待URL</h2>
-      <p className="small text-body-secondary">
-        イベントごとに1つです。参加者はこのURLから、いまのテーマに投稿でき、すべてのテーマを見られます。
-      </p>
-      <CopyField label="招待URL" value={url} />
-      <div className="mb-3">
-        <QrCode value={url} label="招待URLのQRコード" />
-      </div>
-    </section>
-  );
-}
-
 /** いま開いているテーマか。選ばれていなければ、公開中のテーマすべてが開いている */
 export function isOpenSession(event: EventRecord, sessions: SessionRecord[], session: SessionRecord): boolean {
   if (session.status !== "active") return false;
@@ -120,6 +103,37 @@ function selectedOpenIds(event: EventRecord): string[] | undefined {
   if (event.openSessionIds !== undefined) return event.openSessionIds;
   if (event.currentSessionId !== undefined) return [event.currentSessionId];
   return undefined;
+}
+
+/** イベントの名前、状態、説明(固定の表示)。編集と招待URLは、別の画面へのリンクにする */
+function EventSummary({ event }: { event: EventRecord }) {
+  const base = withBase(`/admin/events/${encodeURIComponent(event.id)}`);
+  return (
+    <section aria-label="イベントの情報">
+      <div className="d-flex justify-content-between align-items-start gap-2">
+        <h2 className="h5 mb-1 text-break">{event.name}</h2>
+        <span className="badge text-bg-secondary flex-shrink-0">{EVENT_STATUS_LABELS[event.status]}</span>
+      </div>
+      {event.description ? (
+        <p className="mb-2" style={{ whiteSpace: "pre-wrap" }}>
+          {event.description}
+        </p>
+      ) : (
+        <p className="mb-2 text-body-secondary">説明はありません。</p>
+      )}
+      {event.status !== "active" && (
+        <p className="small text-body-secondary mb-2">参加者に見えるのは、「公開中」のイベントだけです。編集の画面で、状態を切り替えます。</p>
+      )}
+      <div className="d-flex flex-wrap gap-2">
+        <a className="btn btn-sm btn-outline-secondary" href={`${base}/edit`}>
+          編集
+        </a>
+        <a className="btn btn-sm btn-outline-secondary" href={`${base}/invite`}>
+          招待URLとQR
+        </a>
+      </div>
+    </section>
+  );
 }
 
 const NONE = "__none__";
@@ -212,160 +226,3 @@ function ThemeRadioGroup({
   );
 }
 
-function EventForm({
-  api,
-  event,
-  describeError,
-  onSaved,
-}: {
-  api: AdminApi;
-  event: EventRecord;
-  describeError: (e: unknown) => string;
-  onSaved: () => Promise<void>;
-}) {
-  const [name, setName] = useState(event.name);
-  const [description, setDescription] = useState(event.description);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
-
-  async function run(patch: Parameters<AdminApi["updateEvent"]>[1]) {
-    if (busy) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      await api.updateEvent(event.id, patch);
-      await onSaved();
-      setMessage({ kind: "ok", text: "保存しました。" });
-    } catch (e) {
-      setMessage({ kind: "error", text: describeError(e) });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function save(e: FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    void run({ name: name.trim(), description: description.trim() });
-  }
-
-  return (
-    <form onSubmit={save} aria-label="イベントの設定">
-      <label htmlFor="ev-name" className="form-label fw-bold">
-        イベント名
-      </label>
-      <input id="ev-name" className="form-control mb-2" value={name} onChange={(e) => setName(e.target.value)} />
-      <label htmlFor="ev-desc" className="form-label">
-        説明
-      </label>
-      <textarea id="ev-desc" className="form-control mb-2" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-      <label htmlFor="ev-status" className="form-label fw-bold">
-        状態
-      </label>
-      <select
-        id="ev-status"
-        className="form-select mb-1"
-        value={event.status}
-        disabled={busy}
-        onChange={(e) => void run({ status: e.target.value as EventStatus })}
-      >
-        {(Object.keys(EVENT_STATUS_LABELS) as EventStatus[]).map((s) => (
-          <option key={s} value={s}>
-            {EVENT_STATUS_LABELS[s]}
-          </option>
-        ))}
-      </select>
-      <div className="form-text mb-3">参加者に見えるのは、「公開中」のイベントのセッションだけです。</div>
-      <button type="submit" className="btn btn-primary w-100" disabled={busy || !name.trim()}>
-        保存する
-      </button>
-      <div aria-live="polite">
-        {message && (
-          <div className={`alert alert-${message.kind === "ok" ? "success" : "danger"} mt-3 mb-0`} role={message.kind === "error" ? "alert" : undefined}>
-            {message.text}
-          </div>
-        )}
-      </div>
-    </form>
-  );
-}
-
-function SessionCreateForm({
-  api,
-  eventId,
-  describeError,
-  onCreated,
-}: {
-  api: AdminApi;
-  eventId: string;
-  describeError: (e: unknown) => string;
-  onCreated: () => Promise<void>;
-}) {
-  const [title, setTitle] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [format, setFormat] = useState<SessionFormat>("workshop");
-  const [show, setShow] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const valid = title.trim().length > 0 && prompt.trim().length > 0;
-
-  async function create(event: FormEvent) {
-    event.preventDefault();
-    if (busy || !valid) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.createSession(eventId, {
-        title: title.trim(),
-        prompt: prompt.trim(),
-        format,
-        showOpinionsToParticipants: show,
-      });
-      setTitle("");
-      setPrompt("");
-      await onCreated();
-    } catch (e) {
-      setError(describeError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form onSubmit={create} className="mt-4" aria-label="セッションを作る">
-      <h2 className="h6">セッションを作る</h2>
-      <label htmlFor="ss-title" className="form-label">
-        セッション名
-      </label>
-      <input id="ss-title" className="form-control mb-2" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <label htmlFor="ss-prompt" className="form-label">
-        参加者への問い
-      </label>
-      <textarea id="ss-prompt" className="form-control mb-2" rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
-      <label htmlFor="ss-format" className="form-label">
-        形式
-      </label>
-      <select id="ss-format" className="form-select mb-2" value={format} onChange={(e) => setFormat(e.target.value as SessionFormat)}>
-        {(Object.keys(FORMAT_LABELS) as SessionFormat[]).map((f) => (
-          <option key={f} value={f}>
-            {FORMAT_LABELS[f]}
-          </option>
-        ))}
-      </select>
-      <div className="form-check mb-3">
-        <input id="ss-show" type="checkbox" className="form-check-input" checked={show} onChange={(e) => setShow(e.target.checked)} />
-        <label htmlFor="ss-show" className="form-check-label">
-          投稿された意見を、参加者にも見せる
-        </label>
-      </div>
-      <button type="submit" className="btn btn-primary w-100" disabled={busy || !valid}>
-        {busy ? "作っています…" : "作る"}
-      </button>
-      {error && (
-        <div className="alert alert-danger mt-3" role="alert">
-          {error}
-        </div>
-      )}
-    </form>
-  );
-}

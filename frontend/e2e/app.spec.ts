@@ -49,4 +49,24 @@ test.describe("管理画面", () => {
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `admin-${testInfo.project.name}`, `管理画面(${testInfo.project.name})`);
   });
+
+  test("イベントのページは、コンパクト。編集、招待URL、テーマの追加は、別の画面", async ({ page }, testInfo) => {
+    await page.goto("/admin");
+    await page.locator('a[href^="/admin/events/"]').first().click();
+    const info = page.getByRole("region", { name: "イベントの情報" });
+    await expect(info).toBeVisible();
+    await expect(page.getByLabel("イベント名")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `admin-event-${testInfo.project.name}`, `イベントのページ(${testInfo.project.name})`);
+
+    await info.getByRole("link", { name: "招待URLとQR" }).click();
+    await expect(page.getByRole("img", { name: "招待URLのQRコード" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `admin-invite-${testInfo.project.name}`, `招待URLとQR(${testInfo.project.name})`);
+
+    await page.goBack();
+    await page.getByRole("link", { name: "テーマを追加" }).click();
+    await expect(page.getByRole("form", { name: "セッションを作る" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
 });

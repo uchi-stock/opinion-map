@@ -1,5 +1,8 @@
+import { AdminEventEditPage } from "./pages/admin/AdminEventEditPage.tsx";
+import { AdminEventInvitePage } from "./pages/admin/AdminEventInvitePage.tsx";
 import { AdminEventPage } from "./pages/admin/AdminEventPage.tsx";
 import { AdminEventsPage } from "./pages/admin/AdminEventsPage.tsx";
+import { AdminSessionNewPage } from "./pages/admin/AdminSessionNewPage.tsx";
 import { AdminSessionPage } from "./pages/admin/AdminSessionPage.tsx";
 import { stripBase, withBase } from "./lib/paths.ts";
 import { ParticipantEventPage } from "./pages/ParticipantEventPage.tsx";
@@ -12,6 +15,9 @@ export type Route =
   | { page: "event"; eventId: string }
   | { page: "adminEvents" }
   | { page: "adminEvent"; eventId: string }
+  | { page: "adminEventEdit"; eventId: string }
+  | { page: "adminEventInvite"; eventId: string }
+  | { page: "adminSessionNew"; eventId: string }
   | { page: "adminSession"; eventId: string; sessionId: string }
   | { page: "notFound" };
 
@@ -25,6 +31,13 @@ export function routeOf(pathname: string): Route {
   if (/^\/admin\/?$/.test(pathname)) return { page: "adminEvents" };
   const event = /^\/admin\/events\/([^/]+)\/?$/.exec(pathname);
   if (event?.[1]) return { page: "adminEvent", eventId: decodeURIComponent(event[1]) };
+  const eventEdit = /^\/admin\/events\/([^/]+)\/edit\/?$/.exec(pathname);
+  if (eventEdit?.[1]) return { page: "adminEventEdit", eventId: decodeURIComponent(eventEdit[1]) };
+  const eventInvite = /^\/admin\/events\/([^/]+)\/invite\/?$/.exec(pathname);
+  if (eventInvite?.[1]) return { page: "adminEventInvite", eventId: decodeURIComponent(eventInvite[1]) };
+  // 「new」は、テーマのIDではなく、追加の画面。テーマのURLより先に判定する
+  const sessionNew = /^\/admin\/events\/([^/]+)\/sessions\/new\/?$/.exec(pathname);
+  if (sessionNew?.[1]) return { page: "adminSessionNew", eventId: decodeURIComponent(sessionNew[1]) };
   const adminSession = /^\/admin\/events\/([^/]+)\/sessions\/([^/]+)\/?$/.exec(pathname);
   if (adminSession?.[1] && adminSession[2]) {
     return {
@@ -43,6 +56,9 @@ export function App({ pathname = window.location.pathname }: { pathname?: string
   if (route.page === "event") return <ParticipantEventPage eventId={route.eventId} />;
   if (route.page === "adminEvents") return <AdminEventsPage />;
   if (route.page === "adminEvent") return <AdminEventPage eventId={route.eventId} />;
+  if (route.page === "adminEventEdit") return <AdminEventEditPage eventId={route.eventId} />;
+  if (route.page === "adminEventInvite") return <AdminEventInvitePage eventId={route.eventId} />;
+  if (route.page === "adminSessionNew") return <AdminSessionNewPage eventId={route.eventId} />;
   if (route.page === "adminSession") return <AdminSessionPage eventId={route.eventId} sessionId={route.sessionId} />;
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>

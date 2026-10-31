@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/uchi-stock/opinion-map/compare/v1.28.0...v1.29.0) (2026-10-31)
+
+
+### Features
+
+* merge the open-theme radio, the theme list and the links into one list ([#174](https://github.com/uchi-stock/opinion-map/issues/174)) ([2cf02fe](https://github.com/uchi-stock/opinion-map/commit/2cf02fe69fcbee1a4080b14ad9856850f6b48d0a)), closes [#173](https://github.com/uchi-stock/opinion-map/issues/173)
+
 # [1.28.0](https://github.com/uchi-stock/opinion-map/compare/v1.27.1...v1.28.0) (2026-10-31)
 
 

@@ -27,7 +27,7 @@ jobs:
       enable_auto_merge: false
       # 静的チェック(dev-standardsの標準)。違反するコミットは、CIで止まる
       enable_standards_check: true
-      enable_secret_scan: true
+      # 秘密情報の検知(enable_secret_scan)は、組織のリポジトリで gitleaks-action のライセンスキーが要るため、まだ有効にしない(#97)
       enable_text_lint: true
       text_lint_paths: |
         docs/**/*.md

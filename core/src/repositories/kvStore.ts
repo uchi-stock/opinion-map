@@ -52,6 +52,16 @@ function conditionHolds(existing: KvItem | undefined, condition: PutCondition | 
 
 const dataField = (item: KvItem, field: string): unknown => (item.data as Record<string, unknown> | null)?.[field];
 
+/** DynamoDB の項目の大きさの上限(400KB)。メモリ実装も同じ上限を守らせ、超える設計をテストで見つける */
+export const MAX_ITEM_BYTES = 400 * 1024;
+
+function assertItemSize(item: KvItem): void {
+  const bytes = new TextEncoder().encode(JSON.stringify(item)).length;
+  if (bytes > MAX_ITEM_BYTES) {
+    throw new Error(`ValidationException: 項目が大きすぎます（${bytes}バイト。上限は${MAX_ITEM_BYTES}バイト）: ${item.pk}`);
+  }
+}
+
 /** テストとローカル開発用。プロセスが終わると消える。transactWrite は途中で中断せず、不可分に行う */
 export class MemoryKvStore implements KvStore {
   private readonly items = new Map<string, KvItem>();
@@ -62,11 +72,13 @@ export class MemoryKvStore implements KvStore {
   }
 
   async put(item: KvItem, condition?: PutCondition): Promise<void> {
+    assertItemSize(item);
     if (!conditionHolds(this.items.get(item.pk), condition)) throw new Error("ConditionalCheckFailed");
     this.items.set(item.pk, structuredClone(item));
   }
 
   async transactWrite(ops: WriteOp[]): Promise<"ok" | "conflict"> {
+    for (const op of ops) if (op.type === "put") assertItemSize(op.item);
     for (const op of ops) {
       const existing = this.items.get(op.type === "put" ? op.item.pk : op.pk);
       if (op.type === "put" && !conditionHolds(existing, op.condition)) return "conflict";

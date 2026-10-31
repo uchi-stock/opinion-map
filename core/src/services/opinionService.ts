@@ -104,9 +104,12 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
 
   /** 削除した投稿の本文を、過去の分析の入力の記録からも消す */
   async function scrubFromAnalyses(sessionId: string, opinionId: string): Promise<void> {
-    for (const run of await ctx.repos.analyses.listBySession(sessionId)) {
-      if (!run.input.opinions.some((o) => o.id === opinionId)) continue;
-      await ctx.repos.analyses.update({
+    for (const summary of await ctx.repos.analyses.listBySession(sessionId)) {
+      if (!summary.input.opinionIds.includes(opinionId)) continue;
+      // 本文を含む全体を読み、該当の投稿の本文だけを消して、入力を書き直す
+      const run = await ctx.repos.analyses.get(summary.id);
+      if (!run) continue;
+      await ctx.repos.analyses.replaceInput({
         ...run,
         input: {
           ...run.input,

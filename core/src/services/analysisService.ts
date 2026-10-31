@@ -4,8 +4,10 @@ import type {
   AnalysisProvider,
   AnalysisResult,
   AnalysisRunRecord,
+  AnalysisRunSummary,
   AnalysisStatus,
 } from "../analysis/types.js";
+import { inputOpinionIds, MAX_ANALYSIS_OPINIONS } from "../analysis/types.js";
 import { AppError, badRequest, conflict, notFound } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
 import type { UsageService } from "./usageService.js";
@@ -45,16 +47,17 @@ export function createAnalysisService(
 ) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_ANALYSIS_TIMEOUT_MS;
 
-  async function toPublic(run: AnalysisRunRecord, includeResult: boolean): Promise<PublicAnalysisRun> {
+  async function toPublic(run: AnalysisRunRecord | AnalysisRunSummary, includeResult: boolean): Promise<PublicAnalysisRun> {
     const current = await ctx.repos.opinions.listBySession(run.sessionId);
-    const inSnapshot = new Set(run.input.opinions.map((o) => o.id));
+    const snapshotIds = inputOpinionIds(run);
+    const inSnapshot = new Set(snapshotIds);
     const publicRun: PublicAnalysisRun = {
       id: run.id,
       sessionId: run.sessionId,
       status: run.status,
       requestedAt: run.requestedAt,
       providerName: run.providerName,
-      inputCount: run.input.opinions.length,
+      inputCount: snapshotIds.length,
       inputHash: run.input.hash,
       newOpinionCount: current.filter((o) => !inSnapshot.has(o.id)).length,
     };
@@ -158,6 +161,12 @@ export function createAnalysisService(
         kind: o.kind,
       }));
       if (opinions.length === 0) throw badRequest("no_opinions", "分析できる投稿がありません");
+      if (opinions.length > MAX_ANALYSIS_OPINIONS) {
+        throw badRequest(
+          "too_many_opinions",
+          `投稿が多すぎて分析できません（${opinions.length}件）。1回の分析で扱えるのは、${MAX_ANALYSIS_OPINIONS}件までです`,
+        );
+      }
       return toPublic(await launch(sessionId, session.prompt, opinions), false);
     },
 

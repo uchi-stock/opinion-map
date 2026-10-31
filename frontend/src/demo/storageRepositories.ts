@@ -154,6 +154,12 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         return read().analyses.find((r) => r.id === id);
       },
       async update(run) {
+        // 入力は書き換えない。保存済みの入力を引き継ぐ
+        const d = read();
+        d.analyses = d.analyses.map((r) => (r.id === run.id ? { ...run, input: r.input } : r));
+        write(d);
+      },
+      async replaceInput(run) {
         const d = read();
         d.analyses = d.analyses.map((r) => (r.id === run.id ? run : r));
         write(d);
@@ -161,7 +167,11 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
       async listBySession(sessionId) {
         return read()
           .analyses.filter((r) => r.sessionId === sessionId)
-          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt))
+          .map((r) => {
+            const { input, ...rest } = r;
+            return { ...rest, input: { hash: input.hash, opinionIds: input.opinions.map((o) => o.id) } };
+          });
       },
     },
     operatorTokens: {

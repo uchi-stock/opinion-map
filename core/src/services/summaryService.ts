@@ -38,7 +38,7 @@ export function createSummaryService(ctx: ServiceContext) {
       const run = [...runs].reverse().find((r) => r.status === "succeeded" && r.result);
       if (!run?.result) return { published: false };
       const showOpinions = session.showOpinionsToParticipants;
-      const analyzed = new Set(run.input.opinions.map((o) => o.id));
+      const analyzed = new Set(run.input.opinionIds);
       const current = await ctx.repos.opinions.listBySession(sessionId);
       const insights = (await ctx.repos.insights.listByAnalysis(run.id)).filter((i) => i.approved);
       return {

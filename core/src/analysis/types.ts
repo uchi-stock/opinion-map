@@ -58,6 +58,9 @@ export interface AnalysisProvider {
   fetchResult(providerRunId: string, opinions: readonly AnalysisOpinion[]): Promise<RawAnalysisResult>;
 }
 
+/** 1回の分析で扱える投稿の数の上限。保存先の項目の大きさ(400KB)に収めるための数 */
+export const MAX_ANALYSIS_OPINIONS = 1500;
+
 export interface AnalysisRunRecord {
   id: string;
   sessionId: string;
@@ -73,4 +76,17 @@ export interface AnalysisRunRecord {
   input: { opinions: AnalysisOpinion[]; hash: string };
   error?: { code: string; summary: string };
   result?: AnalysisResult;
+}
+
+/**
+ * 一覧用の、軽い形。入力の投稿の本文を持たず、IDと件数だけを持つ。
+ * 本文は大きいので、一覧のたびには読まない(必要なときに、get で全体を読む)。
+ */
+export interface AnalysisRunSummary extends Omit<AnalysisRunRecord, "input"> {
+  input: { hash: string; opinionIds: string[] };
+}
+
+/** 実行(全体でも、軽い形でも)の入力にある投稿のID */
+export function inputOpinionIds(run: AnalysisRunRecord | AnalysisRunSummary): string[] {
+  return "opinions" in run.input ? run.input.opinions.map((o) => o.id) : run.input.opinionIds;
 }

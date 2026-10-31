@@ -1,4 +1,4 @@
-import type { AnalysisRunRecord } from "../analysis/types.js";
+import { inputOpinionIds, type AnalysisRunRecord, type AnalysisRunSummary } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
@@ -104,13 +104,21 @@ export function createInMemoryRepositories(): Repositories {
         return r ? structuredClone(r) : undefined;
       },
       async update(run) {
+        // 入力は書き換えない。保存済みの入力を引き継ぐ
+        const stored = analyses.get(run.id);
+        analyses.set(run.id, structuredClone(stored ? { ...run, input: stored.input } : run));
+      },
+      async replaceInput(run) {
         analyses.set(run.id, structuredClone(run));
       },
-      async listBySession(sessionId) {
+      async listBySession(sessionId): Promise<AnalysisRunSummary[]> {
         return [...analyses.values()]
           .filter((r) => r.sessionId === sessionId)
-          .map((r) => structuredClone(r))
-          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt))
+          .map((r) => {
+            const { input, ...rest } = structuredClone(r);
+            return { ...rest, input: { hash: input.hash, opinionIds: inputOpinionIds(r) } };
+          });
       },
     },
     operatorTokens: {

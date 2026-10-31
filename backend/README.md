@@ -133,3 +133,16 @@ CI で `vitest --coverage` を実行し、行・文・分岐が閾値（`ci.yml`
   - `adapters/awsRunnerPort.ts`: 実 AWS の呼び出し。`verify-analysis` ワークフローで守る
 - CI の計測は、メモリ実装のテストの1回分である。DynamoDB 実装のテスト（`TEST_REPOS=dynamo`）は、別に実行される
 - ローカルでの確認: `npx vitest run --coverage`
+
+## DynamoDB Local での検証
+
+本物の DynamoDB と同じ挙動で、保存先の契約と、並行の競合を確かめるテストがある（`test/dynamoLocal.test.ts`）。
+CI では、サービスコンテナの DynamoDB Local に対して実行する。
+
+- 確かめること: 条件付き書き込み、トランザクション、GSI の並びと件数、並行して呼んだときの競合（投稿の重複、分析の排他、1日の上限、いいね）
+- メモリ実装と DynamoDB 実装に、同じ期待を課す。差があれば、このテストが見つける
+- `DYNAMODB_ENDPOINT` が無いときは、スキップされる
+- ローカルでは、先に `docker run -p 8000:8000 amazon/dynamodb-local` で DynamoDB Local を起動する
+- そのあと、次のコマンドでテストを実行する
+  - `DYNAMODB_ENDPOINT=http://localhost:8000 npx vitest run test/dynamoLocal.test.ts`
+- 項目の大きさの上限（400KB、#51）は、まだ確かめていない

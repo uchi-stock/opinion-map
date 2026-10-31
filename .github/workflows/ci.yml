@@ -93,15 +93,52 @@ jobs:
     if: needs.changes.outputs.runner == 'true'
     uses: ./.github/workflows/runner-image.yml
 
+  # 実際の DynamoDB(DynamoDB Local)に対して、保存先の契約と、並行の競合を確かめる。
+  # 本物の DynamoDB の挙動(条件付き書き込み、トランザクション、GSI)の違いで壊れるのを、デプロイの前に見つける
+  dynamodb-local:
+    name: "DynamoDB Localでの検証"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: 依存パッケージをインストールする
+        working-directory: backend
+        run: npm ci
+      - name: DynamoDB Local の起動を待つ
+        run: |
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null http://localhost:8000; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::DynamoDB Local が起動しませんでした"
+          exit 1
+      - name: 保存先の契約テストを実行する
+        working-directory: backend
+        env:
+          DYNAMODB_ENDPOINT: http://localhost:8000
+        run: npx vitest run test/dynamoLocal.test.ts
+
   # CI・評価・イメージの確認が成功してからマージする。評価とイメージの確認は、対象外ならスキップを成功とみなす
   gate:
     name: "自動マージ"
-    needs: [ci, changes, eval, runner-image]
+    needs: [ci, changes, eval, runner-image, dynamodb-local]
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
       needs.ci.result == 'success' &&
       needs.changes.result == 'success' &&
+      needs.dynamodb-local.result == 'success' &&
       (needs.eval.result == 'success' || needs.eval.result == 'skipped') &&
       (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped')
     runs-on: ubuntu-latest

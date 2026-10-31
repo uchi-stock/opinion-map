@@ -1,4 +1,9 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+// 共通フォント(M PLUS Rounded 1c)は、外部CDNでなく、npm のパッケージでバンドルする
+import "@fontsource/m-plus-rounded-1c/400.css";
+import "@fontsource/m-plus-rounded-1c/700.css";
+// dev-standards の共通テーマ(symlink。ブートストラップで作る)
+import "./bootstrap-theme.css";
 import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";

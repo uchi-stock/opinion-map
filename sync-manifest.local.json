@@ -1,0 +1,6 @@
+{
+  "symlinks": [
+    { "source": "shared/ui/bootstrap-theme.css", "target": "frontend/src/bootstrap-theme.css" },
+    { "source": "shared/ui/common-theme.css", "target": "frontend/src/common-theme.css" }
+  ]
+}

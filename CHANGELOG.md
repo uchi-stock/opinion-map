@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/uchi-stock/opinion-map/compare/v1.22.0...v1.23.0) (2026-10-31)
+
+
+### Features
+
+* show opinions and the board first on the admin theme page ([#151](https://github.com/uchi-stock/opinion-map/issues/151)) ([a2edf3e](https://github.com/uchi-stock/opinion-map/commit/a2edf3e5d84ddd4496202bd9089349ac517ca952)), closes [#149](https://github.com/uchi-stock/opinion-map/issues/149)
+
 # [1.22.0](https://github.com/uchi-stock/opinion-map/compare/v1.21.0...v1.22.0) (2026-10-31)
 
 

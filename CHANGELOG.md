@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/uchi-stock/opinion-map/compare/v1.4.0...v1.5.0) (2026-10-31)
+
+
+### Features
+
+* one invite URL per event with a switchable current theme ([#84](https://github.com/uchi-stock/opinion-map/issues/84)) ([#86](https://github.com/uchi-stock/opinion-map/issues/86)) ([e4fda81](https://github.com/uchi-stock/opinion-map/commit/e4fda814ef12c066fd4f41db6ba36ac6218df75e))
+
 # [1.4.0](https://github.com/uchi-stock/opinion-map/compare/v1.3.0...v1.4.0) (2026-10-31)
 
 

@@ -43,7 +43,6 @@ export function AdminListSection({ api, describeError }: { api: AdminApi; descri
 
   return (
     <section aria-label="管理者">
-      <hr />
       <h2 className="h6">管理者</h2>
       <p className="small text-body-secondary">
         ここに載っているGoogleアカウントだけが、管理画面にログインできます。参加者は、ログインなしで投稿できます。

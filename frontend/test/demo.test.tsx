@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventRecord, OpinionRecord } from "../../core/src/domain/types.ts";
 import { DemoBanner } from "../src/demo/DemoBanner.tsx";
 import { DEMO_ADMIN_TOKEN, installDemoApi } from "../src/demo/installDemoApi.ts";
 import { createStorageRepositories, DEMO_DATA_KEY, resetDemoData } from "../src/demo/storageRepositories.ts";
+import { AdminEventNewPage } from "../src/pages/admin/AdminEventNewPage.tsx";
 import { AdminEventsPage } from "../src/pages/admin/AdminEventsPage.tsx";
 import { ParticipantPage } from "../src/pages/ParticipantPage.tsx";
 import { saveAdminToken } from "../src/lib/adminToken.ts";
@@ -161,14 +162,20 @@ describe("デモ版の画面（本物の画面とバックエンドのコード�
     globalThis.fetch = realFetch;
   });
 
-  it("運営者の画面でイベントを作ると、一覧に出る", async () => {
+  it("運営者の画面でイベントを作ると、そのイベントのページへ移り、一覧にも出る", async () => {
     await installDemoApi({ storage: window.localStorage, apiBase: "/api" });
     saveAdminToken(DEMO_ADMIN_TOKEN);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
     const user = userEvent.setup();
+    const { unmount } = render(<AdminEventNewPage />);
+    await user.type(await screen.findByLabelText("イベント名"), "スマホで作る");
+    await user.click(screen.getByRole("button", { name: "作る" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/events\/.+/)));
+    unmount();
+
     render(<AdminEventsPage />);
     expect(await screen.findByText("デモ用イベント")).toBeInTheDocument();
-    await user.type(screen.getByLabelText("イベント名"), "スマホで作る");
-    await user.click(screen.getByRole("button", { name: "作る" }));
     expect(await screen.findByText("スマホで作る")).toBeInTheDocument();
   });
 

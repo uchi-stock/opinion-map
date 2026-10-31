@@ -67,7 +67,6 @@ export function OperatorTokenSection({
 
   return (
     <section aria-label="運営者のリンク">
-      <hr />
       <h2 className="h6">運営者のリンク</h2>
       <p className="small text-body-secondary">
         このイベントだけを操作できるリンクです。リンクを知っている人は運営できるので、渡す相手に気をつけてください。

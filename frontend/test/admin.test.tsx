@@ -2,7 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { routeOf } from "../src/App.tsx";
+import { AdminEventEditPage } from "../src/pages/admin/AdminEventEditPage.tsx";
+import { AdminEventInvitePage } from "../src/pages/admin/AdminEventInvitePage.tsx";
 import { AdminEventPage } from "../src/pages/admin/AdminEventPage.tsx";
+import { AdminSessionNewPage } from "../src/pages/admin/AdminSessionNewPage.tsx";
 import { AdminEventsPage } from "../src/pages/admin/AdminEventsPage.tsx";
 import { AdminSessionPage } from "../src/pages/admin/AdminSessionPage.tsx";
 import { clearAdminToken, loadAdminToken, saveAdminToken } from "../src/lib/adminToken.ts";
@@ -140,6 +143,10 @@ describe("運営者の画面のルーティング", () => {
     expect(routeOf("/admin/")).toEqual({ page: "adminEvents" });
     expect(routeOf("/admin/events/e1")).toEqual({ page: "adminEvent", eventId: "e1" });
     expect(routeOf("/admin/events/e1/sessions/s1")).toEqual({ page: "adminSession", eventId: "e1", sessionId: "s1" });
+    expect(routeOf("/admin/events/e1/edit")).toEqual({ page: "adminEventEdit", eventId: "e1" });
+    expect(routeOf("/admin/events/e1/invite")).toEqual({ page: "adminEventInvite", eventId: "e1" });
+    // 「new」は、テーマのIDではなく、追加の画面
+    expect(routeOf("/admin/events/e1/sessions/new")).toEqual({ page: "adminSessionNew", eventId: "e1" });
     expect(routeOf("/admin/other")).toEqual({ page: "notFound" });
   });
 });
@@ -238,15 +245,14 @@ describe("イベントの画面", () => {
     expect(link).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
   });
 
-  it("イベントの招待URLとQRコードを1つ出す", async () => {
+  it("招待URLとQRコードは、別の画面で、1つ出す", async () => {
     fakeAdminBackend();
-    render(<AdminEventPage eventId="e1" />);
+    render(<AdminEventInvitePage eventId="e1" />);
     const section = await screen.findByRole("region", { name: "参加者の招待URL" });
     expect((within(section).getByLabelText("招待URL") as HTMLInputElement).value).toMatch(/\/e\/e1$/);
     expect(within(section).getByRole("img", { name: "招待URLのQRコード" })).toBeInTheDocument();
-  });
-
-  it("投稿を受け付けるテーマを、ラジオボタンで1つ選ぶ。下書きは選べない", async () => {
+    expect(screen.getByRole("link", { name: /イベント$/ })).toHaveAttribute("href", "/admin/events/e1");
+  });  it("投稿を受け付けるテーマを、ラジオボタンで1つ選ぶ。下書きは選べない", async () => {
     const { calls } = fakeAdminBackend({
       events: [event({ openSessionIds: ["s1"] })],
       sessions: [session(), session({ id: "s2", title: "場B" }), session({ id: "s3", title: "下書きのテーマ", status: "draft" })],
@@ -274,6 +280,28 @@ describe("イベントの画面", () => {
     const group = await screen.findByRole("group", { name: "投稿を受け付けるテーマ" });
     expect(within(group).getByText(/公開中のテーマすべてに投稿できます/)).toBeInTheDocument();
     for (const radio of within(group).getAllByRole("radio")) expect(radio).not.toBeChecked();
+  });
+
+  it("イベントのページは、説明を固定で表示し、フォームやQRを並べない。編集・招待URL・テーマ追加へのリンクを置く", async () => {
+    fakeAdminBackend({ events: [event({ description: "一行目\n二行目" })] });
+    render(<AdminEventPage eventId="e1" />);
+    const info = await screen.findByRole("region", { name: "イベントの情報" });
+    expect(within(info).getByRole("heading", { name: "カンファレンス" })).toBeInTheDocument();
+    expect(within(info).getByText(/一行目/)).toBeInTheDocument();
+    expect(within(info).getByRole("link", { name: "編集" })).toHaveAttribute("href", "/admin/events/e1/edit");
+    expect(within(info).getByRole("link", { name: "招待URLとQR" })).toHaveAttribute("href", "/admin/events/e1/invite");
+    expect(screen.getByRole("link", { name: "テーマを追加" })).toHaveAttribute("href", "/admin/events/e1/sessions/new");
+    // 編集のフォーム、招待URL、QR、テーマの追加フォームは、このページに出さない
+    expect(screen.queryByLabelText("イベント名")).toBeNull();
+    expect(screen.queryByRole("img", { name: "招待URLのQRコード" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "セッションを作る" })).toBeNull();
+  });
+
+  it("説明が無いときは、その旨を出す。公開前のイベントには、状態の案内を出す", async () => {
+    fakeAdminBackend({ events: [event({ description: "", status: "draft" })] });
+    render(<AdminEventPage eventId="e1" />);
+    expect(await screen.findByText("説明はありません。")).toBeInTheDocument();
+    expect(screen.getByText(/編集の画面で、状態を切り替えます/)).toBeInTheDocument();
   });
 
   it("議題の提案を受け付ける設定を切り替える", async () => {
@@ -313,19 +341,17 @@ describe("イベントの画面", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("イベントが見つかりません");
   });
 
-  it("状態を切り替えると、すぐに保存する", async () => {
+  it("編集の画面で、状態を切り替えると、すぐに保存する", async () => {
     const { calls, state } = fakeAdminBackend({ events: [event({ status: "draft" })] });
     const user = userEvent.setup();
-    render(<AdminEventPage eventId="e1" />);
+    render(<AdminEventEditPage eventId="e1" />);
     await user.selectOptions(await screen.findByLabelText("状態"), "active");
     await waitFor(() => expect(state.events[0]?.status).toBe("active"));
     expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ status: "active" });
-  });
-
-  it("名前と説明を保存できる", async () => {
+  });  it("編集の画面で、名前と説明を保存できる", async () => {
     const { calls } = fakeAdminBackend();
     const user = userEvent.setup();
-    render(<AdminEventPage eventId="e1" />);
+    render(<AdminEventEditPage eventId="e1" />);
     const name = await screen.findByLabelText("イベント名");
     await user.clear(name);
     await user.type(name, "改名したイベント");
@@ -334,12 +360,17 @@ describe("イベントの画面", () => {
     expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ name: "改名したイベント" });
   });
 
-  it("セッションを作る。問いが空だと作れない", async () => {
+  it("編集の画面は、存在しないイベントでは、見つからない旨を出す", async () => {
+    fakeAdminBackend();
+    render(<AdminEventEditPage eventId="nope" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("イベントが見つかりません");
+  });  it("テーマの追加は、別の画面。問いが空だと作れず、作ると、そのテーマのページへ移る", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
     const { calls } = fakeAdminBackend({ sessions: [] });
     const user = userEvent.setup();
-    render(<AdminEventPage eventId="e1" />);
-    await screen.findByText(/まだセッションがありません/);
-    const form = screen.getByRole("form", { name: "セッションを作る" });
+    render(<AdminSessionNewPage eventId="e1" />);
+    const form = await screen.findByRole("form", { name: "セッションを作る" });
     const submit = within(form).getByRole("button", { name: "作る" });
     await user.type(within(form).getByLabelText("セッション名"), "新セッション");
     expect(submit).toBeDisabled();
@@ -347,15 +378,14 @@ describe("イベントの画面", () => {
     await user.selectOptions(within(form).getByLabelText("形式"), "ost");
     await user.click(within(form).getByLabelText("投稿された意見を、参加者にも見せる"));
     await user.click(submit);
-    expect(await screen.findByText("新セッション")).toBeInTheDocument();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/admin/events/e1/sessions/s1"));
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({
       title: "新セッション",
       prompt: "どう思いますか",
       format: "ost",
       showOpinionsToParticipants: false,
     });
-  });
-});
+  });});
 
 describe("セッションの画面", () => {
   beforeEach(() => saveAdminToken(TOKEN));

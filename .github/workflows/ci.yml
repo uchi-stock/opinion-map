@@ -48,6 +48,8 @@ jobs:
       # 循環依存と越境 import の検知。TypeScript まで見る検査は、下の architecture ジョブで行う
       enable_architecture_check: true
       enable_duplication_check: true
+      # 依存更新のPRに、更新の種類(major/minor/patch)と直接/間接のリスクの要約をコメントする
+      enable_dependency_risk_summary: true
       duplication_threshold: 0
     secrets: inherit
 
@@ -149,6 +151,7 @@ jobs:
           DYNAMODB_ENDPOINT: http://localhost:8000
         run: npx vitest run test/dynamoLocal.test.ts
 
+  # Renovate(依存の更新)のPRは、自動ではマージしない。リスクの要約を見て、人が判断してマージする。
   # CI・評価・イメージの確認が成功してからマージする。評価とイメージの確認は、対象外ならスキップを成功とみなす
   gate:
     name: "自動マージ"
@@ -156,6 +159,7 @@ jobs:
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login != 'renovate[bot]' &&
       needs.ci.result == 'success' &&
       needs.changes.result == 'success' &&
       needs.dynamodb-local.result == 'success' &&

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "semanticCommits": "enabled",
+  "timezone": "Asia/Tokyo",
+  "minimumReleaseAge": "3 days",
+  "rebaseWhen": "behind-base-branch",
+  "git-submodules": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "スマホで確認しやすいよう、minor と patch の更新は、週に1回、1つのPRにまとめる。major は別のPRにする",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates",
+      "schedule": ["before 6am on monday"]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, getPublicSummary, getSession, listOpinions } from "../api/client.ts";
+import { ApiError, getPublicSummary, getSession, listOpinions, sendPresence } from "../api/client.ts";
 import type { OpinionList, OpinionResult, PublicSession, PublicSummaryResponse } from "../api/types.ts";
 import { OpinionCard } from "../components/OpinionCard.tsx";
 import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
@@ -9,7 +9,12 @@ import { ViewTabs, type ContentView } from "../components/ViewTabs.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../components/StickyBoard.tsx";
 import { groupByKind } from "../lib/board.ts";
 import { OpinionForm } from "../components/OpinionForm.tsx";
+import { getVoterId } from "../lib/reactions.ts";
+import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
+
+/** 見ていることを知らせる間隔。サーバーが数える時間(90秒)より、短くする */
+const PRESENCE_INTERVAL_MS = 30_000;
 
 type SessionState =
   | { status: "loading" }
@@ -77,6 +82,16 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
     // 要約が読めなくても、原文の閲覧と投稿は続けられる
     getPublicSummary(sessionId).then(setSummary, () => setSummary(null));
   }, [loadSession, loadList, sessionId]);
+
+  // 開いた直後にも、1回知らせる
+  useEffect(() => {
+    sendPresence(sessionId, getVoterId()).catch(() => undefined);
+  }, [sessionId]);
+
+  // 見ている間だけ、30秒ごとに知らせる(端末の数の目安に使う。個人は特定しない)
+  useVisiblePolling(() => {
+    sendPresence(sessionId, getVoterId()).catch(() => undefined);
+  }, PRESENCE_INTERVAL_MS);
 
   function handleSubmitted(_result: OpinionResult) {
     setMine(loadMyOpinions());

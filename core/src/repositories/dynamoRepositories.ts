@@ -272,6 +272,21 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
         await store.put(tokenItem(token));
       },
     },
+    presence: {
+      async touch(sessionId, deviceHash, at, ttlSeconds) {
+        // 時刻を並べ替えの鍵(gsi1sk)にして、数えるときに、since 以降だけを引く。古い項目は ttl で消える
+        await store.put({
+          pk: `PRESENCE#${sessionId}#${deviceHash}`,
+          gsi1pk: `SESSION#${sessionId}#PRESENCE`,
+          gsi1sk: at,
+          ttl: nowSeconds() + ttlSeconds,
+          data: { deviceHash },
+        });
+      },
+      async countSince(sessionId, since) {
+        return store.countByGsi1(`SESSION#${sessionId}#PRESENCE`, { fromSk: since });
+      },
+    },
     usage: {
       // 1回分ごとに、番号つきの印(USAGE#範囲#日#番号)を、条件付きで作る。最初に作れた番号が、その回の番号になる。
       // 上限までの番号がすべて使われていれば、上限に達している。同時に呼ばれても、同じ番号は2回作れない

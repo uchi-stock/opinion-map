@@ -15,12 +15,14 @@ interface Data {
   reactions: ReactionRecord[];
   proposals: ProposalRecord[];
   usage: Record<string, number>;
+  /** セッションごとの、端末のハッシュと最後に見た時刻 */
+  presence: Record<string, Record<string, string>>;
   insights: InsightRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], usage: {}, insights: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], usage: {}, presence: {}, insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -45,6 +47,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         reactions: parsed.reactions ?? [],
         proposals: parsed.proposals ?? [],
         usage: parsed.usage ?? {},
+        presence: parsed.presence ?? {},
         insights: parsed.insights ?? [],
       };
     } catch {
@@ -195,6 +198,16 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         const d = read();
         d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
         write(d);
+      },
+    },
+    presence: {
+      async touch(sessionId, deviceHash, at) {
+        const d = read();
+        d.presence[sessionId] = { ...d.presence[sessionId], [deviceHash]: at };
+        write(d);
+      },
+      async countSince(sessionId, since) {
+        return Object.values(read().presence[sessionId] ?? {}).filter((at) => at >= since).length;
       },
     },
     usage: {

@@ -15,6 +15,7 @@ export function createInMemoryRepositories(): Repositories {
   const reactions = new Map<string, ReactionRecord>();
   const proposals = new Map<string, ProposalRecord>();
   const usage = new Map<string, number>();
+  const presence = new Map<string, Map<string, string>>();
   const reactionKey = (opinionId: string, voterHash: string) => `${opinionId}#${voterHash}`;
   const insights = new Map<string, InsightRecord>();
 
@@ -141,6 +142,16 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    presence: {
+      async touch(sessionId, deviceHash, at) {
+        const devices = presence.get(sessionId) ?? new Map<string, string>();
+        devices.set(deviceHash, at);
+        presence.set(sessionId, devices);
+      },
+      async countSince(sessionId, since) {
+        return [...(presence.get(sessionId)?.values() ?? [])].filter((at) => at >= since).length;
       },
     },
     usage: {

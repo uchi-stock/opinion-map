@@ -60,6 +60,7 @@ npm run dev
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |
 | `PATCH /opinions/:id` | 自分の投稿を編集する（編集用の鍵が必要） | 鍵 |
 | `POST /opinions/:id/delete` | 自分の投稿を削除する（編集用の鍵が必要） | 鍵 |
+| `POST /sessions/:id/presence` | 画面を見ていることを知らせる(`deviceId`)。人数の目安に使う | 不要 |
 | `POST /opinions/:id/reaction` | いいねを付ける・外す(`voterId` と `reacted`)。同じ投票者は1回だけ。受け付け中のセッションだけ | 不要 |
 | `POST /opinions/:id/moderation` | 投稿を非表示・再表示・削除する（status は active / hidden / deleted） | 運営者 |
 | `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
@@ -87,6 +88,14 @@ npm run dev
 - セッションごとに、1分に120件を超える投稿は、429を返す（`opinionRateLimit` で変えられる）
 - 投稿時に `editKey`（128ビット以上の乱数）を送ると、あとで編集・削除できる。サーバーにはハッシュだけを保存する
 - 削除した投稿は、本文を消し、過去の分析の入力の記録からも消す
+
+## 見ている人数の目安
+
+イベントの公開情報（`GET /events/:id/public`）の `viewers` に、テーマごとの目安が付く。
+
+- 参加者の画面は、見ている間だけ、30秒ごとに知らせる。端末のIDは、ブラウザが作る乱数で、サーバーにはハッシュだけを残す
+- 直近90秒に知らせた端末の数を数える。記録は、10分で消える（DynamoDB の ttl）
+- 5人未満は、人数を出さず `"few"`（少数）とだけ返す。それ以上は、5人きざみに丸める。少人数の場で、個人を推測できないようにする
 
 ## 設計上の決まり
 

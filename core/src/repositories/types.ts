@@ -74,6 +74,14 @@ export interface ReactionRepository {
   listBySession(sessionId: string): Promise<ReactionRecord[]>;
 }
 
+/** いま見ている端末の数の目安。端末は、使い捨てのIDのハッシュだけで数える(個人は特定しない) */
+export interface PresenceRepository {
+  /** 端末が見ている、と記録する。同じ端末は、1つだけ(時刻を更新する)。ttlSeconds 後に消える */
+  touch(sessionId: string, deviceHash: string, at: string, ttlSeconds: number): Promise<void>;
+  /** since 以降に見ていた端末の数 */
+  countSince(sessionId: string, since: string): Promise<number>;
+}
+
 export interface ProposalRepository {
   create(proposal: ProposalRecord): Promise<void>;
   get(id: string): Promise<ProposalRecord | undefined>;
@@ -120,5 +128,6 @@ export interface Repositories {
   reactions: ReactionRepository;
   proposals: ProposalRepository;
   usage: UsageRepository;
+  presence: PresenceRepository;
   insights: InsightRepository;
 }

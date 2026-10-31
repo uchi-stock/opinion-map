@@ -14,6 +14,8 @@ export interface PublicSession {
   isOpen: boolean;
   /** 公開中の意見の数。イベントの公開情報のときだけ付く */
   opinionCount?: number;
+  /** いま見ている端末の数の目安。少人数は "few"(少数)。イベントの公開情報のときだけ付く */
+  viewers?: number | "few";
 }
 
 /** 招待URL(イベントごとに1つ)から開く画面の情報 */

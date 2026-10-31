@@ -1,8 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { routeOf } from "../src/App.tsx";
-import { ParticipantEventPage } from "../src/pages/ParticipantEventPage.tsx";
+import { ParticipantEventPage, REFRESH_INTERVAL_MS } from "../src/pages/ParticipantEventPage.tsx";
 import { json, opinion, SESSION, stubFetch } from "./helpers.ts";
 
 afterEach(() => {
@@ -60,5 +60,62 @@ describe("招待URLの画面", () => {
     stubFetch(() => json({ error: { code: "not_found", message: "なし" } }, 404));
     render(<ParticipantEventPage eventId="nope" />);
     expect(await screen.findByText("ページが見つかりません")).toBeInTheDocument();
+  });
+});
+
+describe("自動更新", () => {
+  it("運営者がテーマを開閉すると、一定時間後に、画面が追従する", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let open = ["sb"];
+      stubFetch((url) => {
+        if (url.endsWith("/events/e1/public")) {
+          const a = { ...sessionA, isOpen: open.includes("sa"), acceptingOpinions: open.includes("sa") };
+          const b = { ...sessionB, isOpen: open.includes("sb"), acceptingOpinions: open.includes("sb") };
+          return json({ id: "e1", name: "ワークショップ", description: "", openSessionIds: open, sessions: [a, b] });
+        }
+        if (url.endsWith("/sessions/sb")) return json(sessionB);
+        if (url.endsWith("/sessions/sb/opinions")) return json({ hidden: false, opinions: [] });
+        return json({ error: { code: "not_found", message: "なし" } }, 404);
+      });
+      render(<ParticipantEventPage eventId="e1" />);
+      const nav = () => within(screen.getByRole("navigation", { name: "テーマの切り替え" }));
+      await screen.findByText("Bの問い");
+      expect(nav().getAllByText("投稿中")).toHaveLength(1);
+
+      open = ["sa", "sb"];
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS + 100);
+      });
+      expect(nav().getAllByText("投稿中")).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("更新に失敗しても、いまの表示は変わらない", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let fail = false;
+      stubFetch((url) => {
+        if (url.endsWith("/events/e1/public")) {
+          if (fail) return json({ error: { code: "server_error", message: "失敗" } }, 500);
+          return json({ id: "e1", name: "ワークショップ", description: "", openSessionIds: ["sb"], sessions: [sessionA, sessionB] });
+        }
+        if (url.endsWith("/sessions/sb")) return json(sessionB);
+        if (url.endsWith("/sessions/sb/opinions")) return json({ hidden: false, opinions: [] });
+        return json({ error: { code: "not_found", message: "なし" } }, 404);
+      });
+      render(<ParticipantEventPage eventId="e1" />);
+      await screen.findByText("Bの問い");
+      fail = true;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS + 100);
+      });
+      expect(screen.getByText("Bの問い")).toBeInTheDocument();
+      expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

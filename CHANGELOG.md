@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/uchi-stock/opinion-map/compare/v1.25.0...v1.26.0) (2026-10-31)
+
+
+### Features
+
+* show the logged-in account icon at the top right of admin screens ([#162](https://github.com/uchi-stock/opinion-map/issues/162)) ([b16c582](https://github.com/uchi-stock/opinion-map/commit/b16c5821c1d7ffbc7088ce6e96cf14f40ff5c49e)), closes [#161](https://github.com/uchi-stock/opinion-map/issues/161)
+
 # [1.25.0](https://github.com/uchi-stock/opinion-map/compare/v1.24.0...v1.25.0) (2026-10-31)
 
 

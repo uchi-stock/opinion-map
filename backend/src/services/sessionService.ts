@@ -1,5 +1,5 @@
-import type { SessionRecord } from "../domain/types.js";
-import type { SessionInput, SessionPatch } from "../domain/validation.js";
+import type { SessionNotes, SessionRecord } from "../domain/types.js";
+import type { NotesInput, SessionInput, SessionPatch } from "../domain/validation.js";
 import { notFound } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
 
@@ -34,6 +34,36 @@ export function createSessionService(ctx: ServiceContext) {
       const session = await ctx.repos.sessions.get(id);
       if (!session) throw notFound("セッション");
       return session;
+    },
+
+    /** 議論の記録を保存する。同時に書いたときは、後の保存が残る(更新日時で分かる) */
+    async saveNotes(id: string, input: NotesInput): Promise<SessionRecord> {
+      const session = await this.get(id);
+      const at = ctx.now().toISOString();
+      const notes: SessionNotes = {
+        conclusion: input.conclusion,
+        nextActions: input.nextActions,
+        openQuestions: input.openQuestions,
+        updatedAt: at,
+      };
+      const next: SessionRecord = { ...session, notes, notesPublished: input.published, updatedAt: at };
+      await ctx.repos.sessions.update(next);
+      return next;
+    },
+
+    /**
+     * イベントの全テーマの記録。運営者は、すべて(未公開を含む)。
+     * 参加者は、公開済みのものだけで、下書きのイベント・テーマは存在しないものとして扱う
+     */
+    async listNotes(eventId: string, forAdmin: boolean): Promise<
+      { sessionId: string; title: string; published: boolean; notes: SessionNotes }[]
+    > {
+      const event = await ctx.repos.events.get(eventId);
+      if (!event || (!forAdmin && event.status === "draft")) throw notFound("イベント");
+      const sessions = await ctx.repos.sessions.listByEvent(eventId);
+      return sessions
+        .filter((s) => s.notes !== undefined && (forAdmin || (s.notesPublished === true && s.status !== "draft")))
+        .map((s) => ({ sessionId: s.id, title: s.title, published: s.notesPublished === true, notes: s.notes! }));
     },
 
     async update(id: string, patch: SessionPatch): Promise<SessionRecord> {

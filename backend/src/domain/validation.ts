@@ -168,6 +168,50 @@ export function parseProposalDecision(body: unknown): ProposalDecision {
   return { status, intoSessionId: into };
 }
 
+export const NOTES_CONCLUSION_MAX = 1000;
+export const NOTES_ITEM_MAX = 200;
+export const NOTES_OWNER_MAX = 50;
+export const NOTES_MAX_ITEMS = 20;
+
+export interface NotesInput {
+  conclusion: string;
+  nextActions: { text: string; owner: string }[];
+  openQuestions: string[];
+  published: boolean;
+}
+export function parseNotes(body: unknown): NotesInput {
+  const obj = asObject(body);
+  const list = (key: string, label: string): unknown[] => {
+    const raw = obj[key];
+    if (raw === undefined || raw === null) return [];
+    if (!Array.isArray(raw) || raw.length > NOTES_MAX_ITEMS) {
+      throw badRequest("invalid_type", `${label}は${NOTES_MAX_ITEMS}件までの一覧で指定してください`);
+    }
+    return raw;
+  };
+  const nextActions = list("nextActions", "次の行動").flatMap((item) => {
+    const o = asObject(item);
+    const t = text(o, "text", "次の行動", NOTES_ITEM_MAX, { required: false }) ?? "";
+    const owner = text(o, "owner", "担当", NOTES_OWNER_MAX, { required: false }) ?? "";
+    return t === "" ? [] : [{ text: t, owner }];
+  });
+  const openQuestions = list("openQuestions", "未解決の問い").flatMap((item) => {
+    if (typeof item !== "string") throw badRequest("invalid_type", "未解決の問いは文字列で指定してください");
+    const q = text({ q: item }, "q", "未解決の問い", NOTES_ITEM_MAX, { required: false }) ?? "";
+    return q === "" ? [] : [q];
+  });
+  const published = obj["published"];
+  if (published !== undefined && typeof published !== "boolean") {
+    throw badRequest("invalid_type", "published は真偽値で指定してください");
+  }
+  return {
+    conclusion: text(obj, "conclusion", "結論", NOTES_CONCLUSION_MAX, { required: false }) ?? "",
+    nextActions,
+    openQuestions,
+    published: published ?? false,
+  };
+}
+
 export interface SessionInput {
   title: string;
   prompt: string;

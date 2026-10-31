@@ -63,7 +63,19 @@ export interface SessionRecord {
   status: SessionStatus;
   /** 参加者に投稿済みの意見を見せるか */
   showOpinionsToParticipants: boolean;
+  /** 議論の記録(OST)。結論、次の行動、未解決の問い */
+  notes?: SessionNotes;
+  /** 記録を参加者に見せるか。既定は見せない(運営者が確認してから公開する) */
+  notesPublished?: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+/** テーマごとの議論の記録。担当者の名前は文字列だけで、アカウントとは結びつけない */
+export interface SessionNotes {
+  conclusion: string;
+  nextActions: { text: string; owner: string }[];
+  openQuestions: string[];
   updatedAt: string;
 }
 

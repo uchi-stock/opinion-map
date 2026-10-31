@@ -5,6 +5,7 @@ import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
 import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
+import { NotesOverview } from "../../components/admin/NotesOverview.tsx";
 import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
 import { eventInviteUrl, EVENT_STATUS_LABELS, FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -79,6 +80,7 @@ function EventContent({
         </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />
+      <NotesOverview api={api} eventId={eventId} eventName={state.data.event.name} describeError={describeError} />
       <ProposalAdminSection
         api={api}
         event={state.data.event}

@@ -45,8 +45,8 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 
 ## デプロイの手順（スマホで完結）
 
-1. GitHub の Actions 画面で「本番へデプロイ」を開く
-2. 「Run workflow」を押す
+1. GitHub の Actions 画面で「CD」を開く
+2. 「Run workflow」を押す(自動では、採番のあとに自動で走る)
 3. 完了を待つ。初回は、CloudFront の作成に10分ほどかかる
 4. 実行の Job Summary に、公開URLと、動作確認の結果が出る
 5. **初回だけ**: Google Cloud Console の OAuth クライアントを開く。「承認済みの JavaScript 生成元」に、公開URL（`https://xxxx.cloudfront.net`）を追加する
@@ -89,7 +89,7 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 
 - 画面だけを更新したいときも、同じワークフローを使う。インフラに変更がなければ、`osls deploy` は短く終わる
 - CloudFront のキャッシュは、デプロイごとに消す。`index.html` は、毎回確かめさせる設定である
-- `feat`か`fix`をマージすると、新しいバージョンが採番されたあと、自動で本番にデプロイされる。`docs`や`chore`ではデプロイされない。手動の実行も、再実行やロールバック用に残してある
+- `feat`か`fix`をマージすると、新しいバージョンが採番されたあと、自動で本番にデプロイされる。`docs`や`chore`ではデプロイされない。手動の実行も、再実行やロールバック用に残してある(Actions の「CD」の「Run workflow」)
 - バージョンは、mainへのマージごとに自動で採番される(`cd.yml`のsemantic-release)。`feat`は新機能(minor)、`fix`は修正(patch)で上がり、`docs`や`chore`では上がらない
 - 採番されたバージョンは、デプロイで画面に反映される。トップページの「バージョン」で確認できる
 - 広聴AIの分析は、次の「分析の仕組み」を参照する

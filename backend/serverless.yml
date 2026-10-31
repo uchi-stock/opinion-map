@@ -1,7 +1,7 @@
 # Opinion Map の本番構成(API Gateway + Lambda + DynamoDB、S3 + CloudFront)。
 # 1つのスタックにまとめる。CloudFront が、同じドメインで、画面(S3)と API(/api/*)を配信する。
 # 同じドメインなので、CORS の設定は要らない。
-# デプロイ: npm run bundle のあとに、npx osls deploy(.github/workflows/deploy.yml が行う)
+# デプロイ: npm run bundle のあとに、npx osls deploy(.github/workflows/cd.yml のdeploy jobが行う)
 service: opinion-map
 
 provider:

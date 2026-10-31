@@ -4,7 +4,7 @@ import type { Me } from "../../api/types.ts";
 import { Avatar } from "./Avatar.tsx";
 
 /**
- * ログイン中のアカウントを、左上のアイコンで示す。タップすると、アカウントの情報と「ログアウト」が出る。
+ * ログイン中のアカウントを、右上のアイコンで示す。タップすると、アカウントの情報と「ログアウト」が出る。
  * アカウントの情報を読めなくても(通信の失敗など)、ログアウトはできる。
  */
 export function AccountMenu({ api, onSignOut }: { api: AdminApi; onSignOut: () => void }) {
@@ -56,7 +56,7 @@ export function AccountMenu({ api, onSignOut }: { api: AdminApi; onSignOut: () =
       {open && (
         <div
           role="menu"
-          className="position-absolute start-0 mt-1 card shadow-sm p-2"
+          className="position-absolute end-0 mt-1 card shadow-sm p-2"
           style={{ zIndex: 1050, minWidth: 220, maxWidth: "80vw" }}
         >
           <p className="small text-body-secondary mb-2 text-break">{description}</p>

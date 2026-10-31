@@ -211,7 +211,7 @@ describe("トークンの入力", () => {
     expect(screen.getByLabelText("運営者のトークン")).toBeInTheDocument();
   });
 
-  it("左上のアイコンをタップして「ログアウト」すると、入力画面に戻る", async () => {
+  it("右上のアイコンをタップして「ログアウト」すると、入力画面に戻る", async () => {
     fakeAdminBackend();
     saveAdminToken(TOKEN);
     const user = userEvent.setup();
@@ -226,6 +226,22 @@ describe("トークンの入力", () => {
 
 describe("アカウントのアイコン", () => {
   beforeEach(() => saveAdminToken(TOKEN));
+
+  it("アイコンは、ナビゲーションの右側(トップページのボタンの右)にあり、メニューは右揃えで開く", async () => {
+    fakeAdminBackend({ me: { role: "owner", email: "alice@example.com" } });
+    const user = userEvent.setup();
+    render(<AdminEventsPage />);
+    const nav = await screen.findByRole("navigation", { name: "運営者の画面のナビゲーション" });
+    const top = within(nav).getByRole("link", { name: "トップページ" });
+    const account = within(nav).getByRole("button", { name: "アカウントのメニュー" });
+    // 同じ右側のまとまりで、トップページのボタンの次(右)にある。左側には、戻る・見出しだけ
+    expect(top.parentElement).toBe(account.parentElement?.parentElement);
+    expect(top.nextElementSibling).toBe(account.parentElement);
+    expect(nav.firstElementChild).not.toBe(top.parentElement);
+    await user.click(account);
+    expect(within(nav).getByRole("menu").className).toContain("end-0");
+    expect(within(nav).getByRole("menu").className).not.toContain("start-0");
+  });
 
   it("ログイン中のメールの頭文字がアイコンになり、タップするとメールが出る。もう一度タップすると閉じる", async () => {
     fakeAdminBackend({ me: { role: "owner", email: "alice@example.com" } });

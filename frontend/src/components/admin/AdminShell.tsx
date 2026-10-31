@@ -105,13 +105,14 @@ export function AdminShell({ title, back, children }: Props) {
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <nav className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 small" aria-label="運営者の画面のナビゲーション">
+        {back ? <a href={back.href}>← {back.label}</a> : <span>運営者の画面</span>}
         <div className="d-flex align-items-center gap-2">
+          <a className="btn btn-sm btn-outline-secondary" href={withBase("/")}>
+            トップページ
+          </a>
+          {/* ログイン中のアカウントは、右上に出す */}
           {api && <AccountMenu api={api} onSignOut={signOut} />}
-          {back ? <a href={back.href}>← {back.label}</a> : <span>運営者の画面</span>}
         </div>
-        <a className="btn btn-sm btn-outline-secondary" href={withBase("/")}>
-          トップページ
-        </a>
       </nav>
       <h1 className="h4 mb-3">{title}</h1>
       {api ? (

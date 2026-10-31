@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/uchi-stock/opinion-map/compare/v1.24.0...v1.25.0) (2026-10-31)
+
+
+### Features
+
+* split the admin theme page and remove dead ends for participants ([#156](https://github.com/uchi-stock/opinion-map/issues/156)) ([8846c1d](https://github.com/uchi-stock/opinion-map/commit/8846c1d00b018588d7c0ba31cc0dc6a033a8326a)), closes [#153](https://github.com/uchi-stock/opinion-map/issues/153)
+
 # [1.24.0](https://github.com/uchi-stock/opinion-map/compare/v1.23.0...v1.24.0) (2026-10-31)
 
 

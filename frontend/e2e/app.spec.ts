@@ -52,14 +52,15 @@ test.describe("管理画面", () => {
 
   test("イベントのページは、コンパクト。編集、招待URL、テーマの追加は、別の画面", async ({ page }, testInfo) => {
     await page.goto("/admin");
-    await page.locator('a[href^="/admin/events/"]').first().click();
+    await page.locator('a[href^="/admin/events/"]:not([href$="/new"])').first().click();
     const info = page.getByRole("region", { name: "イベントの情報" });
     await expect(info).toBeVisible();
     await expect(page.getByLabel("イベント名")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `admin-event-${testInfo.project.name}`, `イベントのページ(${testInfo.project.name})`);
 
-    await info.getByRole("link", { name: "招待URLとQR" }).click();
+    // 重い操作は、メニューから、別の画面へ移る
+    await page.getByRole("navigation", { name: "このイベントの操作" }).getByRole("link", { name: /^招待URLとQR/ }).click();
     await expect(page.getByRole("img", { name: "招待URLのQRコード" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `admin-invite-${testInfo.project.name}`, `招待URLとQR(${testInfo.project.name})`);
@@ -72,7 +73,7 @@ test.describe("管理画面", () => {
 
   test("テーマのページは、意見とボードを最初に見せる", async ({ page }, testInfo) => {
     await page.goto("/admin");
-    await page.locator('a[href^="/admin/events/"]').first().click();
+    await page.locator('a[href^="/admin/events/"]:not([href$="/new"])').first().click();
     await page.locator('a[href*="/sessions/"]:not([href$="/new"])').first().click();
     const opinions = page.getByRole("region", { name: "投稿された意見" });
     await expect(opinions).toBeVisible();

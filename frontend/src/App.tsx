@@ -1,6 +1,9 @@
+import { AdminAdminsPage } from "./pages/admin/AdminAdminsPage.tsx";
 import { AdminEventEditPage } from "./pages/admin/AdminEventEditPage.tsx";
 import { AdminEventInvitePage } from "./pages/admin/AdminEventInvitePage.tsx";
+import { AdminEventNewPage } from "./pages/admin/AdminEventNewPage.tsx";
 import { AdminEventPage } from "./pages/admin/AdminEventPage.tsx";
+import { AdminNotesPage, AdminOperatorsPage, AdminProposalsPage, AdminUsagePage } from "./pages/admin/AdminEventSubPages.tsx";
 import { AdminEventsPage } from "./pages/admin/AdminEventsPage.tsx";
 import { AdminSessionNewPage } from "./pages/admin/AdminSessionNewPage.tsx";
 import { AdminSessionPage } from "./pages/admin/AdminSessionPage.tsx";
@@ -14,7 +17,13 @@ export type Route =
   | { page: "session"; sessionId: string }
   | { page: "event"; eventId: string }
   | { page: "adminEvents" }
+  | { page: "adminEventNew" }
+  | { page: "adminAdmins" }
   | { page: "adminEvent"; eventId: string }
+  | { page: "adminEventProposals"; eventId: string }
+  | { page: "adminEventNotes"; eventId: string }
+  | { page: "adminEventOperators"; eventId: string }
+  | { page: "adminEventUsage"; eventId: string }
   | { page: "adminEventEdit"; eventId: string }
   | { page: "adminEventInvite"; eventId: string }
   | { page: "adminSessionNew"; eventId: string }
@@ -29,6 +38,13 @@ export function routeOf(pathname: string): Route {
   const eventPage = /^\/e\/([^/]+)\/?$/.exec(pathname);
   if (eventPage?.[1]) return { page: "event", eventId: decodeURIComponent(eventPage[1]) };
   if (/^\/admin\/?$/.test(pathname)) return { page: "adminEvents" };
+  // 「new」は、イベントのIDではなく、作る画面。イベントのURLより先に判定する
+  if (/^\/admin\/events\/new\/?$/.test(pathname)) return { page: "adminEventNew" };
+  if (/^\/admin\/admins\/?$/.test(pathname)) return { page: "adminAdmins" };
+  for (const [name, page] of [["proposals", "adminEventProposals"], ["notes", "adminEventNotes"], ["operators", "adminEventOperators"], ["usage", "adminEventUsage"]] as const) {
+    const sub = new RegExp(`^/admin/events/([^/]+)/${name}/?$`).exec(pathname);
+    if (sub?.[1]) return { page, eventId: decodeURIComponent(sub[1]) };
+  }
   const event = /^\/admin\/events\/([^/]+)\/?$/.exec(pathname);
   if (event?.[1]) return { page: "adminEvent", eventId: decodeURIComponent(event[1]) };
   const eventEdit = /^\/admin\/events\/([^/]+)\/edit\/?$/.exec(pathname);
@@ -55,6 +71,12 @@ export function App({ pathname = window.location.pathname }: { pathname?: string
   if (route.page === "session") return <ParticipantPage sessionId={route.sessionId} />;
   if (route.page === "event") return <ParticipantEventPage eventId={route.eventId} />;
   if (route.page === "adminEvents") return <AdminEventsPage />;
+  if (route.page === "adminEventNew") return <AdminEventNewPage />;
+  if (route.page === "adminAdmins") return <AdminAdminsPage />;
+  if (route.page === "adminEventProposals") return <AdminProposalsPage eventId={route.eventId} />;
+  if (route.page === "adminEventNotes") return <AdminNotesPage eventId={route.eventId} />;
+  if (route.page === "adminEventOperators") return <AdminOperatorsPage eventId={route.eventId} />;
+  if (route.page === "adminEventUsage") return <AdminUsagePage eventId={route.eventId} />;
   if (route.page === "adminEvent") return <AdminEventPage eventId={route.eventId} />;
   if (route.page === "adminEventEdit") return <AdminEventEditPage eventId={route.eventId} />;
   if (route.page === "adminEventInvite") return <AdminEventInvitePage eventId={route.eventId} />;

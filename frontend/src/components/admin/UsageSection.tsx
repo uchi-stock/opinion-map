@@ -18,7 +18,6 @@ export function UsageSection({ api, eventId, describeError }: { api: AdminApi; e
   );
   return (
     <section aria-label="AIの利用状況">
-      <hr />
       <h2 className="h6">AIの利用状況（今日）</h2>
       <p className="small text-body-secondary">
         分析と案の生成は、実行のたびに費用がかかります。誤操作や使いすぎを防ぐため、1日の上限があります。上限は、{timeFormat.format(new Date(u.resetsAt))}（日本時間）に戻ります。

@@ -67,9 +67,14 @@ function EventContent({
               {session.title}
               {isOpenSession(state.data.event, state.data.sessions, session) && <span className="badge text-bg-primary ms-2">開いている</span>}
             </span>
-            <span className="badge text-bg-secondary">{SESSION_STATUS_LABELS[session.status]}</span>
+            <span className={`badge ${session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
+              {SESSION_STATUS_LABELS[session.status]}
+            </span>
           </div>
         </a>
+        {session.status === "draft" && (
+          <p className="small text-warning-emphasis mb-1">参加者には見えません。テーマのページで「公開中」にすると見えます。</p>
+        )}
         </div>
       ))}
       <SessionCreateForm api={api} eventId={eventId} describeError={describeError} onCreated={reload} />

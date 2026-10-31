@@ -37,6 +37,8 @@ const PRESENCE_TTL_SECONDS = 10 * 60;
 /** 参加者向けの、イベントの公開情報。下書きのテーマは含めない */
 export interface PublicEvent {
   id: string;
+  /** 下書きなら "draft"。参加者の画面は、開始を待つ案内を出す。そのとき名前や中身は返さない */
+  status: EventRecord["status"];
   name: string;
   description: string;
   /** 開くテーマが選ばれているときの、最初の1つ(古い画面との互換)。未設定なら null */
@@ -168,7 +170,11 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     /** 招待URL(イベントごとに1つ)から開く画面の情報。下書きのイベントは、存在しないものとして扱う */
     async getPublicEvent(eventId: string): Promise<PublicEvent> {
       const event = await ctx.repos.events.get(eventId);
-      if (!event || event.status === "draft") throw notFound("イベント");
+      if (!event) throw notFound("イベント");
+      // 下書きは、存在を隠さず「まだ始まっていない」と伝える。名前や中身は、公開するまで返さない
+      if (event.status === "draft") {
+        return { id: event.id, status: "draft", name: "", description: "", currentSessionId: null, openSessionIds: null, sessions: [] };
+      }
       const sessions = (await ctx.repos.sessions.listByEvent(eventId)).filter((s) => s.status !== "draft");
       const selected = selectedOpenIds(event);
       const withCounts = await Promise.all(
@@ -184,6 +190,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       );
       return {
         id: event.id,
+        status: event.status,
         name: event.name,
         description: event.description,
         currentSessionId: selected?.[0] ?? null,

@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/uchi-stock/opinion-map/compare/v1.16.0...v1.17.0) (2026-10-31)
+
+
+### Features
+
+* choose the open theme with radio buttons and list all themes for participants ([#129](https://github.com/uchi-stock/opinion-map/issues/129)) ([a2ed2a9](https://github.com/uchi-stock/opinion-map/commit/a2ed2a91c0c12113b7052c9d6ce04670ed678c5d)), closes [#127](https://github.com/uchi-stock/opinion-map/issues/127)
+
 # [1.16.0](https://github.com/uchi-stock/opinion-map/compare/v1.15.0...v1.16.0) (2026-10-31)
 
 

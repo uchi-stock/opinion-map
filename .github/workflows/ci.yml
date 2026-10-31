@@ -25,6 +25,26 @@ jobs:
       # CI単独でのマージは止める。広聴AI評価の完了を待つgate jobがマージする
       # （dev-standardsの「1 job per app」パターン、docs/cicd-pipeline-specification.md参照）
       enable_auto_merge: false
+      # 静的チェック(dev-standardsの標準)。違反するコミットは、CIで止まる
+      enable_standards_check: true
+      # 秘密情報の検知(enable_secret_scan)は、組織のリポジトリで gitleaks-action のライセンスキーが要るため、まだ有効にしない(#97)
+      enable_text_lint: true
+      text_lint_paths: |
+        docs/**/*.md
+        README.md
+        CLAUDE.md
+        backend/README.md
+        frontend/README.md
+      enable_dead_link_check: true
+      dead_link_check_paths: |
+        docs/**/*.md
+        README.md
+        CLAUDE.md
+        backend/README.md
+        frontend/README.md
+      # コードの重複。まず報告だけ(しきい値0)。実測は0.6%と低いので、しきい値は後で決める
+      enable_duplication_check: true
+      duplication_threshold: 0
     secrets: inherit
 
   # eval配下を変更したPRだけ広聴AI評価を、kouchou-runner配下を変更したPRだけランナーのイメージの確認を実行する

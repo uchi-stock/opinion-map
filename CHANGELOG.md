@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/uchi-stock/opinion-map/compare/v1.15.0...v1.16.0) (2026-10-31)
+
+
+### Features
+
+* apply the shared dev-standards Bootstrap theme ([#131](https://github.com/uchi-stock/opinion-map/issues/131)) ([107526d](https://github.com/uchi-stock/opinion-map/commit/107526d1ceecbe98824cc04ed5a228291f06c8f4)), closes [#130](https://github.com/uchi-stock/opinion-map/issues/130)
+
 # [1.15.0](https://github.com/uchi-stock/opinion-map/compare/v1.14.0...v1.15.0) (2026-10-31)
 
 

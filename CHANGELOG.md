@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/uchi-stock/opinion-map/compare/v1.11.0...v1.12.0) (2026-10-31)
+
+
+### Features
+
+* add operational monitoring with alarms and client error reports ([#81](https://github.com/uchi-stock/opinion-map/issues/81)) ([#109](https://github.com/uchi-stock/opinion-map/issues/109)) ([ad885f2](https://github.com/uchi-stock/opinion-map/commit/ad885f25a3f51c89cc6b34c7601a2707a4eebcba))
+
 # [1.11.0](https://github.com/uchi-stock/opinion-map/compare/v1.10.0...v1.11.0) (2026-10-31)
 
 

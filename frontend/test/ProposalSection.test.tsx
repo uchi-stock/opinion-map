@@ -14,7 +14,7 @@ const at = "2026-01-01T00:00:00.000Z";
 describe("ProposalSection", () => {
   it("受け付けていて、提案が無いなら、フォームだけを出す。提案すると送信される", async () => {
     let proposals: unknown[] = [];
-    const mock = stubFetch((url, init) => {
+    const mock = stubFetch((_url, init) => {
       if (init?.method === "POST") {
         const body = JSON.parse(String(init.body));
         proposals = [{ id: "p1", title: body.title, description: body.description, status: "pending", reactionCount: 0, createdAt: at }];

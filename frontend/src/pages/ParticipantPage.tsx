@@ -3,6 +3,7 @@ import { ApiError, getSession, listOpinions } from "../api/client.ts";
 import type { OpinionList, OpinionResult, PublicSession } from "../api/types.ts";
 import { OpinionCard } from "../components/OpinionCard.tsx";
 import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
+import { ReactionButton } from "../components/ReactionButton.tsx";
 import { OpinionForm } from "../components/OpinionForm.tsx";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 
@@ -152,7 +153,17 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
           {listState.status === "ready" &&
             [...listState.list.opinions].reverse().map((o) => (
               <div key={o.id}>
-                <OpinionCard opinion={o} />
+                <OpinionCard
+                  opinion={o}
+                  actions={
+                    <ReactionButton
+                      opinionId={o.id}
+                      count={o.reactionCount ?? 0}
+                      disabled={!session.acceptingOpinions}
+                      onChanged={() => void loadList()}
+                    />
+                  }
+                />
                 {mine[o.id] && (
                   <MyOpinionActions
                     opinion={o}

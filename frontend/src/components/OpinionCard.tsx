@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { PublicOpinion } from "../api/types.ts";
 import { KIND_LABELS } from "../lib/text.ts";
 
@@ -12,7 +13,7 @@ function formatTime(iso: string): string {
  * 意見のカード。本文は文字列として描画する（React が自動でエスケープする）。
  * 種類は、色だけでなく文字のラベルでも示す。
  */
-export function OpinionCard({ opinion }: { opinion: PublicOpinion }) {
+export function OpinionCard({ opinion, actions }: { opinion: PublicOpinion; actions?: ReactNode }) {
   return (
     <article className="card mb-2" data-testid="opinion-card">
       <div className="card-body py-2">
@@ -23,6 +24,7 @@ export function OpinionCard({ opinion }: { opinion: PublicOpinion }) {
         <p className="card-text mb-0" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
           {opinion.body}
         </p>
+        {actions && <div className="mt-2">{actions}</div>}
       </div>
     </article>
   );

@@ -74,6 +74,10 @@ export function editOpinion(
 }
 
 /** 自分の投稿を削除する。削除すると、本文は消え、戻せない */
+export function reactToOpinion(opinionId: string, voterId: string, reacted: boolean): Promise<{ reacted: boolean; count: number }> {
+  return request(`/opinions/${enc(opinionId)}/reaction`, jsonPost("POST", { voterId, reacted }));
+}
+
 export function deleteOpinion(opinionId: string, editKey: string): Promise<{ deleted: true }> {
   return request(`/opinions/${enc(opinionId)}/delete`, jsonPost("POST", { editKey }));
 }

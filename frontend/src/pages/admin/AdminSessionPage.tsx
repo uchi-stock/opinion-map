@@ -85,7 +85,7 @@ function SessionContent({
         {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
         {[...opinions].reverse().map((o) => (
           <div key={o.id} id={opinionAnchor(o.id)}>
-            <OpinionCard opinion={o} />
+            <OpinionCard opinion={o} actions={<small className="text-body-secondary">いいね {o.reactionCount ?? 0}</small>} />
             <ModerationControls api={api} opinion={o} describeError={describeError} onChanged={reload} />
           </div>
         ))}

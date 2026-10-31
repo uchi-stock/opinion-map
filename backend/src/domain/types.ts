@@ -60,6 +60,19 @@ export interface PublicOpinion {
   body: string;
   kind: OpinionKind;
   createdAt: string;
+  /** いいねの数。一覧のときだけ付く */
+  reactionCount?: number;
+}
+
+/**
+ * 投稿へのリアクション(いいね)。投票者は、ブラウザが作る乱数(voterId)のハッシュだけを持つ。
+ * 人は特定しない。同じブラウザは、同じ投稿に1回だけ付けられる。
+ */
+export interface ReactionRecord {
+  sessionId: string;
+  opinionId: string;
+  voterHash: string;
+  createdAt: string;
 }
 
 export function toPublicOpinion(o: OpinionRecord): PublicOpinion {

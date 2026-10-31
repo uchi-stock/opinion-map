@@ -39,6 +39,20 @@ export interface AdminOpinion extends PublicOpinion {
 export const DELETED_BODY_PLACEHOLDER = "";
 
 export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRateLimit = DEFAULT_RATE_LIMIT) {
+  /** 投稿ごとのいいねの数 */
+  async function reactionCounts(sessionId: string): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    for (const r of await ctx.repos.reactions.listBySession(sessionId)) {
+      counts.set(r.opinionId, (counts.get(r.opinionId) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  const withCount = (o: PublicOpinion, counts: Map<string, number>): PublicOpinion => ({
+    ...o,
+    reactionCount: counts.get(o.id) ?? 0,
+  });
+
   /** 削除した投稿の本文を、過去の分析の入力の記録からも消す */
   async function scrubFromAnalyses(sessionId: string, opinionId: string): Promise<void> {
     for (const run of await ctx.repos.analyses.listBySession(sessionId)) {
@@ -128,7 +142,35 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const { session } = await loadForParticipant(sessionId);
       if (!session.showOpinionsToParticipants) return { hidden: true, opinions: [] };
       const list = await ctx.repos.opinions.listBySession(sessionId);
-      return { hidden: false, opinions: list.map(toPublicOpinion) };
+      const counts = await reactionCounts(sessionId);
+      return { hidden: false, opinions: list.map((o) => withCount(toPublicOpinion(o), counts)) };
+    },
+
+    /**
+     * いいねを付ける・外す。同じ投票者は、同じ投稿に1回だけ付けられる(再送は無害)。
+     * 受け付け中で、公開中の投稿だけ。投票者は、IDのハッシュだけを保存する。
+     */
+    async react(opinionId: string, voterId: string, reacted: boolean): Promise<{ reacted: boolean; count: number }> {
+      const opinion = await ctx.repos.opinions.get(opinionId);
+      if (!opinion || opinion.status !== "active") throw notFound("投稿");
+      const { event, session } = await loadForParticipant(opinion.sessionId);
+      if (!session.showOpinionsToParticipants) throw notFound("投稿");
+      if (!isAccepting(event, session)) {
+        throw forbidden("not_accepting", "このセッションは、いま投票を受け付けていません");
+      }
+      const voterHash = await sha256Hex(voterId);
+      if (reacted) {
+        await ctx.repos.reactions.add({
+          sessionId: opinion.sessionId,
+          opinionId,
+          voterHash,
+          createdAt: ctx.now().toISOString(),
+        });
+      } else {
+        await ctx.repos.reactions.remove(opinionId, voterHash);
+      }
+      const counts = await reactionCounts(opinion.sessionId);
+      return { reacted, count: counts.get(opinionId) ?? 0 };
     },
 
     /** 運営者向けの一覧。設定にかかわらず、非表示のものも含めて返す */
@@ -136,7 +178,8 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const session = await ctx.repos.sessions.get(sessionId);
       if (!session) throw notFound("セッション");
       const list = await ctx.repos.opinions.listManageableBySession(sessionId);
-      return list.map((o) => ({ ...toPublicOpinion(o), status: o.status === "hidden" ? "hidden" : "active" }));
+      const counts = await reactionCounts(sessionId);
+      return list.map((o) => ({ ...withCount(toPublicOpinion(o), counts), status: o.status === "hidden" ? "hidden" : "active" }));
     },
 
     /** 投稿者による編集。受け付け中のセッションだけ。分析の入力の記録は変えない */

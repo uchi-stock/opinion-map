@@ -1,6 +1,6 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
-import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
 /** テストとローカル開発用。プロセスが終わると消える */
@@ -12,6 +12,8 @@ export function createInMemoryRepositories(): Repositories {
   const analyses = new Map<string, AnalysisRunRecord>();
   const operatorTokens = new Map<string, OperatorTokenRecord>();
   const admins = new Map<string, AdminRecord>();
+  const reactions = new Map<string, ReactionRecord>();
+  const reactionKey = (opinionId: string, voterHash: string) => `${opinionId}#${voterHash}`;
   const insights = new Map<string, InsightRecord>();
 
   return {
@@ -129,6 +131,20 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    reactions: {
+      async add(reaction) {
+        const key = reactionKey(reaction.opinionId, reaction.voterHash);
+        if (reactions.has(key)) return false;
+        reactions.set(key, { ...reaction });
+        return true;
+      },
+      async remove(opinionId, voterHash) {
+        return reactions.delete(reactionKey(opinionId, voterHash));
+      },
+      async listBySession(sessionId) {
+        return [...reactions.values()].filter((r) => r.sessionId === sessionId).map((r) => ({ ...r }));
       },
     },
     admins: {

@@ -72,7 +72,7 @@ flowchart TD
 
 </details>
 
-![画面遷移（参加者） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-1.png?3cb5a0e22731bc178c4e7aee1898cb76bde3a5bc)
+![画面遷移（参加者） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-1.png?101db8346238a0ac102fd60a063d9c6297d587df)
 
 - 参加者は、ログインなしで使う。
 - 公開中（active）のイベントは、招待URLがなくても、トップページの一覧から入れる。下書きと終了は、一覧に出ない。

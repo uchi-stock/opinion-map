@@ -3,6 +3,7 @@ import { createAdminApi, type AdminApi } from "../../api/admin.ts";
 import { ApiError } from "../../api/client.ts";
 import { GoogleLoginButton } from "./GoogleLoginButton.tsx";
 import { clearAdminToken, loadAdminToken, saveAdminToken } from "../../lib/adminToken.ts";
+import { withBase } from "../../lib/paths.ts";
 
 export interface AdminContext {
   api: AdminApi;
@@ -102,13 +103,18 @@ export function AdminShell({ title, back, children }: Props) {
 
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>
-      <nav className="d-flex justify-content-between align-items-center mb-3 small">
+      <nav className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 small" aria-label="運営者の画面のナビゲーション">
         {back ? <a href={back.href}>← {back.label}</a> : <span>運営者の画面</span>}
-        {token && (
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={signOut}>
-            トークンを消す
-          </button>
-        )}
+        <div className="d-flex align-items-center gap-2">
+          <a className="btn btn-sm btn-outline-secondary" href={withBase("/")}>
+            トップページ
+          </a>
+          {token && (
+            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={signOut}>
+              トークンを消す
+            </button>
+          )}
+        </div>
       </nav>
       <h1 className="h4 mb-3">{title}</h1>
       {api ? (

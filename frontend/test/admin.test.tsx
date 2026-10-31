@@ -144,6 +144,24 @@ describe("運営者の画面のルーティング", () => {
   });
 });
 
+describe("トップページへ戻るリンク", () => {
+  it("トークンの入力前でも、トップページへ戻れる", () => {
+    fakeAdminBackend();
+    render(<AdminEventsPage />);
+    const nav = screen.getByRole("navigation", { name: "運営者の画面のナビゲーション" });
+    expect(within(nav).getByRole("link", { name: "トップページ" })).toHaveAttribute("href", "/");
+  });
+
+  it("イベント・セッションの画面でも、トップページへのリンクが出る", async () => {
+    saveAdminToken(TOKEN);
+    fakeAdminBackend();
+    render(<AdminEventPage eventId="e1" />);
+    const nav = await screen.findByRole("navigation", { name: "運営者の画面のナビゲーション" });
+    expect(within(nav).getByRole("link", { name: "トップページ" })).toHaveAttribute("href", "/");
+    expect(within(nav).getByRole("link", { name: /イベント一覧/ })).toBeInTheDocument();
+  });
+});
+
 describe("トークンの入力", () => {
   it("トークンがなければ入力画面を出し、入力すると読み込む", async () => {
     const { calls } = fakeAdminBackend();

@@ -13,6 +13,7 @@ import { getVoterId } from "../lib/reactions.ts";
 import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 import { withBase } from "../lib/paths.ts";
+import { TimerBadge } from "../components/TimerBadge.tsx";
 import { useHashFlag } from "../lib/useHashFlag.ts";
 
 /** 見ていることを知らせる間隔。サーバーが数える時間(90秒)より、短くする */
@@ -71,6 +72,15 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setSessionState({ status: "notFound" });
       else setSessionState({ status: "error", message: errorMessage(e) });
+    }
+  }, [sessionId]);
+
+  // 時間が来たとき。画面を「読み込み中」にせず、受付の状態だけをサーバーから取り直す
+  const refreshSession = useCallback(async () => {
+    try {
+      setSessionState({ status: "ready", session: await getSession(sessionId) });
+    } catch {
+      // 失敗しても、いまの表示を保つ
     }
   }, [sessionId]);
 
@@ -155,6 +165,11 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
         )}
         <h1 className="h4">{session.title}</h1>
         <p className="lead mb-0">{session.prompt}</p>
+        {session.status === "active" && session.deadlineAt && session.serverNow && (
+          <p className="mt-2 mb-0">
+            <TimerBadge deadlineAt={session.deadlineAt} serverNow={session.serverNow} onExpire={() => void refreshSession()} />
+          </p>
+        )}
       </header>
 
       {composing ? (

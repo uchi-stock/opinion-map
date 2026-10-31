@@ -90,6 +90,13 @@ const app = createApp({
   ...(geminiKey ? { insightProvider: new GeminiInsightProvider({ apiKey: geminiKey }) } : {}),
 });
 
-export async function handler(event: HttpApiEvent): Promise<HttpApiResult> {
+/** EventBridge の定期実行(1分ごと)。制限時間が過ぎたテーマを締め切り、分析を始める */
+interface ScheduledEvent {
+  source: "aws.events";
+}
+
+export async function handler(event: HttpApiEvent | ScheduledEvent): Promise<HttpApiResult | { closed: number }> {
+  if ("source" in event && event.source === "aws.events") return { closed: await app.sweepTimers() };
+  event = event as HttpApiEvent;
   return toHttpApiResult(await app.handleRequest(toHttpRequest(event, apiPrefix ? { stripPrefix: apiPrefix } : {})));
 }

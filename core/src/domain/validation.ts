@@ -231,6 +231,7 @@ export interface SessionInput {
   prompt: string;
   format: SessionFormat;
   showOpinionsToParticipants: boolean;
+  timerSeconds?: number;
 }
 export function parseSessionCreate(body: unknown): SessionInput {
   const obj = asObject(body);
@@ -238,11 +239,13 @@ export function parseSessionCreate(body: unknown): SessionInput {
   if (show !== undefined && typeof show !== "boolean") {
     throw badRequest("invalid_type", "showOpinionsToParticipants は真偽値で指定してください");
   }
+  const timerOnCreate = parseTimerSeconds(obj["timerSeconds"]);
   return {
     title: text(obj, "title", "テーマ名", NAME_MAX_LENGTH, { required: true })!,
     prompt: text(obj, "prompt", "問い", PROMPT_MAX_LENGTH, { required: true })!,
     format: oneOf(obj, "format", "形式", SESSION_FORMATS, { required: false }) ?? "workshop",
     showOpinionsToParticipants: show ?? true,
+    ...(timerOnCreate === undefined || timerOnCreate === null ? {} : { timerSeconds: timerOnCreate }),
   };
 }
 
@@ -253,6 +256,20 @@ export interface SessionPatch {
   status?: SessionStatus;
   showOpinionsToParticipants?: boolean;
   summaryPublished?: boolean;
+  /** 制限時間(秒)。null で解除 */
+  timerSeconds?: number | null;
+}
+
+export const TIMER_MIN_SECONDS = 60;
+export const TIMER_MAX_SECONDS = 24 * 60 * 60;
+/** 制限時間の指定。未指定は undefined、null は解除 */
+export function parseTimerSeconds(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < TIMER_MIN_SECONDS || value > TIMER_MAX_SECONDS) {
+    throw badRequest("invalid_timer", `制限時間は、${TIMER_MIN_SECONDS}秒以上${TIMER_MAX_SECONDS}秒以下の整数で指定してください`);
+  }
+  return value;
 }
 export function parseSessionPatch(body: unknown): SessionPatch {
   const obj = asObject(body);
@@ -281,6 +298,8 @@ export function parseSessionPatch(body: unknown): SessionPatch {
     if (typeof summaryPublished !== "boolean") throw badRequest("invalid_type", "summaryPublished は真偽値で指定してください");
     patch.summaryPublished = summaryPublished;
   }
+  const timer = parseTimerSeconds(obj["timerSeconds"]);
+  if (timer !== undefined) patch.timerSeconds = timer;
   return patch;
 }
 

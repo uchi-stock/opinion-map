@@ -23,6 +23,7 @@ export interface SessionInput {
   prompt: string;
   format: SessionFormat;
   showOpinionsToParticipants: boolean;
+  timerSeconds?: number;
 }
 
 /** 運営者向けのAPI。すべてのリクエストに、運営者のトークンを付ける */
@@ -63,7 +64,7 @@ export function createAdminApi(token: string) {
     },
     updateSession(
       id: string,
-      patch: Partial<SessionInput & { status: SessionStatus; summaryPublished: boolean }>,
+      patch: Partial<Omit<SessionInput, "timerSeconds"> & { status: SessionStatus; summaryPublished: boolean; timerSeconds: number | null }>,
     ): Promise<SessionRecord> {
       return send("PATCH", `/sessions/${enc(id)}`, patch);
     },

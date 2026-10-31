@@ -7,7 +7,6 @@ import { SummaryView } from "../../components/SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
-import { NotesEditor } from "../../components/admin/NotesEditor.tsx";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
 import { FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -24,7 +23,7 @@ export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sess
 }
 
 /** 最新の分析と、その案。なければ null(ボードは種類ごとにまとめる。要約のビューは出さない) */
-async function latestAnalysis(api: AdminApi, sessionId: string): Promise<{ run: AnalysisRun; insights: Insight[] } | null> {
+export async function latestAnalysis(api: AdminApi, sessionId: string): Promise<{ run: AnalysisRun; insights: Insight[] } | null> {
   try {
     const runs = await api.listAnalyses(sessionId);
     const latest = runs[runs.length - 1];
@@ -79,6 +78,7 @@ function SessionContent({
 
   const { event, session, opinions, latest, analysis } = state.data;
   const visible = event.status === "active" && session.status === "active";
+  const themePath = withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`);
 
   return (
     <>
@@ -97,6 +97,9 @@ function SessionContent({
       {!visible && (
         <div className="alert alert-warning" role="status">
           参加者が投稿できるのは、イベントとテーマが、両方とも「公開中」のときだけです。
+          <a className="alert-link ms-1" href={`${themePath}/edit`}>
+            テーマの設定を開く
+          </a>
         </div>
       )}
       <ViewTabs view={view} onChange={setView} summaryAvailable={latest !== null} />
@@ -143,25 +146,32 @@ function SessionContent({
       <hr />
       <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
       <hr />
-      <SessionForm api={api} session={session} describeError={describeError} onSaved={reload} />
-      <hr />
-      <NotesEditor
-        api={api}
-        sessionId={session.id}
-        initial={session.notes}
-        initialPublished={session.notesPublished === true}
-        describeError={describeError}
-        draftSource={
-          latest?.run.result
-            ? {
-                overview: latest.run.result.overview,
-                clusterTitles: latest.run.result.clusters.filter((c) => c.level === Math.min(...latest.run.result!.clusters.map((x) => x.level))).map((c) => c.title),
-                questions: latest.insights.flatMap((i) => (i.edited ?? i.ai).questions),
-              }
-            : null
-        }
-      />
+      <ThemeMenu eventId={eventId} sessionId={sessionId} />
     </>
+  );
+}
+
+/** このテーマでできることの入口。設定と議論の記録は、それぞれ別の画面で行う */
+function ThemeMenu({ eventId, sessionId }: { eventId: string; sessionId: string }) {
+  const base = withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`);
+  return (
+    <nav aria-label="このテーマの操作">
+      <h2 className="h6">このテーマの操作</h2>
+      <div className="list-group">
+        {[
+          { href: `${base}/edit`, label: "テーマの設定", note: "名前、問い、形式、状態" },
+          { href: `${base}/notes`, label: "議論の記録", note: "結論、次の行動、未解決の問い" },
+        ].map((item) => (
+          <a key={item.href} className="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href={item.href}>
+            <span>
+              {item.label}
+              <span className="d-block small text-body-secondary">{item.note}</span>
+            </span>
+            <span aria-hidden="true">›</span>
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }
 
@@ -283,7 +293,7 @@ function ModerationControls({
   );
 }
 
-function SessionForm({
+export function SessionForm({
   api,
   session,
   describeError,

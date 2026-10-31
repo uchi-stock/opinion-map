@@ -73,6 +73,8 @@ describe("参加者の画面", () => {
     stubFetch(() => json({ error: { code: "not_found", message: "テーマが見つかりません" } }, 404));
     render(<ParticipantPage sessionId="nope" />);
     expect(await screen.findByText("ページが見つかりません")).toBeInTheDocument();
+    // 行き止まりにしない。トップページへ戻れる
+    expect(screen.getByRole("link", { name: "トップページへ" })).toHaveAttribute("href", "/");
   });
 
   it("通信に失敗したときは、エラーと再読み込みのボタンを出し、押すと読み込み直す", async () => {
@@ -193,5 +195,21 @@ describe("見ていることの通知", () => {
     expect(sent).toHaveLength(1);
     const body = JSON.parse(String((sent[0]![1] as RequestInit).body)) as { deviceId: string };
     expect(body.deviceId).toMatch(/^[A-Za-z0-9_-]{22,128}$/);
+  });
+});
+
+describe("イベントのほかのテーマへの導線", () => {
+  it("旧URL(/s/<ID>)で開いたときは、イベントのページへのリンクを出す。イベントの画面の中では、出さない", async () => {
+    stubFetch((url) => {
+      if (url.endsWith("/sessions/s1")) return json(SESSION);
+      if (url.endsWith("/opinions")) return json({ hidden: false, opinions: [] });
+      return json({ error: { code: "not_found", message: "なし" } }, 404);
+    });
+    const { unmount } = render(<ParticipantPage sessionId="s1" />);
+    expect(await screen.findByRole("link", { name: "このイベントのほかのテーマを見る" })).toHaveAttribute("href", "/e/e1");
+    unmount();
+    render(<ParticipantPage sessionId="s1" embedded />);
+    await screen.findByRole("form", { name: "意見の投稿フォーム" });
+    expect(screen.queryByRole("link", { name: "このイベントのほかのテーマを見る" })).toBeNull();
   });
 });

@@ -33,3 +33,9 @@ commit_msg*.txt
 # --- dev-standards managed: end ---
 dist-lambda/
 .serverless/
+
+# E2E(Playwright)の出力
+dist-demo/
+e2e-screenshots/
+playwright-report/
+test-results/

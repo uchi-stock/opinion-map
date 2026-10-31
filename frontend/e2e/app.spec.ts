@@ -1,0 +1,52 @@
+import { expect, test } from "@playwright/test";
+import { captureScreenshot } from "./screenshot.ts";
+
+// 画面の横幅を超えてはみ出していないこと(iPhone で崩れていないこと)
+async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+}
+
+test.describe("トップページ", () => {
+  test("サンプルのボードが表示される", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Opinion Map" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "サンプル" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `top-${testInfo.project.name}`, `トップページ(${testInfo.project.name})`);
+  });
+});
+
+test.describe("参加者の画面", () => {
+  test("意見を投稿し、一覧に出て、いいねできる", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "参加者の画面（サンプル）" }).click();
+    await expect(page.getByRole("form", { name: "意見の投稿フォーム" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `participant-form-${testInfo.project.name}`, `参加者の投稿画面(${testInfo.project.name})`);
+
+    const text = "E2Eテストからの投稿です";
+    await page.getByLabel("あなたの意見").fill(text);
+    await page.getByRole("button", { name: "投稿する" }).click();
+    await expect(page.getByText("投稿しました。ありがとうございます。")).toBeVisible();
+
+    const list = page.getByRole("region", { name: "投稿された意見" });
+    await expect(list.getByText(text)).toBeVisible();
+
+    const like = list.getByRole("button", { name: /^いいね/ }).first();
+    await like.click();
+    await expect(list.getByRole("button", { name: /^いいね済み/ }).first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `participant-list-${testInfo.project.name}`, `投稿といいねのあと(${testInfo.project.name})`);
+  });
+});
+
+test.describe("管理画面", () => {
+  // デモ版は運営者トークンが入力済みになる。Google ログインの画面は、E2E の対象外(外部サービスのため)
+  test("イベント一覧が表示される", async ({ page }, testInfo) => {
+    await page.goto("/admin");
+    await expect(page.locator("main")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `admin-${testInfo.project.name}`, `管理画面(${testInfo.project.name})`);
+  });
+});

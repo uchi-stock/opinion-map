@@ -89,3 +89,12 @@ Playwright で、デモ版（バックエンドがブラウザの中で動く）
 - CI は chromium だけを入れるため、WebKit は使わない。iPhone は chromium で幅と操作を再現する
 - Google ログインの画面は、外部サービスのため対象外にしている
 - スクリーンショットは、PR のコメントと Job Summary に画像で出る。スマホで確認できる
+
+## 共通テーマ
+
+dev-standards の共通テーマ（`shared/ui/bootstrap-theme.css`）を使う。共通フォントと、ダークモードの配色追従を含む。
+
+- `src/bootstrap-theme.css` と `src/common-theme.css` は、dev-standards への symlink である。直接は編集しない
+- symlink は、リポジトリのルートで `node dev-standards/scripts/bootstrap.js` を実行すると作られる。定義は `sync-manifest.local.json` にある
+- フォントは、外部CDNを使わず、`@fontsource/m-plus-rounded-1c` で配信ファイルに含める
+- ダークモードの切り替え（`data-bs-theme`）は、まだ組み込んでいない

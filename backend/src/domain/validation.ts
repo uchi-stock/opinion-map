@@ -171,6 +171,20 @@ export function parseEditKey(value: unknown): string {
   return value;
 }
 
+/** リアクションの投票者を示す、ブラウザが作る乱数(128ビット以上) */
+const VOTER_ID = /^[A-Za-z0-9_-]{22,128}$/;
+export function parseReaction(body: unknown): { voterId: string; reacted: boolean } {
+  const obj = asObject(body);
+  const voterId = obj["voterId"];
+  if (typeof voterId !== "string" || !VOTER_ID.test(voterId)) {
+    throw badRequest("invalid_voter_id", "投票者のIDが正しくありません");
+  }
+  if (typeof obj["reacted"] !== "boolean") {
+    throw badRequest("invalid_reacted", "reacted は true か false で指定してください");
+  }
+  return { voterId, reacted: obj["reacted"] };
+}
+
 export function parseOpinionCreate(body: unknown, maxLength = DEFAULT_OPINION_MAX_LENGTH): OpinionInput {
   const obj = asObject(body);
   const submissionId = obj["submissionId"];

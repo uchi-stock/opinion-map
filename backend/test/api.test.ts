@@ -205,9 +205,9 @@ describe("匿名性と安全性", () => {
     expect(Object.keys(posted.json.opinion).sort()).toEqual(["body", "createdAt", "id", "kind"]);
     // 運営者の一覧だけが、非表示かどうか(status)を持つ。参加者の一覧は、許可した項目だけ
     const list = await call("GET", `/sessions/${sessionId}/opinions`, { admin: true });
-    expect(Object.keys(list.json.opinions[0]).sort()).toEqual(["body", "createdAt", "id", "kind", "status"]);
+    expect(Object.keys(list.json.opinions[0]).sort()).toEqual(["body", "createdAt", "id", "kind", "reactionCount", "status"]);
     const participantList = await call("GET", `/sessions/${sessionId}/opinions`);
-    expect(Object.keys(participantList.json.opinions[0]).sort()).toEqual(["body", "createdAt", "id", "kind"]);
+    expect(Object.keys(participantList.json.opinions[0]).sort()).toEqual(["body", "createdAt", "id", "kind", "reactionCount"]);
     for (const res of [posted, list, participantList]) {
       expect(res.body).not.toContain(submissionId);
       expect(res.body).not.toContain("203.0.113.9");

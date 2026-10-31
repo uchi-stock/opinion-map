@@ -16,6 +16,8 @@ export interface PublicOpinion {
   body: string;
   kind: OpinionKind;
   createdAt: string;
+  /** いいねの数。一覧のときだけ付く */
+  reactionCount?: number;
 }
 
 export interface OpinionList {

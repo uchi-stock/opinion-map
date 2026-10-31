@@ -1,5 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
-import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { KvItem, KvStore } from "./kvStore.js";
 import type { Repositories } from "./types.js";
@@ -52,6 +52,12 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
     gsi1pk: `EVENT#${t.eventId}#OPTOKENS`,
     gsi1sk: sortKey(t.createdAt, t.id),
     data: t,
+  });
+  const reactionItem = (r: ReactionRecord): KvItem => ({
+    pk: `REACTION#${r.opinionId}#${r.voterHash}`,
+    gsi1pk: `SESSION#${r.sessionId}#REACTIONS`,
+    gsi1sk: `${r.opinionId}#${r.voterHash}`,
+    data: r,
   });
   const adminItem = (a: AdminRecord): KvItem => ({
     pk: `ADMIN#${a.email}`,
@@ -192,6 +198,24 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
       },
       async update(token) {
         await store.put(tokenItem(token));
+      },
+    },
+    reactions: {
+      async add(reaction) {
+        try {
+          await store.put(reactionItem(reaction), { type: "notExists" });
+          return true;
+        } catch (error) {
+          const name = error instanceof Error ? `${error.name}:${error.message}` : "";
+          if (name.includes("ConditionalCheckFailed")) return false;
+          throw error;
+        }
+      },
+      async remove(opinionId, voterHash) {
+        return store.delete(`REACTION#${opinionId}#${voterHash}`);
+      },
+      async listBySession(sessionId) {
+        return (await store.queryByGsi1(`SESSION#${sessionId}#REACTIONS`)).map((i) => i.data as ReactionRecord);
       },
     },
     admins: {

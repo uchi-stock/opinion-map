@@ -49,6 +49,7 @@ npm run dev
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |
 | `PATCH /opinions/:id` | 自分の投稿を編集する（編集用の鍵が必要） | 鍵 |
 | `POST /opinions/:id/delete` | 自分の投稿を削除する（編集用の鍵が必要） | 鍵 |
+| `POST /opinions/:id/reaction` | いいねを付ける・外す(`voterId` と `reacted`)。同じ投票者は1回だけ。受け付け中のセッションだけ | 不要 |
 | `POST /opinions/:id/moderation` | 投稿を非表示・再表示・削除する（status は active / hidden / deleted） | 運営者 |
 | `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
 | `GET /sessions/:id/analyses` | 分析の一覧 | 運営者 |

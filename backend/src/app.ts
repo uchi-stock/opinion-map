@@ -2,6 +2,7 @@ import {
   parseEventCreate,
   parseEventPatch,
   parseEditKeyBody,
+  parseReaction,
   parseModeration,
   parseOpinionCreate,
   parseOpinionEdit,
@@ -378,6 +379,15 @@ export function createApp(options: AppOptions) {
         status: 200,
         data: { opinion: await opinions.edit(params["id"]!, parseOpinionEdit(body, options.opinionMaxLength)) },
       }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/opinions\/(?<id>[^/]+)\/reaction$/,
+      admin: false,
+      handle: async ({ params, body }) => {
+        const { voterId, reacted } = parseReaction(body);
+        return { status: 200, data: await opinions.react(params["id"]!, voterId, reacted) };
+      },
     },
     {
       method: "POST",

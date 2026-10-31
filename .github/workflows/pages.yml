@@ -30,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # 画面が、dev-standards の共通テーマ(symlink)を読み込むため、submodule も取得する
+          submodules: true
       - uses: actions/setup-node@v7
         with:
           node-version: "22"

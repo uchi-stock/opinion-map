@@ -5,7 +5,7 @@ import { createInMemoryRepositories } from "../../core/src/repositories/inMemory
 
 /**
  * ローカル開発用のサーバー。データはメモリ上にあり、再起動すると消える。
- * 起動時に、すぐ試せるイベントとセッションを1つ作る。
+ * 起動時に、すぐ試せるイベントとテーマを1つ作る。
  */
 const port = Number(process.env["PORT"] ?? 8787);
 const adminToken = process.env["ADMIN_TOKEN"] ?? "local-dev-admin-token";
@@ -30,7 +30,7 @@ async function seed(): Promise<string> {
   const event = JSON.parse((await call("POST", "/events", { name: "ローカル確認用イベント" })).body);
   await call("PATCH", `/events/${event.id}`, { status: "active" });
   const session = JSON.parse(
-    (await call("POST", `/events/${event.id}/sessions`, { title: "確認用セッション", prompt: "いま感じていることを教えてください" })).body,
+    (await call("POST", `/events/${event.id}/sessions`, { title: "確認用テーマ", prompt: "いま感じていることを教えてください" })).body,
   );
   await call("PATCH", `/sessions/${session.id}`, { status: "active" });
   return session.id as string;
@@ -65,6 +65,6 @@ seed().then((sessionId) => {
   server.listen(port, () => {
     console.log(`API: http://localhost:${port}`);
     console.log(`運営者トークン: ${adminToken}`);
-    console.log(`参加者の画面で使うセッションID: ${sessionId}`);
+    console.log(`参加者の画面で使うテーマID: ${sessionId}`);
   });
 });

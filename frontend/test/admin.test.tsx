@@ -166,7 +166,7 @@ describe("トップページへ戻るリンク", () => {
     expect(within(nav).getByRole("link", { name: "トップページ" })).toHaveAttribute("href", "/");
   });
 
-  it("イベント・セッションの画面でも、トップページへのリンクが出る", async () => {
+  it("イベント・テーマの画面でも、トップページへのリンクが出る", async () => {
     saveAdminToken(TOKEN);
     fakeAdminBackend();
     render(<AdminEventPage eventId="e1" />);
@@ -319,7 +319,7 @@ describe("イベント一覧", () => {
 describe("イベントの画面", () => {
   beforeEach(() => saveAdminToken(TOKEN));
 
-  it("セッションを一覧する", async () => {
+  it("テーマを一覧する", async () => {
     fakeAdminBackend();
     render(<AdminEventPage eventId="e1" />);
     const link = await screen.findByRole("link", { name: /ワークショップA/ });
@@ -345,6 +345,26 @@ describe("イベントの画面", () => {
     expect(within(group).queryByRole("radio", { name: "下書きのテーマ" })).toBeNull();
     await user.click(within(group).getByRole("radio", { name: "場B" }));
     await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s2"] }));
+  });
+
+  it("コピーのボタンで、招待URLをクリップボードに写す", async () => {
+    fakeAdminBackend();
+    const user = userEvent.setup();
+    render(<AdminEventInvitePage eventId="e1" />);
+    await screen.findByLabelText("招待URL");
+    await user.click(screen.getByRole("button", { name: "コピー" }));
+    expect(await screen.findByText("コピーしました。")).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/e/e1`);
+  });
+
+  it("クリップボードが使えない環境では、手でコピーする案内を出す", async () => {
+    fakeAdminBackend();
+    const user = userEvent.setup();
+    render(<AdminEventInvitePage eventId="e1" />);
+    await screen.findByLabelText("招待URL");
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    await user.click(screen.getByRole("button", { name: "コピー" }));
+    expect(await screen.findByText(/長押ししてコピー/)).toBeInTheDocument();
   });
 
   it("「すべて閉じる」を選ぶと、どのテーマにも投稿できなくなる", async () => {
@@ -375,7 +395,7 @@ describe("イベントの画面", () => {
     // 編集のフォーム、招待URL、QR、テーマの追加フォームは、このページに出さない
     expect(screen.queryByLabelText("イベント名")).toBeNull();
     expect(screen.queryByRole("img", { name: "招待URLのQRコード" })).toBeNull();
-    expect(screen.queryByRole("form", { name: "セッションを作る" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "テーマを作る" })).toBeNull();
   });
 
   it("説明が無いときは、その旨を出す。公開前のイベントには、状態の案内を出す", async () => {
@@ -451,9 +471,9 @@ describe("イベントの画面", () => {
     const { calls } = fakeAdminBackend({ sessions: [] });
     const user = userEvent.setup();
     render(<AdminSessionNewPage eventId="e1" />);
-    const form = await screen.findByRole("form", { name: "セッションを作る" });
+    const form = await screen.findByRole("form", { name: "テーマを作る" });
     const submit = within(form).getByRole("button", { name: "作る" });
-    await user.type(within(form).getByLabelText("セッション名"), "新セッション");
+    await user.type(within(form).getByLabelText("テーマ名"), "新テーマ");
     expect(submit).toBeDisabled();
     await user.type(within(form).getByLabelText("参加者への問い"), "どう思いますか");
     await user.selectOptions(within(form).getByLabelText("形式"), "ost");
@@ -461,43 +481,23 @@ describe("イベントの画面", () => {
     await user.click(submit);
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/admin/events/e1/sessions/s1"));
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({
-      title: "新セッション",
+      title: "新テーマ",
       prompt: "どう思いますか",
       format: "ost",
       showOpinionsToParticipants: false,
     });
   });});
 
-describe("セッションの画面", () => {
+describe("テーマの画面", () => {
   beforeEach(() => saveAdminToken(TOKEN));
 
-  it("参加者のURLとQRコードを表示する", async () => {
+  it("テーマのページには、URLのコピーもQRも出さない(参加者に配るのは、イベントの招待URLだけ)", async () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    const input = (await screen.findByLabelText("参加者のURL")) as HTMLInputElement;
-    expect(input.value).toBe(`${window.location.origin}/s/s1`);
-    const qr = screen.getByRole("img", { name: "参加者のURLのQRコード" });
-    expect(qr.querySelectorAll("rect").length).toBeGreaterThan(100);
-  });
-
-  it("コピーのボタンで、URLをクリップボードに写す", async () => {
-    fakeAdminBackend();
-    const user = userEvent.setup();
-    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByLabelText("参加者のURL");
-    await user.click(screen.getByRole("button", { name: "コピー" }));
-    expect(await screen.findByText("コピーしました。")).toBeInTheDocument();
-    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/s/s1`);
-  });
-
-  it("クリップボードが使えない環境では、手でコピーする案内を出す", async () => {
-    fakeAdminBackend();
-    const user = userEvent.setup();
-    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByLabelText("参加者のURL");
-    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
-    await user.click(screen.getByRole("button", { name: "コピー" }));
-    expect(await screen.findByText(/長押ししてコピー/)).toBeInTheDocument();
+    await screen.findByLabelText("テーマ名");
+    expect(screen.queryByLabelText("参加者のURL")).toBeNull();
+    expect(screen.queryByRole("img", { name: /QRコード/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "コピー" })).toBeNull();
   });
 
   it("公開中でないときは、参加者に見えない旨を警告する", async () => {
@@ -506,10 +506,10 @@ describe("セッションの画面", () => {
     expect(await screen.findByText(/両方とも「公開中」のときだけ/)).toBeInTheDocument();
   });
 
-  it("イベントもセッションも公開中なら、警告を出さない", async () => {
+  it("イベントもテーマも公開中なら、警告を出さない", async () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByLabelText("参加者のURL");
+    await screen.findByLabelText("テーマ名");
     expect(screen.queryByText(/両方とも「公開中」のときだけ/)).toBeNull();
   });
 
@@ -542,10 +542,10 @@ describe("セッションの画面", () => {
     expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ showOpinionsToParticipants: false });
   });
 
-  it("存在しないセッションでは、見つからない旨を出す", async () => {
+  it("存在しないテーマでは、見つからない旨を出す", async () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="nope" />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("セッションが見つかりません");
+    expect(await screen.findByRole("alert")).toHaveTextContent("テーマが見つかりません");
   });
 
   it("不適切な投稿を、非表示にして、表示に戻せる", async () => {

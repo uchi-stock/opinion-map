@@ -1,6 +1,6 @@
 # backend
 
-イベント・セッション・投稿のAPIである。TypeScript、Node.js 22以上で動く。
+イベント・テーマ・投稿のAPIである。TypeScript、Node.js 22以上で動く。
 
 ## 構成
 
@@ -34,7 +34,7 @@ npm ci
 npm run dev
 ```
 
-起動すると、すぐ試せるイベントとセッションを1つ作り、ID と運営者トークンを表示する。
+起動すると、すぐ試せるイベントとテーマを1つ作り、ID と運営者トークンを表示する。
 
 ## API
 
@@ -52,16 +52,16 @@ npm run dev
 | `POST /events` | イベントを作る（下書き） | 運営者 |
 | `GET /events` | イベント一覧 | 運営者 |
 | `PATCH /events/:id` | イベントを編集する（状態は draft / active / archived） | 運営者 |
-| `POST /events/:id/sessions` | セッションを作る（下書き） | 運営者 |
-| `GET /events/:id/sessions` | セッション一覧 | 運営者 |
-| `PATCH /sessions/:id` | セッションを編集する（状態は draft / active / closed） | 運営者 |
+| `POST /events/:id/sessions` | テーマを作る（下書き） | 運営者 |
+| `GET /events/:id/sessions` | テーマ一覧 | 運営者 |
+| `PATCH /sessions/:id` | テーマを編集する（状態は draft / active / closed） | 運営者 |
 | `GET /sessions/:id` | 問いなどの表示用の情報 | 不要 |
 | `POST /sessions/:id/opinions` | 意見を投稿する | 不要 |
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |
 | `PATCH /opinions/:id` | 自分の投稿を編集する（編集用の鍵が必要） | 鍵 |
 | `POST /opinions/:id/delete` | 自分の投稿を削除する（編集用の鍵が必要） | 鍵 |
 | `POST /sessions/:id/presence` | 画面を見ていることを知らせる(`deviceId`)。人数の目安に使う | 不要 |
-| `POST /opinions/:id/reaction` | いいねを付ける・外す(`voterId` と `reacted`)。同じ投票者は1回だけ。受け付け中のセッションだけ | 不要 |
+| `POST /opinions/:id/reaction` | いいねを付ける・外す(`voterId` と `reacted`)。同じ投票者は1回だけ。受け付け中のテーマだけ | 不要 |
 | `POST /opinions/:id/moderation` | 投稿を非表示・再表示・削除する（status は active / hidden / deleted） | 運営者 |
 | `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
 | `GET /sessions/:id/analyses` | 分析の一覧 | 運営者 |
@@ -85,7 +85,7 @@ npm run dev
 
 方式と理由は[ADR-0003](../docs/decisions/ADR-0003-spam-and-author-control.md)を参照する。
 
-- セッションごとに、1分に120件を超える投稿は、429を返す（`opinionRateLimit` で変えられる）
+- テーマごとに、1分に120件を超える投稿は、429を返す（`opinionRateLimit` で変えられる）
 - 投稿時に `editKey`（128ビット以上の乱数）を送ると、あとで編集・削除できる。サーバーにはハッシュだけを保存する
 - 削除した投稿は、本文を消し、過去の分析の入力の記録からも消す
 
@@ -108,9 +108,9 @@ npm run dev
 
 - 投稿者を特定できる情報は、保存も返却もしない
 - 投稿には、ブラウザが作る使い捨ての `submissionId` が必要である。同じ値の再送は、新しい投稿を作らない
-- 投稿は、イベントとセッションが両方とも `active` のときだけ受け付ける
+- 投稿は、イベントとテーマが両方とも `active` のときだけ受け付ける
 - 下書きのイベントは、公開情報（`GET /events/:id/public`）が `status: "draft"` を返す。名前や中身は返さない。参加者の画面は「開始をお待ちください」と出す
-- 下書きのセッションは、参加者には 404 になる。イベントの公開情報の一覧にも出ない
+- 下書きのテーマは、参加者には 404 になる。イベントの公開情報の一覧にも出ない
 - 文字数の上限は、初期値が300文字である
 - 本文はそのまま保存する。HTMLのエスケープは、表示側で行う
 - 想定外のエラーでは、詳細や投稿本文を返さない
@@ -121,7 +121,7 @@ npm run dev
 
 - 1つのテーブルに、すべての種類の項目を置く。主キーは `pk`、一覧は GSI1（`gsi1pk` と `gsi1sk`）で引く
 - 投稿の二重送信は、送信IDの印と投稿を、1つのトランザクションで書いて防ぐ。並行して来ても、1件しか作られない
-- 分析の重複実行は、セッションごとのロックと実行を、1つのトランザクションで書いて防ぐ。ロックは終了時に外れ、2時間で失効する
+- 分析の重複実行は、テーマごとのロックと実行を、1つのトランザクションで書いて防ぐ。ロックは終了時に外れ、2時間で失効する
 - GSI は結果整合である。書いた直後の一覧は、反映が遅れることがある
 - 項目は 400KB までである。分析の実行は、入力の投稿の本文を含むため、投稿が数百件で超える
   - 入力の投稿は、100件ごとの別の項目（`ANALYSISINPUT#<実行>#<番号>`）に分けて置く。実行の項目には、IDと件数だけを持たせる

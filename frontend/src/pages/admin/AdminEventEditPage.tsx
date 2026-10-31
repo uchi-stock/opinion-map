@@ -89,7 +89,7 @@ export function EventForm({
           </option>
         ))}
       </select>
-      <div className="form-text mb-3">参加者に見えるのは、「公開中」のイベントのセッションだけです。</div>
+      <div className="form-text mb-3">参加者に見えるのは、「公開中」のイベントのテーマだけです。</div>
       <button type="submit" className="btn btn-primary w-100" disabled={busy || !name.trim()}>
         保存する
       </button>

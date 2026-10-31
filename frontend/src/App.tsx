@@ -21,7 +21,7 @@ export type Route =
   | { page: "adminSession"; eventId: string; sessionId: string }
   | { page: "notFound" };
 
-/** 参加者の招待URLは /e/<イベントID>(テーマは運営者が切り替える)。/s/<セッションID> も使える。運営者の画面は /admin 以下 */
+/** 参加者の招待URLは /e/<イベントID>(テーマは運営者が切り替える)。/s/<テーマID> も使える。運営者の画面は /admin 以下 */
 export function routeOf(pathname: string): Route {
   if (pathname === "/" || pathname === "") return { page: "top" };
   const session = /^\/s\/([^/]+)\/?$/.exec(pathname);

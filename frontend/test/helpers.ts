@@ -6,7 +6,7 @@ export const json = (data: unknown, status = 200) =>
 
 export const SESSION = {
   id: "s1",
-  title: "セッションのタイトル",
+  title: "テーマのタイトル",
   prompt: "いま感じていることを教えてください",
   format: "workshop",
   status: "active",

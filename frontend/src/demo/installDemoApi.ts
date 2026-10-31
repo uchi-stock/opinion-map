@@ -24,7 +24,7 @@ async function admin(app: App, method: string, path: string, body?: unknown) {
   return JSON.parse(response.body || "null");
 }
 
-/** データが空のときだけ、すぐ試せるイベントとセッション、サンプルの意見を作る */
+/** データが空のときだけ、すぐ試せるイベントとテーマ、サンプルの意見を作る */
 async function seedIfEmpty(app: App, repos: Repositories): Promise<void> {
   if ((await repos.events.list()).length > 0) return;
   const event = await admin(app, "POST", "/events", {
@@ -33,7 +33,7 @@ async function seedIfEmpty(app: App, repos: Repositories): Promise<void> {
   });
   await admin(app, "PATCH", `/events/${event.id}`, { status: "active" });
   const session = await admin(app, "POST", `/events/${event.id}/sessions`, {
-    title: "デモ用セッション",
+    title: "デモ用テーマ",
     prompt: "このアプリについて、感じたことを教えてください",
   });
   await admin(app, "PATCH", `/sessions/${session.id}`, { status: "active" });
@@ -47,7 +47,7 @@ async function seedIfEmpty(app: App, repos: Repositories): Promise<void> {
   }
 }
 
-/** 公開されているセッションのうち、最初のものを返す（デモ版の案内のリンクに使う） */
+/** 公開されているテーマのうち、最初のものを返す（デモ版の案内のリンクに使う） */
 export async function findSampleSessionId(repos: Repositories): Promise<string | undefined> {
   for (const event of await repos.events.list()) {
     const sessions = await repos.sessions.listByEvent(event.id);

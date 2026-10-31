@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe("APIクライアント", () => {
-  it("セッションを取得する", async () => {
+  it("テーマを取得する", async () => {
     const fetchMock = stubFetch(() => json(SESSION));
     expect((await getSession("s1")).title).toBe(SESSION.title);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/sessions/s1");

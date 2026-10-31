@@ -186,7 +186,7 @@ describeLocal("DynamoDB Local に対する保存先の契約", () => {
       expect(new Set(results.map((r) => r.opinion.id)).size).toBe(1);
     });
 
-    it("同じセッションの分析を同時に始めても、進行中は1つだけ", async () => {
+    it("同じテーマの分析を同時に始めても、進行中は1つだけ", async () => {
       const repos = createDynamoRepositories(await fresh("dynamo"));
       const run = (id: string) => ({
         id,

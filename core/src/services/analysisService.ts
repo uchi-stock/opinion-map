@@ -92,7 +92,7 @@ export function createAnalysisService(
     };
     const created = await ctx.repos.analyses.createIfNoActive(queued);
     if (!created.created) {
-      throw conflict("analysis_in_progress", "このセッションでは、すでに分析を実行中です");
+      throw conflict("analysis_in_progress", "このテーマでは、すでに分析を実行中です");
     }
     if (options.usage && eventId) {
       try {
@@ -154,7 +154,7 @@ export function createAnalysisService(
     /** 分析を始める。そのときの投稿を固定して記録する */
     async start(sessionId: string): Promise<PublicAnalysisRun> {
       const session = await ctx.repos.sessions.get(sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       const opinions = (await ctx.repos.opinions.listBySession(sessionId)).map<AnalysisOpinion>((o) => ({
         id: o.id,
         body: o.body,
@@ -175,7 +175,7 @@ export function createAnalysisService(
       const failed = await load(runId);
       if (failed.status !== "failed") throw conflict("not_failed", "失敗した分析だけを、再試行できます");
       const session = await ctx.repos.sessions.get(failed.sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       return toPublic(await launch(failed.sessionId, session.prompt, failed.input.opinions, failed.id), false);
     },
 
@@ -212,7 +212,7 @@ export function createAnalysisService(
 
     async list(sessionId: string): Promise<PublicAnalysisRun[]> {
       const session = await ctx.repos.sessions.get(sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       const runs = await ctx.repos.analyses.listBySession(sessionId);
       return Promise.all(runs.map((r) => toPublic(r, false)));
     },

@@ -54,7 +54,7 @@ Node.js 22以上が必要である。
    npm run dev
    ```
 
-   起動時に、「セッションID」が表示される。
+   起動時に、「テーマID」が表示される。
 
 2. 別のターミナルで、フロントエンドを起動する。
 
@@ -64,7 +64,7 @@ Node.js 22以上が必要である。
    npm run dev
    ```
 
-3. ブラウザで `http://localhost:5173/s/<セッションID>` を開く。
+3. ブラウザで `http://localhost:5173/s/<テーマID>` を開く。
 
 詳しくは、[backend](backend/README.md) と [frontend](frontend/README.md) を参照する。
 

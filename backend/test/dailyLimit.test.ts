@@ -25,7 +25,7 @@ describe("AIの利用の1日の上限(API)", () => {
     const a = await t.openSession();
     await t.call("POST", `/sessions/${a.sessionId}/opinions`, { body: { submissionId: newSubmissionId(), kind: "idea", body: "意見A" } });
     await t.call("POST", `/sessions/${a.sessionId}/opinions`, { body: { submissionId: newSubmissionId(), kind: "idea", body: "意見B" } });
-    // 同じセッションで、続けて始められるよう、前の実行を完了させてから始める
+    // 同じテーマで、続けて始められるよう、前の実行を完了させてから始める
     const analyze = async () => {
       const res = await t.call("POST", `/sessions/${a.sessionId}/analyses`, { admin: true });
       if (res.statusCode === 202) await t.call("GET", `/analyses/${res.json.id}`, { admin: true });
@@ -92,7 +92,7 @@ describe("AIの利用の1日の上限(API)", () => {
       Array.from({ length: 6 }, () => t.call("POST", `/sessions/${t.sessionId}/analyses`, { admin: true })),
     );
     const accepted = results.filter((r) => r.statusCode === 202).length;
-    // 同じセッションは、同時に1つしか実行できない。受理された数は、上限を超えない
+    // 同じテーマは、同時に1つしか実行できない。受理された数は、上限を超えない
     expect(accepted).toBeLessThanOrEqual(3);
     expect((await t.usage()).json.analysis.used).toBeLessThanOrEqual(3);
   });

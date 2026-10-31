@@ -32,7 +32,7 @@ export function createSessionService(ctx: ServiceContext) {
 
     async get(id: string): Promise<SessionRecord> {
       const session = await ctx.repos.sessions.get(id);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       return session;
     },
 

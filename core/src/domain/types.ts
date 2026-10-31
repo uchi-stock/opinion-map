@@ -16,8 +16,8 @@ export interface EventRecord {
   description: string;
   status: EventStatus;
   /**
-   * いま参加者が投稿できるテーマ(セッション)。招待URLがイベントごとに1つなので、運営者が切り替える。
-   * 未設定のイベントは、公開中のセッションすべてに投稿できる(従来の動き)
+   * いま参加者が投稿できるテーマ。招待URLがイベントごとに1つなので、運営者が切り替える。
+   * 未設定のイベントは、公開中のテーマすべてに投稿できる(従来の動き)
    */
   currentSessionId?: string;
   /**
@@ -40,7 +40,7 @@ export type ProposalStatus = "pending" | "approved" | "rejected" | "merged";
 
 /**
  * 参加者が出した議題の提案(OST)。提案者の情報は持たない。
- * 承認するとセッション(テーマ)ができ、統合すると既存のテーマに寄せる。どちらも sessionId で結ぶ。
+ * 承認するとテーマができ、統合すると既存のテーマに寄せる。どちらも sessionId で結ぶ。
  */
 export interface ProposalRecord {
   id: string;

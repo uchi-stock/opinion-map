@@ -63,7 +63,7 @@ export interface AppOptions {
    * ownerEmails に載っているメールアドレスだけが、オーナーになれる。
    */
   ownerLogin?: OwnerLoginOptions;
-  /** セッションごとの投稿頻度の上限。未指定なら、1分に120件 */
+  /** テーマごとの投稿頻度の上限。未指定なら、1分に120件 */
   opinionRateLimit?: OpinionRateLimit;
   /** 運用監視のログの出力先。未指定なら、標準出力にJSONで出す */
   log?: Logger;
@@ -546,7 +546,7 @@ export function createApp(options: AppOptions) {
       pattern: /^\/sessions\/(?<id>[^/]+)\/opinions$/,
       admin: false,
       handle: async ({ params, principal }) => {
-        // 運営者は、担当のイベントのセッションだけ、すべての投稿を見られる
+        // 運営者は、担当のイベントのテーマだけ、すべての投稿を見られる
         const eventId = principal ? await eventOfSession(params) : undefined;
         const isAdmin = principal?.kind === "owner" || (principal?.kind === "operator" && principal.eventId === eventId);
         if (isAdmin) {

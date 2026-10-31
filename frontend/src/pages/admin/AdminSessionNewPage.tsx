@@ -62,9 +62,9 @@ function SessionCreateForm({
   }
 
   return (
-    <form onSubmit={create} aria-label="セッションを作る">
+    <form onSubmit={create} aria-label="テーマを作る">
       <label htmlFor="ss-title" className="form-label">
-        セッション名
+        テーマ名
       </label>
       <input id="ss-title" className="form-control mb-2" value={title} onChange={(e) => setTitle(e.target.value)} />
       <label htmlFor="ss-prompt" className="form-label">

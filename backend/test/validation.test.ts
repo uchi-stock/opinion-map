@@ -81,19 +81,19 @@ describe("投稿の入力検証", () => {
   });
 });
 
-describe("イベントとセッションの入力検証", () => {
+describe("イベントとテーマの入力検証", () => {
   it("イベント名は必須", () => {
     expect(codeOf(() => parseEventCreate({ name: "  " }))).toBe("required");
     expect(parseEventCreate({ name: "カンファレンス" })).toEqual({ name: "カンファレンス", description: "" });
   });
 
-  it("セッションの形式は省略するとワークショップになる", () => {
+  it("テーマの形式は省略するとワークショップになる", () => {
     const s = parseSessionCreate({ title: "A", prompt: "問い" });
     expect(s.format).toBe("workshop");
     expect(s.showOpinionsToParticipants).toBe(true);
   });
 
-  it("セッションの形式が正しくないと拒否する", () => {
+  it("テーマの形式が正しくないと拒否する", () => {
     expect(codeOf(() => parseSessionCreate({ title: "A", prompt: "問い", format: "party" }))).toBe("invalid_value");
   });
 });

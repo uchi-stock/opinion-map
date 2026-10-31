@@ -29,7 +29,7 @@ export function createInsightService(ctx: ServiceContext, provider: InsightProvi
       const opinions = run.input.opinions.filter((o) => inCluster.has(o.id));
       if (opinions.length === 0) throw badRequest("no_opinions", "このクラスタには、投稿がありません");
       const session = await ctx.repos.sessions.get(run.sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
 
       // 課金が発生する前に、1日の上限を使う
       if (usage) await usage.consume("insight", session.eventId);

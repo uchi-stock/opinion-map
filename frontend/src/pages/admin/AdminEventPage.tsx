@@ -50,13 +50,13 @@ function EventContent({
     <>
       <EventSummary event={state.data.event} />
       <div className="d-flex justify-content-between align-items-center mt-3 mb-2">
-        <h2 className="h6 mb-0">テーマ（セッション）</h2>
+        <h2 className="h6 mb-0">テーマ</h2>
         <a className="btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`}>
           テーマを追加
         </a>
       </div>
       <ThemeRadioGroup event={state.data.event} sessions={state.data.sessions} api={api} describeError={describeError} onChanged={reload} />
-      {state.data.sessions.length === 0 && <p className="text-body-secondary">まだセッションがありません。</p>}
+      {state.data.sessions.length === 0 && <p className="text-body-secondary">まだテーマがありません。</p>}
       {state.data.sessions.map((session) => (
         <div key={session.id} className="mb-2">
         <a

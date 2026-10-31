@@ -41,7 +41,7 @@ describe("運営者トークン", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("担当のイベントのセッション・投稿・分析を操作できる", async () => {
+  it("担当のイベントのテーマ・投稿・分析を操作できる", async () => {
     const { call, a, issue, asOperator } = await setup();
     const { token } = await issue(a.eventId);
     const op = asOperator(token);
@@ -65,7 +65,7 @@ describe("運営者トークン", () => {
     expect((await call("PATCH", `/events/${b.eventId}`, { ...op, body: { name: "x" } })).statusCode).toBe(403);
     expect((await call("PATCH", `/sessions/${b.sessionId}`, { ...op, body: { title: "x" } })).statusCode).toBe(403);
     expect((await call("POST", `/sessions/${b.sessionId}/analyses`, op)).statusCode).toBe(403);
-    // 担当外のセッションの投稿は、参加者と同じ見え方にしかならない
+    // 担当外のテーマの投稿は、参加者と同じ見え方にしかならない
     await call("PATCH", `/sessions/${b.sessionId}`, { admin: true, body: { showOpinionsToParticipants: false } });
     const own = await call("GET", `/sessions/${b.sessionId}/opinions`, op);
     expect(own.json.hidden).toBe(true);

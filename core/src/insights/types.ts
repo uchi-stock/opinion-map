@@ -13,7 +13,7 @@ export interface InsightContent {
 }
 
 export interface InsightRequest {
-  /** セッションの問い */
+  /** テーマの問い */
   question: string;
   clusterTitle: string;
   clusterSummary: string;

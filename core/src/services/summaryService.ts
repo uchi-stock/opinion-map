@@ -30,9 +30,9 @@ export function createSummaryService(ctx: ServiceContext) {
     /** 公開されていなければ、要約の内容は返さない(公開の有無だけ) */
     async getPublished(sessionId: string): Promise<{ published: false } | PublicSummary> {
       const session = await ctx.repos.sessions.get(sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       const event = await ctx.repos.events.get(session.eventId);
-      if (!event || event.status === "draft" || session.status === "draft") throw notFound("セッション");
+      if (!event || event.status === "draft" || session.status === "draft") throw notFound("テーマ");
       if (session.summaryPublished !== true) return { published: false };
       const runs = await ctx.repos.analyses.listBySession(sessionId);
       const run = [...runs].reverse().find((r) => r.status === "succeeded" && r.result);

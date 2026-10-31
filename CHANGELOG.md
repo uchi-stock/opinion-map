@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/uchi-stock/opinion-map/compare/v1.7.0...v1.8.0) (2026-10-31)
+
+
+### Features
+
+* record and share the notes of each theme ([#90](https://github.com/uchi-stock/opinion-map/issues/90)) ([#100](https://github.com/uchi-stock/opinion-map/issues/100)) ([ed3af36](https://github.com/uchi-stock/opinion-map/commit/ed3af3617aa0368172f9740ca7cfc3d6943b00cb))
+
 # [1.7.0](https://github.com/uchi-stock/opinion-map/compare/v1.6.0...v1.7.0) (2026-10-31)
 
 

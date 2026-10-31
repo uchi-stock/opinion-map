@@ -102,6 +102,12 @@ export interface AnalysisRun {
   result?: AnalysisResult;
 }
 
+export interface AdminAccount {
+  email: string;
+  addedAt: string;
+  addedBy: string;
+}
+
 export interface OperatorToken {
   id: string;
   eventId: string;

@@ -5,6 +5,7 @@ import type {
   EventStatus,
   Insight,
   InsightContent,
+  AdminAccount,
   OperatorToken,
   AdminOpinionList,
   SessionFormat,
@@ -68,6 +69,15 @@ export function createAdminApi(token: string) {
     },
     updateInsight(id: string, patch: { edited?: InsightContent; approved?: boolean }): Promise<Insight> {
       return send("PATCH", `/insights/${enc(id)}`, patch);
+    },
+    async listAdmins(): Promise<AdminAccount[]> {
+      return (await send<{ admins: AdminAccount[] }>("GET", "/admins")).admins;
+    },
+    addAdmin(email: string): Promise<AdminAccount> {
+      return send("POST", "/admins", { email });
+    },
+    async removeAdmin(email: string): Promise<void> {
+      await send("DELETE", `/admins/${enc(email)}`);
     },
     async listOperatorTokens(eventId: string): Promise<OperatorToken[]> {
       return (await send<{ tokens: OperatorToken[] }>("GET", `/events/${enc(eventId)}/operator-tokens`)).tokens;

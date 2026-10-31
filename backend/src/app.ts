@@ -18,6 +18,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { createAdminService } from "./services/adminService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
 import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
 import { createSessionService } from "./services/sessionService.js";
@@ -105,7 +106,7 @@ export function createApp(options: AppOptions) {
   const opinions = createOpinionService(ctx, options.opinionRateLimit);
   const operatorTokens = createOperatorTokenService(ctx);
   const login = options.ownerLogin;
-  const ownerEmails = (login?.ownerEmails ?? []).map((e) => e.trim().toLowerCase()).filter((e) => e !== "");
+  const admins = createAdminService(ctx, login?.ownerEmails ?? []);
   if (login && login.sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
     throw new Error(`sessionSecret は${MIN_SESSION_SECRET_LENGTH}文字以上にしてください`);
   }
@@ -113,7 +114,7 @@ export function createApp(options: AppOptions) {
     ? createGoogleVerifier({ clientId: login.googleClientId, ...(login.fetch ? { fetch: login.fetch } : {}), now: ctx.now })
     : undefined;
   const authenticate = createAuthenticator(options.adminToken, options.repos.operatorTokens, {
-    ...(login ? { session: { secret: login.sessionSecret, ownerEmails, now: ctx.now } } : {}),
+    ...(login ? { session: { secret: login.sessionSecret, isOwnerEmail: admins.isAdmin, now: ctx.now } } : {}),
   });
   const eventOfSession = async (p: Params) => (await options.repos.sessions.get(p["id"]!))?.eventId;
   const eventOfAnalysis = async (p: Params) => {
@@ -161,7 +162,7 @@ export function createApp(options: AppOptions) {
         const header = headers["authorization"];
         if (!header || !header.startsWith("Bearer ")) throw unauthorized();
         const identity = await verifyGoogle(header.slice("Bearer ".length));
-        if (!ownerEmails.includes(identity.email.toLowerCase())) {
+        if (!(await admins.isAdmin(identity.email))) {
           throw forbidden("not_owner", "このアカウントは、運営者として登録されていません");
         }
         const iat = Math.floor(ctx.now().getTime() / 1000);
@@ -182,6 +183,36 @@ export function createApp(options: AppOptions) {
             ? { role: "operator", eventId: principal.eventId }
             : { role: "owner", ...(principal?.email ? { email: principal.email } : {}) },
       }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/admins$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async () => ({ status: 200, data: { admins: await admins.list() } }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/admins$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async ({ body, principal }) => ({
+        status: 201,
+        data: await admins.add(
+          (body as { email?: unknown } | undefined)?.email,
+          principal?.kind === "owner" && principal.email ? principal.email : "(token)",
+        ),
+      }),
+    },
+    {
+      method: "DELETE",
+      pattern: /^\/admins\/(?<email>[^/]+)$/,
+      admin: true,
+      ownerOnly: true,
+      handle: async ({ params }) => {
+        await admins.remove(decodeURIComponent(params["email"]!));
+        return { status: 200, data: { removed: true } };
+      },
     },
     {
       method: "POST",

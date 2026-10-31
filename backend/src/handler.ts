@@ -17,8 +17,9 @@ import { createDynamoRepositories } from "./repositories/dynamoRepositories.js";
  * - ADMIN_TOKEN: オーナーのトークン（未設定なら、運営者のAPIはすべて拒否される）
  * - ALLOWED_ORIGIN: CORS で許可するオリジン（API Gateway 側で設定する場合は不要）
  * - API_PREFIX: パスの先頭から取り除く部分(CloudFront が /api/* を転送する構成で、"/api")
- * - GOOGLE_CLIENT_ID、SESSION_SECRET、OWNER_EMAILS: Googleアカウントでのオーナーのログイン。
- *   3つとも設定されているときだけ有効になる。OWNER_EMAILS はカンマ区切り
+ * - GOOGLE_CLIENT_ID、SESSION_SECRET: Googleアカウントでのオーナーのログイン。両方あるときだけ有効になる
+ * - OWNER_EMAILS: 管理者の初期登録(カンマ区切り)。管理者の一覧が空のときだけ使う。
+ *   以降の管理者の追加・削除は、管理画面から行う
  * - ANALYSIS_BUCKET、ANALYSIS_CLUSTER、ANALYSIS_TASK_DEFINITION、ANALYSIS_CONTAINER、
  *   ANALYSIS_SUBNETS、ANALYSIS_SECURITY_GROUPS(後ろ2つはカンマ区切り): 広聴AIをFargateで動かす設定。
  *   すべて揃っているときだけ、分析のAPIが使える(なければ503)
@@ -67,7 +68,7 @@ const app = createApp({
   repos: createDynamoRepositories(new DynamoKvStore(client, tableName)),
   adminToken: process.env["ADMIN_TOKEN"],
   ...(allowedOrigin ? { allowedOrigin } : {}),
-  ...(googleClientId && sessionSecret && ownerEmails.some((e) => e.trim() !== "")
+  ...(googleClientId && sessionSecret
     ? { ownerLogin: { googleClientId, sessionSecret, ownerEmails } }
     : {}),
   ...(analysisProvider ? { analysisProvider } : {}),

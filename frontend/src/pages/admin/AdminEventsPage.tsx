@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
+import { AdminListSection } from "../../components/admin/AdminListSection.tsx";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { EVENT_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -95,6 +96,8 @@ function EventsContent({
           </div>
         )}
       </form>
+
+      <AdminListSection api={api} describeError={describeError} />
     </>
   );
 }

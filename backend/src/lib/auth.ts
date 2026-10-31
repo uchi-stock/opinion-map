@@ -37,7 +37,7 @@ export function createAuthenticator(
   tokens: Pick<OperatorTokenRepository, "getByHash">,
   options: {
     /** Googleのログインで発行したセッショントークンを、オーナーとして受け付ける */
-    session?: { secret: string; ownerEmails: readonly string[]; now?: () => Date };
+    session?: { secret: string; isOwnerEmail: (email: string) => Promise<boolean>; now?: () => Date };
   } = {},
 ) {
   const owner = ownerToken && ownerToken.length > 0 ? ownerToken : undefined;
@@ -49,8 +49,8 @@ export function createAuthenticator(
     if (options.session && presented.split(".").length === 3) {
       const nowSeconds = Math.floor((options.session.now ?? (() => new Date()))().getTime() / 1000);
       const claims = await verifySession(presented, options.session.secret, nowSeconds);
-      // 発行後にオーナーの一覧から外されたメールアドレスは、期限内でも受け付けない
-      if (claims && options.session.ownerEmails.includes(claims.email.toLowerCase())) {
+      // 発行後に管理者の一覧から外されたメールアドレスは、期限内でも受け付けない
+      if (claims && (await options.session.isOwnerEmail(claims.email))) {
         return { kind: "owner", email: claims.email };
       }
       return null;

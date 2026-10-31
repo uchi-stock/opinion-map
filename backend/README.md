@@ -55,6 +55,7 @@ npm run dev
 | `POST /events/:id/sessions` | テーマを作る（下書き） | 運営者 |
 | `GET /events/:id/sessions` | テーマ一覧 | 運営者 |
 | `PATCH /sessions/:id` | テーマを編集する（状態は draft / active / closed） | 運営者 |
+| `GET /public/events` | 公開中(active)のイベントの一覧。名前と説明だけ。トップページに出す。新しい順で、50件まで | 不要 |
 | `GET /sessions/:id` | 問いなどの表示用の情報 | 不要 |
 | `POST /sessions/:id/opinions` | 意見を投稿する | 不要 |
 | `GET /sessions/:id/opinions` | 意見の一覧 | 不要（運営者は設定にかかわらず全件） |

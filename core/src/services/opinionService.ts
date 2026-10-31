@@ -53,6 +53,16 @@ function roundViewers(n: number): number {
   return Math.floor(n / 5) * 5;
 }
 
+/** トップページに出す、公開中のイベント。名前と説明だけ。作成者などは、含めない */
+export interface PublicEventSummary {
+  id: string;
+  name: string;
+  description: string;
+}
+
+/** トップページに出すイベントの数の上限(新しい順) */
+export const MAX_PUBLIC_EVENTS = 50;
+
 /** 運営者が選んだ、開くテーマ。古い currentSessionId は、それ1つだけを開く指定として読む */
 function selectedOpenIds(event: EventRecord): string[] | undefined {
   if (event.openSessionIds !== undefined) return event.openSessionIds;
@@ -204,6 +214,15 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       await loadForParticipant(sessionId);
       const deviceHash = await sha256Hex(`presence:${deviceId}`);
       await ctx.repos.presence.touch(sessionId, deviceHash, ctx.now().toISOString(), PRESENCE_TTL_SECONDS);
+    },
+
+    /** 招待なしで、トップページに出す、公開中(active)のイベント。下書きと終了は出さない。新しい順 */
+    async listPublicEvents(): Promise<PublicEventSummary[]> {
+      return (await ctx.repos.events.list())
+        .filter((e) => e.status === "active")
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+        .slice(0, MAX_PUBLIC_EVENTS)
+        .map(({ id, name, description }) => ({ id, name, description }));
     },
 
     /** 同じ送信IDなら、新しく作らず既存の投稿を返す */

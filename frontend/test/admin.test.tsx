@@ -216,7 +216,7 @@ describe("イベントの画面", () => {
   it("セッションを一覧する", async () => {
     fakeAdminBackend();
     render(<AdminEventPage eventId="e1" />);
-    const link = (await screen.findByText("ワークショップA")).closest("a");
+    const link = await screen.findByRole("link", { name: /ワークショップA/ });
     expect(link).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
   });
 
@@ -228,24 +228,34 @@ describe("イベントの画面", () => {
     expect(within(section).getByRole("img", { name: "招待URLのQRコード" })).toBeInTheDocument();
   });
 
-  it("「開く」「閉じる」でテーマを切り替える。複数を同時に開ける。下書きには、ボタンを出さない", async () => {
+  it("投稿を受け付けるテーマを、ラジオボタンで1つ選ぶ。下書きは選べない", async () => {
     const { calls } = fakeAdminBackend({
       events: [event({ openSessionIds: ["s1"] })],
       sessions: [session(), session({ id: "s2", title: "場B" }), session({ id: "s3", title: "下書きのテーマ", status: "draft" })],
     });
     const user = userEvent.setup();
     render(<AdminEventPage eventId="e1" />);
-    await user.click(await screen.findByRole("button", { name: "場Bを開く" }));
-    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s1", "s2"] }));
-    expect(screen.queryByRole("button", { name: /下書きのテーマを/ })).toBeNull();
+    const group = await screen.findByRole("group", { name: "投稿を受け付けるテーマ" });
+    expect(within(group).getByRole("radio", { name: "ワークショップA" })).toBeChecked();
+    expect(within(group).queryByRole("radio", { name: "下書きのテーマ" })).toBeNull();
+    await user.click(within(group).getByRole("radio", { name: "場B" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s2"] }));
   });
 
-  it("選択が無いときは、公開中のすべてが開いている。1つ閉じると、残りを開いた状態で選択になる", async () => {
-    const { calls } = fakeAdminBackend({ sessions: [session(), session({ id: "s2", title: "場B" })] });
+  it("「すべて閉じる」を選ぶと、どのテーマにも投稿できなくなる", async () => {
+    const { calls } = fakeAdminBackend({ events: [event({ openSessionIds: ["s1"] })], sessions: [session(), session({ id: "s2", title: "場B" })] });
     const user = userEvent.setup();
     render(<AdminEventPage eventId="e1" />);
-    await user.click(await screen.findByRole("button", { name: "場Bを閉じる" }));
-    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s1"] }));
+    await user.click(await screen.findByRole("radio", { name: /すべて閉じる/ }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: [] }));
+  });
+
+  it("選択が無いときは、公開中のすべてに投稿できる旨を出し、どれも選ばれていない", async () => {
+    fakeAdminBackend({ sessions: [session(), session({ id: "s2", title: "場B" })] });
+    render(<AdminEventPage eventId="e1" />);
+    const group = await screen.findByRole("group", { name: "投稿を受け付けるテーマ" });
+    expect(within(group).getByText(/公開中のテーマすべてに投稿できます/)).toBeInTheDocument();
+    for (const radio of within(group).getAllByRole("radio")) expect(radio).not.toBeChecked();
   });
 
   it("議題の提案を受け付ける設定を切り替える", async () => {

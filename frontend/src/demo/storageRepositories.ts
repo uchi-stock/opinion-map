@@ -1,6 +1,6 @@
 import type { InsightRecord } from "../../../backend/src/insights/types.ts";
 import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
-import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
+import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
 import type { Repositories } from "../../../backend/src/repositories/types.ts";
 
 export const DEMO_DATA_KEY = "opinion-map-demo-data";
@@ -11,12 +11,13 @@ interface Data {
   opinions: OpinionRecord[];
   analyses: AnalysisRunRecord[];
   operatorTokens: OperatorTokenRecord[];
+  admins: AdminRecord[];
   insights: InsightRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], insights: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -37,6 +38,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         opinions: parsed.opinions ?? [],
         analyses: parsed.analyses ?? [],
         operatorTokens: parsed.operatorTokens ?? [],
+        admins: parsed.admins ?? [],
         insights: parsed.insights ?? [],
       };
     } catch {
@@ -177,6 +179,29 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         const d = read();
         d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
         write(d);
+      },
+    },
+    admins: {
+      async get(email) {
+        return read().admins.find((a) => a.email === email);
+      },
+      async list() {
+        return read().admins.sort((a, b) => a.addedAt.localeCompare(b.addedAt) || a.email.localeCompare(b.email));
+      },
+      async createIfAbsent(admin) {
+        const d = read();
+        if (d.admins.some((a) => a.email === admin.email)) return false;
+        d.admins.push(admin);
+        write(d);
+        return true;
+      },
+      async remove(email) {
+        const d = read();
+        const next = d.admins.filter((a) => a.email !== email);
+        if (next.length === d.admins.length) return false;
+        d.admins = next;
+        write(d);
+        return true;
       },
     },
     insights: {

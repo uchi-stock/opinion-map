@@ -1,5 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
-import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { KvItem, KvStore } from "./kvStore.js";
 import type { Repositories } from "./types.js";
@@ -52,6 +52,12 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
     gsi1pk: `EVENT#${t.eventId}#OPTOKENS`,
     gsi1sk: sortKey(t.createdAt, t.id),
     data: t,
+  });
+  const adminItem = (a: AdminRecord): KvItem => ({
+    pk: `ADMIN#${a.email}`,
+    gsi1pk: "ADMINS",
+    gsi1sk: sortKey(a.addedAt, a.email),
+    data: a,
   });
   const insightItem = (i: InsightRecord): KvItem => ({
     pk: `INSIGHT#${i.id}`,
@@ -186,6 +192,28 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
       },
       async update(token) {
         await store.put(tokenItem(token));
+      },
+    },
+    admins: {
+      async get(email) {
+        return data<AdminRecord>(await store.get(`ADMIN#${email}`));
+      },
+      async list() {
+        return (await store.queryByGsi1("ADMINS")).map((i) => i.data as AdminRecord);
+      },
+      async createIfAbsent(admin) {
+        try {
+          await store.put(adminItem(admin), { type: "notExists" });
+          return true;
+        } catch (error) {
+          // 条件を満たさない(すでにある)ときだけ false。それ以外の失敗は呼び出し側に伝える
+          const name = error instanceof Error ? `${error.name}:${error.message}` : "";
+          if (name.includes("ConditionalCheckFailed")) return false;
+          throw error;
+        }
+      },
+      async remove(email) {
+        return store.delete(`ADMIN#${email}`);
       },
     },
     insights: {

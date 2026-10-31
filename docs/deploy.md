@@ -31,14 +31,16 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 | Secret | `AWS_SECRET_ACCESS_KEY` | 同上 |
 | Secret または Variable | `GOOGLE_OAUTH_CLIENT_ID` | Google ログインのクライアントID |
 | Secret（任意） | `SESSION_SECRET` | ログイン後のセッションの署名鍵。32文字以上のランダムな文字列。なければ、AWS のシークレットキーから自動で作る |
-| Secret または Variable | `OWNER_EMAILS` | オーナーにする Google アカウントのメールアドレス。カンマ区切り |
+| Secret または Variable | `OWNER_EMAILS` | 最初の管理者にする Google アカウントのメールアドレス。カンマ区切り。管理者の一覧が空のときだけ使う初期値で、以降の追加・削除は管理画面で行う |
 | Secret（任意） | `ADMIN_TOKEN` | 合言葉でのログイン。Google ログインを使うなら不要 |
 | Secret（任意） | `GEMINI_API_KEY` | 共通点・相違点・問いの案に使う |
 | Variable（任意） | `AWS_REGION` | 既定は `ap-northeast-1` |
 
 - `SESSION_SECRET` を自動で作る場合、AWS のキーを入れ替えると値が変わる。発行済みのセッションは使えなくなり、ログインし直しになる
-- `OWNER_EMAILS` に載っていないアカウントは、Google でログインできても、オーナーになれない
-- `OWNER_EMAILS` から外すと、発行済みのセッションも、その場で使えなくなる
+- 管理者の一覧に載っていないアカウントは、Google でログインできても、オーナーになれない
+- 管理者の一覧は、アプリ側(DynamoDB)で持つ。管理者が、管理画面の「管理者」から追加・削除する
+- 初回のログインで、`OWNER_EMAILS` の内容が一覧に登録される。登録後に `OWNER_EMAILS` を変えても、一覧は変わらない
+- 一覧から外すと、発行済みのセッションも、次のリクエストから使えなくなる。最後の1人は外せない
 - `ADMIN_TOKEN` は、AWS の Lambda の環境変数に平文で入る。AWS のコンソールを見られる人は、読める
 
 ## デプロイの手順（スマホで完結）

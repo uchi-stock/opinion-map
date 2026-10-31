@@ -67,6 +67,14 @@ export function toPublicOpinion(o: OpinionRecord): PublicOpinion {
 }
 
 /** イベントごとの運営者トークン。本体は保存せず、ハッシュだけを持つ */
+/** 管理者(オーナー)。Googleのメールアドレスで識別する。メールは小文字に正規化して持つ */
+export interface AdminRecord {
+  email: string;
+  addedAt: string;
+  /** 追加した管理者のメール。環境変数からの初期登録は "(seed)" */
+  addedBy: string;
+}
+
 export interface OperatorTokenRecord {
   id: string;
   eventId: string;

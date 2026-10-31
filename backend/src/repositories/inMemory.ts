@@ -1,6 +1,6 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
-import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { Repositories } from "./types.js";
 
 /** テストとローカル開発用。プロセスが終わると消える */
@@ -11,6 +11,7 @@ export function createInMemoryRepositories(): Repositories {
   const bySubmission = new Map<string, string>();
   const analyses = new Map<string, AnalysisRunRecord>();
   const operatorTokens = new Map<string, OperatorTokenRecord>();
+  const admins = new Map<string, AdminRecord>();
   const insights = new Map<string, InsightRecord>();
 
   return {
@@ -128,6 +129,23 @@ export function createInMemoryRepositories(): Repositories {
       },
       async update(token) {
         operatorTokens.set(token.id, { ...token });
+      },
+    },
+    admins: {
+      async get(email) {
+        const a = admins.get(email);
+        return a ? { ...a } : undefined;
+      },
+      async list() {
+        return [...admins.values()].map((a) => ({ ...a })).sort((a, b) => a.addedAt.localeCompare(b.addedAt) || a.email.localeCompare(b.email));
+      },
+      async createIfAbsent(admin) {
+        if (admins.has(admin.email)) return false;
+        admins.set(admin.email, { ...admin });
+        return true;
+      },
+      async remove(email) {
+        return admins.delete(email);
       },
     },
     insights: {

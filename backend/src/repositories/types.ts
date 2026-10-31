@@ -1,6 +1,6 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
-import type { EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 
 /**
  * 永続化の境界。サービス層は、この型だけに依存する。
@@ -60,6 +60,16 @@ export interface OperatorTokenRepository {
   update(token: OperatorTokenRecord): Promise<void>;
 }
 
+export interface AdminRepository {
+  get(email: string): Promise<AdminRecord | undefined>;
+  /** 古い順 */
+  list(): Promise<AdminRecord[]>;
+  /** なければ作って true。すでにあれば何もせず false（並行して来ても1つだけ作る） */
+  createIfAbsent(admin: AdminRecord): Promise<boolean>;
+  /** 消せたら true。なければ false */
+  remove(email: string): Promise<boolean>;
+}
+
 export interface InsightRepository {
   create(insight: InsightRecord): Promise<void>;
   get(id: string): Promise<InsightRecord | undefined>;
@@ -74,5 +84,6 @@ export interface Repositories {
   opinions: OpinionRepository;
   analyses: AnalysisRunRepository;
   operatorTokens: OperatorTokenRepository;
+  admins: AdminRepository;
   insights: InsightRepository;
 }

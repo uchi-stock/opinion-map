@@ -139,6 +139,15 @@ describe("オーナーのGoogleログイン(API)", () => {
     expect(res.body).not.toContain("token");
   });
 
+  it("管理者から外された人は、期限内のセッションでも次のリクエストから使えず、再ログインもできない", async () => {
+    const { g, login, call } = await setup();
+    const session = { headers: { authorization: `Bearer ${(await login(await g.idToken())).json.token}` } };
+    await call("POST", "/admins", { ...session, body: { email: "second@example.com" } });
+    expect((await call("DELETE", "/admins/owner%40example.com", session)).statusCode).toBe(200);
+    expect((await call("GET", "/me", session)).statusCode).toBe(401);
+    expect((await login(await g.idToken())).statusCode).toBe(403);
+  });
+
   it("Googleのトークンがない・不正なら401", async () => {
     const { login, call } = await setup();
     expect((await call("POST", "/auth/session")).statusCode).toBe(401);

@@ -92,16 +92,6 @@ describe("共通点・相違点・問いの案", () => {
     expect((await call("POST", "/analyses/none/clusters/c1/insights", { admin: true })).statusCode).toBe(404);
     expect((await generate()).statusCode).toBe(201);
   });
-
-  it("運営者は、担当外のイベントの案を操作できない", async () => {
-    const { call, generate } = await setup();
-    const other = (await call("POST", "/events", { admin: true, body: { name: "別" } })).json;
-    const token = (await call("POST", `/events/${other.id}/operator-tokens`, { admin: true, body: { label: "x" } })).json.token;
-    const created = (await generate()).json;
-    const op = { headers: { authorization: `Bearer ${token}` } };
-    expect((await call("PATCH", `/insights/${created.id}`, { ...op, body: { approved: true } })).statusCode).toBe(403);
-    expect((await call("GET", `/analyses/${created.analysisRunId}/insights`, op)).statusCode).toBe(403);
-  });
 });
 
 describe("validateInsightContent", () => {

@@ -5,7 +5,6 @@ import { useLoad } from "../../lib/useLoad.ts";
 
 /**
  * 管理者(Googleログインを許可する人)の一覧。オーナーだけが追加・削除できる。
- * 運営者のトークンで開いたときは、権限がないので、何も表示しない。
  */
 export function AdminListSection({ api, describeError }: { api: AdminApi; describeError: (e: unknown) => string }) {
   const { state, reload } = useLoad(() => api.listAdmins(), (e) => (e instanceof ApiError && e.status === 403 ? "forbidden" : describeError(e)), [api]);

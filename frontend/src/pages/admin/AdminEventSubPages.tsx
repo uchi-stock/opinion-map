@@ -3,12 +3,10 @@ import type { AdminApi } from "../../api/admin.ts";
 import type { EventRecord, SessionRecord } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { NotesOverview } from "../../components/admin/NotesOverview.tsx";
-import { OperatorTokenSection } from "../../components/admin/OperatorTokenSection.tsx";
 import { ProposalAdminSection } from "../../components/admin/ProposalAdminSection.tsx";
 import { UsageSection } from "../../components/admin/UsageSection.tsx";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
-import { useMe } from "../../lib/useMe.ts";
 
 interface Context {
   api: AdminApi;
@@ -76,22 +74,6 @@ export function AdminNotesPage({ eventId }: { eventId: string }) {
       {({ api, describeError, event }) => <NotesOverview api={api} eventId={eventId} eventName={event.name} describeError={describeError} />}
     </EventSubPage>
   );
-}
-
-/** このイベントだけを操作できる運営者のリンクの発行と失効。オーナーだけが使える */
-export function AdminOperatorsPage({ eventId }: { eventId: string }) {
-  return (
-    <EventSubPage eventId={eventId} title="運営者のリンク">
-      {({ api, describeError }) => <OperatorsContent api={api} eventId={eventId} describeError={describeError} />}
-    </EventSubPage>
-  );
-}
-
-function OperatorsContent({ api, eventId, describeError }: { api: AdminApi; eventId: string; describeError: (e: unknown) => string }) {
-  const me = useMe(api);
-  if (me === undefined) return <p role="status">読み込んでいます…</p>;
-  if (me?.role === "operator") return <p className="text-body-secondary">この画面は、オーナーだけが使えます。</p>;
-  return <OperatorTokenSection api={api} eventId={eventId} describeError={describeError} />;
 }
 
 /** AI(分析と案の生成)の、今日の使用量 */

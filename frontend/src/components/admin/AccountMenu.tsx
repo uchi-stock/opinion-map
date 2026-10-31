@@ -39,7 +39,7 @@ export function AccountMenu({ api, onSignOut }: { api: AdminApi; onSignOut: () =
     };
   }, [open]);
 
-  const description = me?.email ?? (me?.role === "operator" ? "運営者のトークンでログイン中" : "トークンでログイン中");
+  const description = me?.email ?? "トークンでログイン中";
 
   return (
     <div className="position-relative" ref={root}>

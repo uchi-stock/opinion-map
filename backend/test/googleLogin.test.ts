@@ -180,15 +180,6 @@ describe("オーナーのGoogleログイン(API)", () => {
     expect((await t.call("POST", "/auth/session", { headers: { authorization: "Bearer x" } })).statusCode).toBe(503);
     expect(() => createTestApp({ ownerLogin: { googleClientId: CLIENT_ID, sessionSecret: "short", ownerEmails: ["a@example.com"] } })).toThrow();
   });
-
-  it("運営者のリンクのトークンも、引き続き使える", async () => {
-    const { call, g, login } = await setup();
-    const owner = { headers: { authorization: `Bearer ${(await login(await g.idToken())).json.token}` } };
-    const event = (await call("POST", "/events", { ...owner, body: { name: "e" } })).json;
-    const issued = (await call("POST", `/events/${event.id}/operator-tokens`, { ...owner, body: { label: "x" } })).json;
-    const me = await call("GET", "/me", { headers: { authorization: `Bearer ${issued.token}` } });
-    expect(me.json).toEqual({ role: "operator", eventId: event.id });
-  });
 });
 
 describe("イベントの作成者とアイコン", () => {
@@ -246,18 +237,5 @@ describe("イベントの作成者とアイコン", () => {
     expect(created.createdBy).toBe("(token)");
     const list = (await call("GET", "/events", { admin: true })).json.events as { id: string; creatorPicture?: string }[];
     expect(list.find((e) => e.id === created.id)?.creatorPicture).toBeUndefined();
-  });
-
-  it("運営者のトークンの一覧には、管理者のメールを見せない", async () => {
-    const { call, login } = await setup();
-    const session = await login();
-    const created = (await call("POST", "/events", { ...session, body: { name: "共有するイベント" } })).json;
-    const issued = (await call("POST", `/events/${created.id}/operator-tokens`, { ...session, body: { label: "会場係" } })).json;
-    const operator = { headers: { authorization: `Bearer ${issued.token as string}` } };
-    const events = (await call("GET", "/events", operator)).json.events as Record<string, unknown>[];
-    expect(events).toHaveLength(1);
-    expect(events[0]).not.toHaveProperty("createdBy");
-    expect(events[0]).not.toHaveProperty("creatorPicture");
-    expect(JSON.stringify(events)).not.toContain("owner@example.com");
   });
 });

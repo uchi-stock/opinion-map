@@ -85,17 +85,6 @@ describe("分析の重複実行の抑制（並行）", () => {
   });
 });
 
-describe("運営者トークンの引き当て", () => {
-  it("ハッシュから引ける。同じハッシュは作れない", async () => {
-    const repos = createDynamoRepositories(new MemoryKvStore());
-    const token = { id: "t1", eventId: "e1", label: "x", tokenHash: "hash-1", createdAt: at };
-    await repos.operatorTokens.create(token);
-    expect(await repos.operatorTokens.getByHash("hash-1")).toEqual(token);
-    expect(await repos.operatorTokens.getByHash("nope")).toBeUndefined();
-    await expect(repos.operatorTokens.create({ ...token, id: "t2" })).rejects.toThrow();
-  });
-});
-
 describe("投稿の一覧と数", () => {
   it("公開中だけ、運営者向けは削除済み以外、数はすべて", async () => {
     const repos = createDynamoRepositories(new MemoryKvStore());

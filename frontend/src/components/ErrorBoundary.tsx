@@ -26,9 +26,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
       <main className="container py-4" style={{ maxWidth: 640 }}>
         <div className="alert alert-danger" role="alert">
           <p className="mb-2">画面でエラーが起きました。運営に自動で知らせました。</p>
-          <button type="button" className="btn btn-outline-danger" onClick={() => window.location.reload()}>
-            もう一度読み込む
-          </button>
+          <button type="button" className="btn icon-btn btn-outline-danger" onClick={() => window.location.reload()} aria-label="もう一度読み込む" title="もう一度読み込む">🔄</button>
         </div>
       </main>
     );

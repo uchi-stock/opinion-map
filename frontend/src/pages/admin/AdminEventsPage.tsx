@@ -38,12 +38,8 @@ function EventsContent({
       {/* 作る・管理者は、オーナーだけが使う。運営者のトークンの人には、出さない */}
       {me?.role === "owner" && (
         <div className="d-flex gap-2 mb-3">
-          <a className="btn btn-primary flex-grow-1" href={withBase("/admin/events/new")}>
-            イベントを作る
-          </a>
-          <a className="btn btn-outline-secondary" href={withBase("/admin/admins")}>
-            管理者
-          </a>
+          <a className="btn icon-btn btn-primary flex-grow-1" href={withBase("/admin/events/new")} aria-label="イベントを作る" title="イベントを作る">➕</a>
+          <a className="btn icon-btn btn-outline-secondary" href={withBase("/admin/admins")} aria-label="管理者" title="管理者">👥</a>
         </div>
       )}
       <section className="mb-4" aria-label="イベント一覧">

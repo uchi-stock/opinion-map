@@ -60,9 +60,7 @@ export function AccountMenu({ api, onSignOut }: { api: AdminApi; onSignOut: () =
           style={{ zIndex: 1050, minWidth: 220, maxWidth: "80vw" }}
         >
           <p className="small text-body-secondary mb-2 text-break">{description}</p>
-          <button type="button" role="menuitem" className="btn btn-sm btn-outline-danger w-100" onClick={onSignOut}>
-            ログアウト
-          </button>
+          <button type="button" role="menuitem" className="btn icon-btn btn-sm btn-outline-danger w-100" onClick={onSignOut} aria-label="ログアウト" title="ログアウト">🚪</button>
         </div>
       )}
     </div>

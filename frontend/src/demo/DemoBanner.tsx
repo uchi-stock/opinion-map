@@ -17,17 +17,11 @@ export function DemoBanner({ sampleSessionId, onReset }: Props) {
         </p>
         <p className="mb-2">運営者の画面のトークンは「{DEMO_ADMIN_TOKEN}」です（入力済みです）。</p>
         <div className="d-flex flex-wrap gap-2">
-          <a className="btn btn-sm btn-outline-dark" href={withBase("/admin")}>
-            運営者の画面
-          </a>
+          <a className="btn icon-btn btn-sm btn-outline-dark" href={withBase("/admin")} aria-label="運営者の画面" title="運営者の画面">🛠️</a>
           {sampleSessionId && (
-            <a className="btn btn-sm btn-outline-dark" href={withBase(`/s/${encodeURIComponent(sampleSessionId)}`)}>
-              参加者の画面（サンプル）
-            </a>
+            <a className="btn icon-btn btn-sm btn-outline-dark" href={withBase(`/s/${encodeURIComponent(sampleSessionId)}`)} aria-label="参加者の画面（サンプル）" title="参加者の画面（サンプル）">👀</a>
           )}
-          <button type="button" className="btn btn-sm btn-outline-danger" onClick={onReset}>
-            最初からやり直す
-          </button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-danger" onClick={onReset} aria-label="最初からやり直す" title="最初からやり直す">♻️</button>
         </div>
       </div>
     </aside>

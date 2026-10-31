@@ -62,8 +62,14 @@ function EventCreateForm({
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <button type="submit" className="btn btn-primary w-100" disabled={saving || !name.trim()}>
-        {saving ? "作っています…" : "作る"}
+      <button
+        type="submit"
+        className="btn icon-btn btn-primary w-100"
+        disabled={saving || !name.trim()}
+        aria-label={saving ? "作っています…" : "作る"}
+        title={saving ? "作っています…" : "作る"}
+      >
+        {saving ? "⏳" : "➕"}
       </button>
       {error && (
         <div className="alert alert-danger mt-3" role="alert">

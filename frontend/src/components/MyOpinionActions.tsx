@@ -66,13 +66,9 @@ export function MyOpinionActions({
       {mode === "idle" && (
         <div className="d-flex gap-3">
           {canEdit && (
-            <button type="button" className="btn btn-link btn-sm p-0" onClick={() => setMode("editing")}>
-              編集する
-            </button>
+            <button type="button" className="btn icon-btn btn-link btn-sm p-0" onClick={() => setMode("editing")} aria-label="編集する" title="編集する">✏️</button>
           )}
-          <button type="button" className="btn btn-link btn-sm p-0 text-danger" onClick={() => setMode("confirmDelete")}>
-            削除する
-          </button>
+          <button type="button" className="btn icon-btn btn-link btn-sm p-0 text-danger" onClick={() => setMode("confirmDelete")} aria-label="削除する" title="削除する">🗑️</button>
         </div>
       )}
       {mode === "editing" && (
@@ -90,23 +86,15 @@ export function MyOpinionActions({
           <div className="form-text mb-2">
             {charLength(trimmed)} / {maxLength}文字
           </div>
-          <button type="submit" className="btn btn-sm btn-primary me-2" disabled={busy || !valid}>
-            保存する
-          </button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setMode("idle")}>
-            やめる
-          </button>
+          <button type="submit" className="btn icon-btn btn-sm btn-primary me-2" disabled={busy || !valid} aria-label="保存する" title="保存する">💾</button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => setMode("idle")} aria-label="やめる" title="やめる">✖️</button>
         </form>
       )}
       {mode === "confirmDelete" && (
         <div>
           <p className="mb-1">この意見を削除します。元に戻せません。</p>
-          <button type="button" className="btn btn-sm btn-danger me-2" disabled={busy} onClick={remove}>
-            削除する
-          </button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setMode("idle")}>
-            やめる
-          </button>
+          <button type="button" className="btn icon-btn btn-sm btn-danger me-2" disabled={busy} onClick={remove} aria-label="削除する" title="削除する">🗑️</button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => setMode("idle")} aria-label="やめる" title="やめる">✖️</button>
         </div>
       )}
       {error && (

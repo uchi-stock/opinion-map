@@ -47,12 +47,14 @@ export function ReactionButton({
     <div className="d-flex align-items-center gap-2">
       <button
         type="button"
-        className={`btn btn-sm ${reacted ? "btn-primary" : "btn-outline-primary"}`}
+        className={`btn icon-btn btn-sm ${reacted ? "btn-primary" : "btn-outline-primary"}`}
         aria-pressed={reacted}
         disabled={disabled || busy}
         onClick={() => void toggle()}
+        aria-label={`${reacted ? "いいね済み" : "いいね"} ${count}`}
+        title={reacted ? "いいね済み" : "いいね"}
       >
-        {reacted ? "いいね済み" : "いいね"} {count}
+        {reacted ? "❤️" : "🤍"} {count}
       </button>
       {error && (
         <small className="text-danger" role="alert">

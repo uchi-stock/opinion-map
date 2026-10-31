@@ -90,9 +90,7 @@ export function EventForm({
         ))}
       </select>
       <div className="form-text mb-3">参加者に見えるのは、「公開中」のイベントのテーマだけです。</div>
-      <button type="submit" className="btn btn-primary w-100" disabled={busy || !name.trim()}>
-        保存する
-      </button>
+      <button type="submit" className="btn icon-btn btn-primary w-100" disabled={busy || !name.trim()} aria-label="保存する" title="保存する">💾</button>
       <div aria-live="polite">
         {message && (
           <div className={`alert alert-${message.kind === "ok" ? "success" : "danger"} mt-3 mb-0`} role={message.kind === "error" ? "alert" : undefined}>

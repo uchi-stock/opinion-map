@@ -77,9 +77,7 @@ export function OperatorTokenSection({
           渡す相手の名前（例: 会場係）
         </label>
         <input id="op-label" className="form-control mb-2" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <button type="submit" className="btn btn-outline-primary w-100" disabled={busy || !label.trim()}>
-          リンクを発行する
-        </button>
+        <button type="submit" className="btn icon-btn btn-outline-primary w-100" disabled={busy || !label.trim()} aria-label="リンクを発行する" title="リンクを発行する">🔗</button>
       </form>
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -101,9 +99,7 @@ export function OperatorTokenSection({
               {t.revokedAt && <span className="badge text-bg-secondary ms-2">失効済み</span>}
             </span>
             {!t.revokedAt && (
-              <button type="button" className="btn btn-sm btn-outline-danger" disabled={busy} onClick={() => void revoke(t.id)} aria-label={`${t.label}のリンクを失効する`}>
-                失効する
-              </button>
+              <button type="button" className="btn icon-btn btn-sm btn-outline-danger" disabled={busy} onClick={() => void revoke(t.id)} aria-label={`${t.label}のリンクを失効する`}>🚫</button>
             )}
           </li>
         ))}

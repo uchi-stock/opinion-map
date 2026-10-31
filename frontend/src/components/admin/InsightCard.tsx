@@ -92,12 +92,8 @@ export function InsightCard({
               />
             </div>
           ))}
-          <button type="submit" className="btn btn-sm btn-primary me-2" disabled={busy}>
-            保存する
-          </button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setEditing(false)}>
-            やめる
-          </button>
+          <button type="submit" className="btn icon-btn btn-sm btn-primary me-2" disabled={busy} aria-label="保存する" title="保存する">💾</button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => setEditing(false)} aria-label="やめる" title="やめる">✖️</button>
         </form>
       ) : (
         <>
@@ -116,9 +112,7 @@ export function InsightCard({
             ),
           )}
           <div className="d-flex gap-2 align-items-center flex-wrap">
-            <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setEditing(true)}>
-              編集する
-            </button>
+            <button type="button" className="btn icon-btn btn-sm btn-outline-primary" onClick={() => setEditing(true)} aria-label="編集する" title="編集する">✏️</button>
             <div className="form-check mb-0">
               <input
                 id={`${insight.id}-approved`}

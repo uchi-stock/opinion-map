@@ -129,9 +129,7 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
         <div className="alert alert-danger" role="alert">
           {sessionState.message}
         </div>
-        <button type="button" className="btn btn-outline-primary" onClick={() => void loadSession()}>
-          もう一度読み込む
-        </button>
+        <button type="button" className="btn icon-btn btn-outline-primary" onClick={() => void loadSession()} aria-label="もう一度読み込む" title="もう一度読み込む">🔄</button>
       </Shell>
     );
   }
@@ -207,9 +205,7 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
             <h2 className="h5 mb-0">投稿された意見</h2>
             <div className="d-flex gap-2">
               <ViewToggle mode={mode} onChange={setMode} />
-              <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void loadList()}>
-                更新
-              </button>
+              <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void loadList()} aria-label="更新" title="更新">🔄</button>
             </div>
           </div>
           {listState.status === "loading" && <p role="status">読み込んでいます…</p>}

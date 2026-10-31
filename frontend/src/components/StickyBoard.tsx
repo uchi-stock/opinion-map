@@ -80,12 +80,8 @@ export type ViewMode = "list" | "board";
 export function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (mode: ViewMode) => void }) {
   return (
     <div className="btn-group btn-group-sm" role="group" aria-label="表示の切り替え">
-      <button type="button" className={`btn ${mode === "list" ? "btn-primary" : "btn-outline-primary"}`} aria-pressed={mode === "list"} onClick={() => onChange("list")}>
-        一覧
-      </button>
-      <button type="button" className={`btn ${mode === "board" ? "btn-primary" : "btn-outline-primary"}`} aria-pressed={mode === "board"} onClick={() => onChange("board")}>
-        ボード
-      </button>
+      <button type="button" className={`btn icon-btn ${mode === "list" ? "btn-primary" : "btn-outline-primary"}`} aria-pressed={mode === "list"} onClick={() => onChange("list")} aria-label="一覧" title="一覧">☰</button>
+      <button type="button" className={`btn icon-btn ${mode === "board" ? "btn-primary" : "btn-outline-primary"}`} aria-pressed={mode === "board"} onClick={() => onChange("board")} aria-label="ボード" title="ボード">🗒️</button>
     </div>
   );
 }

@@ -53,9 +53,7 @@ export function AdminListSection({ api, describeError }: { api: AdminApi; descri
           追加するGoogleアカウントのメールアドレス
         </label>
         <input id="admin-email" type="email" className="form-control mb-2" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <button type="submit" className="btn btn-outline-primary w-100" disabled={busy || !email.trim()}>
-          管理者に追加する
-        </button>
+        <button type="submit" className="btn icon-btn btn-outline-primary w-100" disabled={busy || !email.trim()} aria-label="管理者に追加する" title="管理者に追加する">➕</button>
       </form>
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -68,12 +66,13 @@ export function AdminListSection({ api, describeError }: { api: AdminApi; descri
             <span className="text-break">{a.email}</span>
             <button
               type="button"
-              className="btn btn-sm btn-outline-danger ms-2 flex-shrink-0"
+              className="btn icon-btn btn-sm btn-outline-danger ms-2 flex-shrink-0"
               disabled={busy || admins.length <= 1}
               onClick={() => void run(() => api.removeAdmin(a.email))}
               aria-label={`${a.email}を管理者から外す`}
+              title="管理者から外す"
             >
-              外す
+              ➖
             </button>
           </li>
         ))}

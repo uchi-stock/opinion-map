@@ -44,7 +44,7 @@ describe("見ている人数の目安", () => {
     expect(await t.viewers()).toBe("few");
   });
 
-  it("端末のIDが正しくないと、400。存在しないセッションは404", async () => {
+  it("端末のIDが正しくないと、400。存在しないテーマは404", async () => {
     const t = await setup();
     expect((await t.call("POST", `/sessions/${t.sessionId}/presence`, { body: { deviceId: "short" } })).statusCode).toBe(400);
     expect((await t.call("POST", `/sessions/nope/presence`, { body: { deviceId: device(1) } })).statusCode).toBe(404);

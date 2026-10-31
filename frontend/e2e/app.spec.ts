@@ -66,7 +66,7 @@ test.describe("管理画面", () => {
 
     await page.goBack();
     await page.getByRole("link", { name: "テーマを追加" }).click();
-    await expect(page.getByRole("form", { name: "セッションを作る" })).toBeVisible();
+    await expect(page.getByRole("form", { name: "テーマを作る" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 });

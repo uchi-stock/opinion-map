@@ -34,7 +34,7 @@ describe("ルーティング", () => {
     expect(screen.getByText("ページが見つかりません")).toBeInTheDocument();
   });
 
-  it("セッションのURLでは、参加者の画面を開く", async () => {
+  it("テーマのURLでは、参加者の画面を開く", async () => {
     stubFetch((url) => (url.endsWith("/opinions") ? json({ hidden: false, opinions: [] }) : json(SESSION)));
     render(<App pathname="/s/s1" />);
     expect(await screen.findByText(SESSION.prompt)).toBeInTheDocument();

@@ -9,7 +9,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** セッションと意見一覧に応答する、簡単なバックエンドの代わり */
+/** テーマと意見一覧に応答する、簡単なバックエンドの代わり */
 function fakeBackend(options: { session?: object; opinions?: object[]; hidden?: boolean } = {}) {
   const stored = [...(options.opinions ?? [])];
   const mock = stubFetch((url, init) => {
@@ -69,8 +69,8 @@ describe("参加者の画面", () => {
     expect(screen.queryByRole("region", { name: "投稿された意見" })).toBeNull();
   });
 
-  it("存在しないセッションでは、見つからない旨を表示する", async () => {
-    stubFetch(() => json({ error: { code: "not_found", message: "セッションが見つかりません" } }, 404));
+  it("存在しないテーマでは、見つからない旨を表示する", async () => {
+    stubFetch(() => json({ error: { code: "not_found", message: "テーマが見つかりません" } }, 404));
     render(<ParticipantPage sessionId="nope" />);
     expect(await screen.findByText("ページが見つかりません")).toBeInTheDocument();
   });

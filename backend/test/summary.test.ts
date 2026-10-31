@@ -79,7 +79,7 @@ describe("要約のビュー(参加者向けAPI)", () => {
     expect((await t.call("PATCH", `/sessions/${a.sessionId}`, { admin: true, body: { summaryPublished: "x" } })).statusCode).toBe(400);
   });
 
-  it("存在しない、または下書きのセッションは404", async () => {
+  it("存在しない、または下書きのテーマは404", async () => {
     const t = createTestApp();
     expect((await t.call("GET", "/sessions/nope/summary")).statusCode).toBe(404);
   });

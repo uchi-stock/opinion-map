@@ -44,7 +44,7 @@ function errorMessage(e: unknown): string {
 }
 
 /**
- * セッション(テーマ)の画面。embedded のときは、イベントの招待URLの画面の中に置かれる
+ * テーマの画面。embedded のときは、イベントの招待URLの画面の中に置かれる
  * (外側の main と、イベント名は、親が出す)。
  */
 export function ParticipantPage({ sessionId, embedded = false }: { sessionId: string; embedded?: boolean }) {

@@ -53,7 +53,7 @@ describe("いいね(API)", () => {
     expect((await t.react("nope", VOTER_A)).statusCode).toBe(404);
   });
 
-  it("受け付けを終えたセッションには付けられない", async () => {
+  it("受け付けを終えたテーマには付けられない", async () => {
     const t = await setup();
     const a = await t.post("意見A");
     await t.call("PATCH", `/sessions/${t.sessionId}`, { admin: true, body: { status: "closed" } });

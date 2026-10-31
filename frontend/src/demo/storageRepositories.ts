@@ -15,7 +15,7 @@ interface Data {
   reactions: ReactionRecord[];
   proposals: ProposalRecord[];
   usage: Record<string, number>;
-  /** セッションごとの、端末のハッシュと最後に見た時刻 */
+  /** テーマごとの、端末のハッシュと最後に見た時刻 */
   presence: Record<string, Record<string, string>>;
   insights: InsightRecord[];
 }

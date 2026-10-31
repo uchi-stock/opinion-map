@@ -3,21 +3,19 @@ import type { AdminApi } from "../../api/admin.ts";
 import type { AdminOpinion, AnalysisRun, Insight, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
-import { CopyField } from "../../components/admin/CopyField.tsx";
-import { QrCode } from "../../components/admin/QrCode.tsx";
 import { SummaryView } from "../../components/SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { NotesEditor } from "../../components/admin/NotesEditor.tsx";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
-import { FORMAT_LABELS, participantUrl, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
+import { FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
 export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sessionId: string }) {
   return (
-    <AdminShell title="セッション" back={{ href: withBase(`/admin/events/${encodeURIComponent(eventId)}`), label: "イベント" }}>
+    <AdminShell title="テーマ" back={{ href: withBase(`/admin/events/${encodeURIComponent(eventId)}`), label: "イベント" }}>
       {({ api, describeError }) => (
         <SessionContent api={api} describeError={describeError} eventId={eventId} sessionId={sessionId} />
       )}
@@ -64,7 +62,7 @@ function SessionContent({
       if (!event || !session) throw new Error("not_found");
       return { event, session, opinions: opinions.opinions, latest, analysis: latest?.run.result ?? null };
     },
-    (e) => (e instanceof Error && e.message === "not_found" ? "セッションが見つかりません。" : describeError(e)),
+    (e) => (e instanceof Error && e.message === "not_found" ? "テーマが見つかりません。" : describeError(e)),
     [api, eventId, sessionId],
   );
 
@@ -80,7 +78,6 @@ function SessionContent({
     );
 
   const { event, session, opinions, latest, analysis } = state.data;
-  const url = participantUrl(session.id);
   const visible = event.status === "active" && session.status === "active";
 
   return (
@@ -88,15 +85,9 @@ function SessionContent({
       <p className="text-body-secondary small mb-3">{event.name}</p>
       {!visible && (
         <div className="alert alert-warning" role="status">
-          参加者が投稿できるのは、イベントとセッションが、両方とも「公開中」のときだけです。
+          参加者が投稿できるのは、イベントとテーマが、両方とも「公開中」のときだけです。
         </div>
       )}
-      <section aria-label="参加者への共有">
-        <CopyField label="参加者のURL" value={url} />
-        <div className="mb-4">
-          <QrCode value={url} label="参加者のURLのQRコード" />
-        </div>
-      </section>
       <SessionForm api={api} session={session} describeError={describeError} onSaved={reload} />
       <hr />
       <NotesEditor
@@ -322,7 +313,7 @@ function SessionForm({
   }
 
   return (
-    <form onSubmit={save} aria-label="セッションの設定">
+    <form onSubmit={save} aria-label="テーマの設定">
       <label htmlFor="se-status" className="form-label fw-bold">
         状態
       </label>
@@ -340,7 +331,7 @@ function SessionForm({
         ))}
       </select>
       <label htmlFor="se-title" className="form-label">
-        セッション名
+        テーマ名
       </label>
       <input id="se-title" className="form-control mb-2" value={title} onChange={(e) => setTitle(e.target.value)} />
       <label htmlFor="se-prompt" className="form-label">

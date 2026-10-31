@@ -24,10 +24,6 @@ export function eventInviteUrl(eventId: string): string {
   return `${window.location.origin}${withBase(`/e/${encodeURIComponent(eventId)}`)}`;
 }
 
-export function participantUrl(sessionId: string): string {
-  return `${window.location.origin}${withBase(`/s/${encodeURIComponent(sessionId)}`)}`;
-}
-
 /** 日付(日本時間)。例: 2026/10/31。読めない値は、そのまま返す */
 export function formatDate(iso: string): string {
   const date = new Date(iso);

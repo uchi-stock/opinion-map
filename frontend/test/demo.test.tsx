@@ -99,12 +99,12 @@ describe("デモ版のAPI（ブラウザの中のバックエンド）", () => {
     return { storage, map: m, original, target, install: () => installDemoApi({ storage, target, apiBase: "/api" }) };
   }
 
-  it("はじめに、公開済みのイベント・セッションと、サンプルの意見を作る", async () => {
+  it("はじめに、公開済みのイベント・テーマと、サンプルの意見を作る", async () => {
     const { install, target } = setup();
     const { sampleSessionId } = await install();
     expect(sampleSessionId).toBeTruthy();
     const session = await (await target.fetch(`/api/sessions/${sampleSessionId}`)).json();
-    expect(session).toMatchObject({ acceptingOpinions: true, title: "デモ用セッション" });
+    expect(session).toMatchObject({ acceptingOpinions: true, title: "デモ用テーマ" });
     const list = await (await target.fetch(`/api/sessions/${sampleSessionId}/opinions`)).json();
     expect(list.opinions).toHaveLength(3);
   });
@@ -192,7 +192,7 @@ describe("デモ版のお知らせ", () => {
     expect(screen.getByRole("link", { name: "参加者の画面（サンプル）" })).toHaveAttribute("href", "/s/s1");
   });
 
-  it("サンプルのセッションがないときは、そのリンクを出さない", () => {
+  it("サンプルのテーマがないときは、そのリンクを出さない", () => {
     render(<DemoBanner sampleSessionId={undefined} onReset={() => {}} />);
     expect(screen.queryByRole("link", { name: "参加者の画面（サンプル）" })).toBeNull();
   });

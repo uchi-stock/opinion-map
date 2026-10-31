@@ -38,14 +38,14 @@ export function createTestApp(overrides: Partial<AppOptions> = {}) {
     return { ...response, json: response.body ? JSON.parse(response.body) : undefined };
   }
 
-  /** 公開済み（イベント・セッションとも active）のセッションを作る */
+  /** 公開済み（イベント・テーマとも active）のテーマを作る */
   async function openSession(sessionBody: Record<string, unknown> = {}) {
     const event = (await call("POST", "/events", { admin: true, body: { name: "テストイベント" } })).json;
     await call("PATCH", `/events/${event.id}`, { admin: true, body: { status: "active" } });
     const session = (
       await call("POST", `/events/${event.id}/sessions`, {
         admin: true,
-        body: { title: "セッション", prompt: "問い", ...sessionBody },
+        body: { title: "テーマ", prompt: "問い", ...sessionBody },
       })
     ).json;
     await call("PATCH", `/sessions/${session.id}`, { admin: true, body: { status: "active" } });

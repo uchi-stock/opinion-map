@@ -239,7 +239,7 @@ export function parseSessionCreate(body: unknown): SessionInput {
     throw badRequest("invalid_type", "showOpinionsToParticipants は真偽値で指定してください");
   }
   return {
-    title: text(obj, "title", "セッション名", NAME_MAX_LENGTH, { required: true })!,
+    title: text(obj, "title", "テーマ名", NAME_MAX_LENGTH, { required: true })!,
     prompt: text(obj, "prompt", "問い", PROMPT_MAX_LENGTH, { required: true })!,
     format: oneOf(obj, "format", "形式", SESSION_FORMATS, { required: false }) ?? "workshop",
     showOpinionsToParticipants: show ?? true,
@@ -257,9 +257,9 @@ export interface SessionPatch {
 export function parseSessionPatch(body: unknown): SessionPatch {
   const obj = asObject(body);
   const patch: SessionPatch = {};
-  const title = text(obj, "title", "セッション名", NAME_MAX_LENGTH, { required: false });
+  const title = text(obj, "title", "テーマ名", NAME_MAX_LENGTH, { required: false });
   if (title !== undefined) {
-    if (title.length === 0) throw badRequest("required", "セッション名を入力してください");
+    if (title.length === 0) throw badRequest("required", "テーマ名を入力してください");
     patch.title = title;
   }
   const prompt = text(obj, "prompt", "問い", PROMPT_MAX_LENGTH, { required: false });
@@ -269,7 +269,7 @@ export function parseSessionPatch(body: unknown): SessionPatch {
   }
   const format = oneOf(obj, "format", "形式", SESSION_FORMATS, { required: false });
   if (format !== undefined) patch.format = format;
-  const status = oneOf(obj, "status", "セッションの状態", SESSION_STATUSES, { required: false });
+  const status = oneOf(obj, "status", "テーマの状態", SESSION_STATUSES, { required: false });
   if (status !== undefined) patch.status = status;
   const show = obj["showOpinionsToParticipants"];
   if (show !== undefined) {

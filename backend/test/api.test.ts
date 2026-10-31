@@ -33,7 +33,7 @@ describe("運営者の認証", () => {
   });
 });
 
-describe("イベントとセッションの管理", () => {
+describe("イベントとテーマの管理", () => {
   it("イベントは下書きで作られ、編集できる", async () => {
     const { call } = createTestApp();
     const created = await call("POST", "/events", { admin: true, body: { name: "A", description: "説明" } });
@@ -55,7 +55,7 @@ describe("イベントとセッションの管理", () => {
     ).toBe(404);
   });
 
-  it("セッションを作成・編集・一覧できる", async () => {
+  it("テーマを作成・編集・一覧できる", async () => {
     const { call } = createTestApp();
     const event = (await call("POST", "/events", { admin: true, body: { name: "A" } })).json;
     const created = await call("POST", `/events/${event.id}/sessions`, {
@@ -79,7 +79,7 @@ describe("イベントとセッションの管理", () => {
 });
 
 describe("参加者の投稿", () => {
-  it("下書きのセッションは、参加者には存在しない", async () => {
+  it("下書きのテーマは、参加者には存在しない", async () => {
     const { call } = createTestApp();
     const event = (await call("POST", "/events", { admin: true, body: { name: "A" } })).json;
     const session = (
@@ -154,7 +154,7 @@ describe("参加者の投稿", () => {
     expect(res.json.error.code).toBe("too_long");
   });
 
-  it("終了したセッションには投稿できないが、閲覧はできる", async () => {
+  it("終了したテーマには投稿できないが、閲覧はできる", async () => {
     const { call, openSession } = createTestApp();
     const { sessionId } = await openSession();
     await call("POST", `/sessions/${sessionId}/opinions`, {

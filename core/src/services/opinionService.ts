@@ -15,7 +15,7 @@ export interface PublicSession {
   eventName: string;
   acceptingOpinions: boolean;
   showOpinions: boolean;
-  /** このセッションが属するイベント(招待URLと、テーマの切り替えに使う) */
+  /** このテーマが属するイベント(招待URLと、テーマの切り替えに使う) */
   eventId: string;
   /** いま開いている(参加者が投稿できる)テーマか。未設定のイベントでは、公開中のテーマすべてが開いている */
   isOpen: boolean;
@@ -65,7 +65,7 @@ function isOpen(event: EventRecord, session: SessionRecord): boolean {
   return selected === undefined || selected.includes(session.id);
 }
 
-/** 投稿を受け付けるのは、公開中のイベントの、公開中で、開いているテーマ(選ばれていれば)のセッションだけ */
+/** 投稿を受け付けるのは、公開中のイベントの、公開中で、開いているテーマ(選ばれていれば)だけ */
 function isAccepting(event: EventRecord, session: SessionRecord): boolean {
   return event.status === "active" && session.status === "active" && isOpen(event, session);
 }
@@ -86,7 +86,7 @@ function toPublicSession(event: EventRecord, session: SessionRecord): PublicSess
   };
 }
 
-/** 1つのセッションが、一定時間に受け付ける投稿の数。誰が書いたかは見ず、全体の量だけを抑える */
+/** 1つのテーマが、一定時間に受け付ける投稿の数。誰が書いたかは見ず、全体の量だけを抑える */
 export interface OpinionRateLimit {
   max: number;
   windowSeconds: number;
@@ -152,12 +152,12 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     return opinion;
   }
 
-  /** 下書きのイベント・セッションは、参加者には存在しないものとして扱う */
+  /** 下書きのイベント・テーマは、参加者には存在しないものとして扱う */
   async function loadForParticipant(sessionId: string): Promise<{ event: EventRecord; session: SessionRecord }> {
     const session = await ctx.repos.sessions.get(sessionId);
-    if (!session) throw notFound("セッション");
+    if (!session) throw notFound("テーマ");
     const event = await ctx.repos.events.get(session.eventId);
-    if (!event || event.status === "draft" || session.status === "draft") throw notFound("セッション");
+    if (!event || event.status === "draft" || session.status === "draft") throw notFound("テーマ");
     return { event, session };
   }
 
@@ -210,7 +210,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     async submit(sessionId: string, input: OpinionInput): Promise<{ opinion: PublicOpinion; created: boolean }> {
       const { event, session } = await loadForParticipant(sessionId);
       if (!isAccepting(event, session)) {
-        throw forbidden("not_accepting", "このセッションは、いま投稿を受け付けていません");
+        throw forbidden("not_accepting", "このテーマは、いま投稿を受け付けていません");
       }
       // 再送(同じ送信ID)は、頻度の制限の対象にしない
       if (!(await ctx.repos.opinions.findBySubmission(sessionId, input.submissionId))) {
@@ -254,7 +254,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const { event, session } = await loadForParticipant(opinion.sessionId);
       if (!session.showOpinionsToParticipants) throw notFound("投稿");
       if (!isAccepting(event, session)) {
-        throw forbidden("not_accepting", "このセッションは、いま投票を受け付けていません");
+        throw forbidden("not_accepting", "このテーマは、いま投票を受け付けていません");
       }
       const voterHash = await sha256Hex(voterId);
       if (reacted) {
@@ -274,18 +274,18 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     /** 運営者向けの一覧。設定にかかわらず、非表示のものも含めて返す */
     async listForAdmin(sessionId: string): Promise<AdminOpinion[]> {
       const session = await ctx.repos.sessions.get(sessionId);
-      if (!session) throw notFound("セッション");
+      if (!session) throw notFound("テーマ");
       const list = await ctx.repos.opinions.listManageableBySession(sessionId);
       const counts = await reactionCounts(sessionId);
       return list.map((o) => ({ ...withCount(toPublicOpinion(o), counts), status: o.status === "hidden" ? "hidden" : "active" }));
     },
 
-    /** 投稿者による編集。受け付け中のセッションだけ。分析の入力の記録は変えない */
+    /** 投稿者による編集。受け付け中のテーマだけ。分析の入力の記録は変えない */
     async edit(id: string, input: OpinionEdit): Promise<PublicOpinion> {
       const opinion = await authorize(id, input.editKey);
       const { event, session } = await loadForParticipant(opinion.sessionId);
       if (!isAccepting(event, session)) {
-        throw forbidden("not_accepting", "このセッションは、いま投稿を受け付けていません");
+        throw forbidden("not_accepting", "このテーマは、いま投稿を受け付けていません");
       }
       const next: OpinionRecord = {
         ...opinion,
@@ -297,7 +297,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       return toPublicOpinion(next);
     },
 
-    /** 投稿者による削除。セッションの状態にかかわらず、できる */
+    /** 投稿者による削除。テーマの状態にかかわらず、できる */
     async deleteByAuthor(id: string, editKey: string): Promise<void> {
       await erase(await authorize(id, editKey));
     },

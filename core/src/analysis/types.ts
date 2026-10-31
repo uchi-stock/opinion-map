@@ -14,7 +14,7 @@ export interface AnalysisRequest {
   /** 分析の実行のID。分析基盤側の名前に使う */
   runId: string;
   sessionId: string;
-  /** セッションの問い */
+  /** テーマの問い */
   question: string;
   opinions: AnalysisOpinion[];
 }

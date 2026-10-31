@@ -42,7 +42,7 @@ export interface AnalysisRunRepository {
   // 入力の投稿(本文)は大きいので、update は入力を書き換えない。入力を書き換えるのは replaceInput だけ。
   // 一覧(listBySession)は、本文を持たない軽い形を返す。
   /**
-   * 同じセッションに、進行中（queued か running）の実行がなければ作る。あれば、その実行を返す。
+   * 同じテーマに、進行中（queued か running）の実行がなければ作る。あれば、その実行を返す。
    * 重複した実行を防ぐため、確認と作成は不可分に行うこと（DynamoDB では条件付き書き込み）。
    */
   createIfNoActive(run: AnalysisRunRecord): Promise<{ run: AnalysisRunRecord; created: boolean }>;
@@ -70,7 +70,7 @@ export interface ReactionRepository {
   add(reaction: ReactionRecord): Promise<boolean>;
   /** 消せたら true。なければ false */
   remove(opinionId: string, voterHash: string): Promise<boolean>;
-  /** セッションのすべてのリアクション。数の集計に使う */
+  /** テーマのすべてのリアクション。数の集計に使う */
   listBySession(sessionId: string): Promise<ReactionRecord[]>;
 }
 

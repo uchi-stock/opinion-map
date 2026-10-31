@@ -44,7 +44,7 @@ describe("投稿の二重送信（並行）", () => {
     expect(await repos.opinions.listBySession("s1")).toHaveLength(3);
   });
 
-  it("別のセッションで、同じ送信IDを使っても、別の投稿になる", async () => {
+  it("別のテーマで、同じ送信IDを使っても、別の投稿になる", async () => {
     const repos = createDynamoRepositories(new MemoryKvStore());
     const a = await repos.opinions.createIfAbsent(opinion("o1", "same-submission-id-0001"));
     const b = await repos.opinions.createIfAbsent(opinion("o2", "same-submission-id-0001", { sessionId: "s2" }));
@@ -53,7 +53,7 @@ describe("投稿の二重送信（並行）", () => {
 });
 
 describe("分析の重複実行の抑制（並行）", () => {
-  it("同じセッションで同時に開始しても、1つしか開始されない", async () => {
+  it("同じテーマで同時に開始しても、1つしか開始されない", async () => {
     const repos = createDynamoRepositories(new MemoryKvStore());
     const results = await Promise.all(Array.from({ length: 10 }, (_, i) => repos.analyses.createIfNoActive(run(`r${i}`))));
     expect(results.filter((r) => r.created)).toHaveLength(1);
@@ -78,7 +78,7 @@ describe("分析の重複実行の抑制（並行）", () => {
     expect(next.created).toBe(true);
   });
 
-  it("別のセッションには影響しない", async () => {
+  it("別のテーマには影響しない", async () => {
     const repos = createDynamoRepositories(new MemoryKvStore());
     await repos.analyses.createIfNoActive(run("r1"));
     expect((await repos.analyses.createIfNoActive(run("r2", { sessionId: "s2" }))).created).toBe(true);

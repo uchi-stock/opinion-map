@@ -16,7 +16,7 @@ async function setup(options: Parameters<typeof createTestApp>[0] = {}) {
 }
 
 describe("投稿頻度の制限", () => {
-  it("セッションごとの上限を超えると429になり、時間が経つと再び投稿できる", async () => {
+  it("テーマごとの上限を超えると429になり、時間が経つと再び投稿できる", async () => {
     let now = Date.UTC(2026, 0, 1);
     const { post, call, sessionId } = await setup({
       opinionRateLimit: { max: 2, windowSeconds: 60 },
@@ -41,7 +41,7 @@ describe("投稿頻度の制限", () => {
     expect(retry.json.duplicate).toBe(true);
   });
 
-  it("別のセッションには影響しない", async () => {
+  it("別のテーマには影響しない", async () => {
     const t = await setup({ opinionRateLimit: { max: 1, windowSeconds: 60 } });
     await t.post("1");
     const other = await t.openSession();
@@ -87,7 +87,7 @@ describe("投稿者による編集・削除", () => {
     expect((await post("x", "短い")).statusCode).toBe(400);
   });
 
-  it("受け付けを終えたセッションでは編集できないが、削除はできる", async () => {
+  it("受け付けを終えたテーマでは編集できないが、削除はできる", async () => {
     const { post, call, sessionId } = await setup();
     const id = (await post()).json.opinion.id;
     await call("PATCH", `/sessions/${sessionId}`, { admin: true, body: { status: "closed" } });

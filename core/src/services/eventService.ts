@@ -34,7 +34,7 @@ export function createEventService(ctx: ServiceContext) {
       const event = await this.get(id);
       const { currentSessionId, openSessionIds, ...rest } = patch;
       const next: EventRecord = { ...event, ...rest, updatedAt: ctx.now().toISOString() };
-      // 開くテーマは、このイベントの、下書きでないセッションだけ
+      // 開くテーマは、このイベントの、下書きでないテーマだけ
       const checkOpenable = async (sessionIds: string[]) => {
         for (const sessionId of sessionIds) {
           const session = await ctx.repos.sessions.get(sessionId);

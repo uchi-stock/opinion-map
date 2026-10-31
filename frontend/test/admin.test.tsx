@@ -425,6 +425,42 @@ describe("イベントの画面", () => {
     expect(await screen.findByText(/長押ししてコピー/)).toBeInTheDocument();
   });
 
+  it("テーマの一覧は、1つのリスト。1行に、ラジオ、テーマ名のリンク、状態が並ぶ(別々の一覧を出さない)", async () => {
+    fakeAdminBackend({
+      events: [event({ openSessionIds: ["s1"] })],
+      sessions: [session(), session({ id: "s2", title: "場B", status: "closed" }), session({ id: "s3", title: "下書きのテーマ", status: "draft" })],
+    });
+    render(<AdminEventPage eventId="e1" />);
+    const group = await screen.findByRole("group", { name: "投稿を受け付けるテーマ" });
+    // テーマ名のリンクは、このリストの中に、1つずつだけある(別の一覧が、重ねて出ない)
+    expect(screen.getAllByRole("link", { name: "ワークショップA" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "場B" })).toHaveLength(1);
+    expect(within(group).getByRole("link", { name: "ワークショップA" })).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
+    // 1行に、ラジオと、リンクと、状態が並ぶ
+    const row = within(group).getByRole("link", { name: "ワークショップA" }).closest(".list-group-item") as HTMLElement;
+    expect(within(row).getByRole("radio", { name: "ワークショップA" })).toBeChecked();
+    expect(within(row).getByText("公開中")).toBeInTheDocument();
+    // 終了したテーマは、選べない。下書きは、ラジオなしで、状態が「下書き」
+    expect(within(group).getByRole("radio", { name: "場B" })).toBeDisabled();
+    const draftRow = within(group).getByRole("link", { name: "下書きのテーマ" }).closest(".list-group-item") as HTMLElement;
+    expect(within(draftRow).queryByRole("radio")).toBeNull();
+    expect(within(draftRow).getByText("下書き")).toBeInTheDocument();
+    // 下書きがあるときだけ、公開の案内を出す
+    expect(screen.getByText(/下書きは、参加者に見えません/)).toBeInTheDocument();
+  });
+
+  it("下書きが無いときは、下書きの案内を出さない。テーマが無いときは、その旨だけを出す", async () => {
+    fakeAdminBackend();
+    const { unmount } = render(<AdminEventPage eventId="e1" />);
+    await screen.findByRole("group", { name: "投稿を受け付けるテーマ" });
+    expect(screen.queryByText(/下書きは、参加者に見えません/)).toBeNull();
+    unmount();
+    fakeAdminBackend({ sessions: [] });
+    render(<AdminEventPage eventId="e1" />);
+    expect(await screen.findByText("まだテーマがありません。")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "投稿を受け付けるテーマ" })).toBeNull();
+  });
+
   it("「すべて閉じる」を選ぶと、どのテーマにも投稿できなくなる", async () => {
     const { calls } = fakeAdminBackend({ events: [event({ openSessionIds: ["s1"] })], sessions: [session(), session({ id: "s2", title: "場B" })] });
     const user = userEvent.setup();

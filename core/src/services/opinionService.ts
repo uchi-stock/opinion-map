@@ -23,7 +23,16 @@ export interface PublicSession {
   isCurrent: boolean;
   /** 公開中の意見の数。イベントの画面で、場ごとの賑わいの目安に使う(イベントの公開情報だけ) */
   opinionCount?: number;
+  /** いま見ている端末の数の目安。少人数だと個人を推測できるため、FEW_VIEWERS 未満は "few"(少数)。イベントの公開情報だけ */
+  viewers?: number | "few";
 }
+
+/** この人数に満たないときは、人数を出さず、「少数」とだけ示す */
+export const FEW_VIEWERS = 5;
+/** 端末が見ている、と数える時間。画面が30秒ごとに知らせるので、取りこぼしを見込んで長めにとる */
+export const PRESENCE_WINDOW_SECONDS = 90;
+/** 記録を残す時間(ttl)。数える時間より長ければよい。個人につながる記録は、短く持つ */
+const PRESENCE_TTL_SECONDS = 10 * 60;
 
 /** 参加者向けの、イベントの公開情報。下書きのテーマは含めない */
 export interface PublicEvent {
@@ -35,6 +44,11 @@ export interface PublicEvent {
   /** 開くテーマが選ばれているときの一覧。未設定なら null(公開中のテーマすべてが開いている) */
   openSessionIds: string[] | null;
   sessions: PublicSession[];
+}
+
+/** 人数は、5人きざみで丸める。1人の出入りで、個人が分からないようにする */
+function roundViewers(n: number): number {
+  return Math.floor(n / 5) * 5;
 }
 
 /** 運営者が選んだ、開くテーマ。古い currentSessionId は、それ1つだけを開く指定として読む */
@@ -160,9 +174,12 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const withCounts = await Promise.all(
         sessions.map(async (s) => {
           const base = toPublicSession(event, s);
+          const since = new Date(ctx.now().getTime() - PRESENCE_WINDOW_SECONDS * 1000).toISOString();
+          const watching = await ctx.repos.presence.countSince(s.id, since);
+          const viewers = watching < FEW_VIEWERS ? ("few" as const) : roundViewers(watching);
           // 意見を参加者に見せない設定のテーマは、件数も見せない
-          if (!s.showOpinionsToParticipants) return base;
-          return { ...base, opinionCount: (await ctx.repos.opinions.listBySession(s.id)).length };
+          if (!s.showOpinionsToParticipants) return { ...base, viewers };
+          return { ...base, viewers, opinionCount: (await ctx.repos.opinions.listBySession(s.id)).length };
         }),
       );
       return {
@@ -173,6 +190,13 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
         openSessionIds: selected ?? null,
         sessions: withCounts,
       };
+    },
+
+    /** 参加者の画面が、いま見ている、と知らせる。端末のIDは、ハッシュにして短く保存する(個人は特定しない) */
+    async touchPresence(sessionId: string, deviceId: string): Promise<void> {
+      await loadForParticipant(sessionId);
+      const deviceHash = await sha256Hex(`presence:${deviceId}`);
+      await ctx.repos.presence.touch(sessionId, deviceHash, ctx.now().toISOString(), PRESENCE_TTL_SECONDS);
     },
 
     /** 同じ送信IDなら、新しく作らず既存の投稿を返す */

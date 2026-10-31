@@ -108,6 +108,11 @@ export function editOpinion(
   return request(`/opinions/${enc(opinionId)}`, jsonPost("PATCH", input));
 }
 
+/** この画面を、いま見ている、と知らせる(端末の数の目安に使う)。失敗しても、画面には影響させない */
+export function sendPresence(sessionId: string, deviceId: string): Promise<{ ok: true }> {
+  return request(`/sessions/${enc(sessionId)}/presence`, jsonPost("POST", { deviceId }));
+}
+
 /** 自分の投稿を削除する。削除すると、本文は消え、戻せない */
 export function reactToOpinion(opinionId: string, voterId: string, reacted: boolean): Promise<{ reacted: boolean; count: number }> {
   return request(`/opinions/${enc(opinionId)}/reaction`, jsonPost("POST", { voterId, reacted }));

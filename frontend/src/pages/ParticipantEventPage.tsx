@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { ApiError, getPublicEvent } from "../api/client.ts";
 import type { PublicEvent } from "../api/types.ts";
+import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { PublishedNotes } from "../components/PublishedNotes.tsx";
 import { ProposalSection } from "../components/ProposalSection.tsx";
 import { ParticipantPage } from "./ParticipantPage.tsx";
+
+/** テーマの開閉に追従する間隔。DynamoDB の読み取りの費用を抑えるため、長めにする */
+export const REFRESH_INTERVAL_MS = 30_000;
 
 type State =
   | { status: "loading" }
@@ -28,6 +32,13 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
       else setState({ status: "error", message: e instanceof ApiError ? e.message : "読み込みに失敗しました。" });
     }
   }
+
+  // 運営者がテーマを開閉したら、数十秒以内に追従する。失敗しても、いまの表示は変えない
+  useVisiblePolling(() => {
+    getPublicEvent(eventId)
+      .then((event) => setState((prev) => (prev.status === "ready" ? { status: "ready", event } : prev)))
+      .catch(() => undefined);
+  }, REFRESH_INTERVAL_MS);
 
   useEffect(() => {
     void load();
@@ -99,6 +110,11 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
                 <span className="badge text-bg-secondary ms-1">閲覧のみ</span>
               )}
               {s.opinionCount !== undefined && <span className="ms-1 small">（{s.opinionCount}件）</span>}
+              {s.viewers !== undefined && (
+                <span className="ms-1 small" aria-label="見ている人の目安">
+                  ・{s.viewers === "few" ? "見ている人は少数" : `見ている人は約${s.viewers}人`}
+                </span>
+              )}
             </button>
           ))}
           <button type="button" className="btn btn-sm btn-outline-secondary ms-auto" onClick={() => void load()}>

@@ -2,6 +2,7 @@ import {
   parseEventCreate,
   parseEventPatch,
   parseEditKeyBody,
+  parsePresence,
   parseReaction,
   parseProposalCreate,
   parseProposalDecision,
@@ -486,6 +487,15 @@ export function createApp(options: AppOptions) {
         status: 200,
         data: { opinion: await opinions.edit(params["id"]!, parseOpinionEdit(body, options.opinionMaxLength)) },
       }),
+    },
+    {
+      method: "POST",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/presence$/,
+      admin: false,
+      handle: async ({ params, body }) => {
+        await opinions.touchPresence(params["id"]!, parsePresence(body).deviceId);
+        return { status: 200, data: { ok: true } };
+      },
     },
     {
       method: "POST",

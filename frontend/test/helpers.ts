@@ -31,5 +31,8 @@ export function stubFetch(handler: Handler) {
   return mock;
 }
 
+/** POST の呼び出し。画面が見ていることを知らせる通信(presence)は、数えない */
 export const postCalls = (mock: ReturnType<typeof stubFetch>) =>
-  mock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+  mock.mock.calls.filter(
+    ([url, init]) => (init as RequestInit | undefined)?.method === "POST" && !String(url).endsWith("/presence"),
+  );

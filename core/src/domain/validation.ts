@@ -314,6 +314,14 @@ export function parseReaction(body: unknown): { voterId: string; reacted: boolea
   return { voterId, reacted: obj["reacted"] };
 }
 
+export function parsePresence(body: unknown): { deviceId: string } {
+  const deviceId = asObject(body)["deviceId"];
+  if (typeof deviceId !== "string" || !VOTER_ID.test(deviceId)) {
+    throw badRequest("invalid_device_id", "端末のIDが正しくありません");
+  }
+  return { deviceId };
+}
+
 export function parseOpinionCreate(body: unknown, maxLength = DEFAULT_OPINION_MAX_LENGTH): OpinionInput {
   const obj = asObject(body);
   const submissionId = obj["submissionId"];

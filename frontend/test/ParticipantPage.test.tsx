@@ -178,3 +178,20 @@ describe("ボード表示", () => {
     expect(screen.queryByTestId("opinion-card")).toBeNull();
   });
 });
+
+describe("見ていることの通知", () => {
+  it("開いた直後に、端末のID(個人を特定しない乱数)で知らせる。失敗しても画面は変わらない", async () => {
+    const mock = stubFetch((url, init) => {
+      if (url.endsWith("/presence") && init?.method === "POST") return json({ error: { code: "server_error", message: "失敗" } }, 500);
+      if (url.endsWith("/sessions/s1")) return json(SESSION);
+      if (url.endsWith("/opinions")) return json({ hidden: false, opinions: [] });
+      return json({ error: { code: "not_found", message: "なし" } }, 404);
+    });
+    render(<ParticipantPage sessionId="s1" />);
+    await screen.findByRole("form", { name: "意見の投稿フォーム" });
+    const sent = mock.mock.calls.filter(([url]) => String(url).endsWith("/sessions/s1/presence"));
+    expect(sent).toHaveLength(1);
+    const body = JSON.parse(String((sent[0]![1] as RequestInit).body)) as { deviceId: string };
+    expect(body.deviceId).toMatch(/^[A-Za-z0-9_-]{22,128}$/);
+  });
+});

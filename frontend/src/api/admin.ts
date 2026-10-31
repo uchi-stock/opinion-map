@@ -58,7 +58,7 @@ export function createAdminApi(token: string) {
     },
     updateSession(
       id: string,
-      patch: Partial<SessionInput & { status: SessionStatus }>,
+      patch: Partial<SessionInput & { status: SessionStatus; summaryPublished: boolean }>,
     ): Promise<SessionRecord> {
       return send("PATCH", `/sessions/${enc(id)}`, patch);
     },

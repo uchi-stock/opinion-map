@@ -1,3 +1,10 @@
+## [1.27.1](https://github.com/uchi-stock/opinion-map/compare/v1.27.0...v1.27.1) (2026-10-31)
+
+
+### Bug Fixes
+
+* fetch the submodule when building the demo for GitHub Pages ([#168](https://github.com/uchi-stock/opinion-map/issues/168)) ([c26a3cc](https://github.com/uchi-stock/opinion-map/commit/c26a3ccaf192701fe3393479898e64fd30ced375)), closes [#131](https://github.com/uchi-stock/opinion-map/issues/131) [#167](https://github.com/uchi-stock/opinion-map/issues/167)
+
 # [1.27.0](https://github.com/uchi-stock/opinion-map/compare/v1.26.0...v1.27.0) (2026-10-31)
 
 

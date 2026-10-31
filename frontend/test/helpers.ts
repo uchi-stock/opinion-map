@@ -11,6 +11,7 @@ export const SESSION = {
   format: "workshop",
   status: "active",
   eventName: "テストイベント",
+  eventId: "e1",
   acceptingOpinions: true,
   showOpinions: true,
 };

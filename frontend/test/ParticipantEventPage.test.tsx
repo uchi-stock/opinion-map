@@ -60,6 +60,7 @@ describe("招待URLの画面", () => {
     stubFetch(() => json({ error: { code: "not_found", message: "なし" } }, 404));
     render(<ParticipantEventPage eventId="nope" />);
     expect(await screen.findByText("ページが見つかりません")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "トップページへ" })).toHaveAttribute("href", "/");
   });
 });
 

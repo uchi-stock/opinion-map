@@ -4,6 +4,7 @@ import type { PublicEvent } from "../api/types.ts";
 import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { PublishedNotes } from "../components/PublishedNotes.tsx";
 import { ProposalSection } from "../components/ProposalSection.tsx";
+import { withBase } from "../lib/paths.ts";
 import { ParticipantPage } from "./ParticipantPage.tsx";
 
 /** テーマの開閉に追従する間隔。DynamoDB の読み取りの費用を抑えるため、長めにする */
@@ -57,6 +58,9 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
       <main className="container py-4" style={{ maxWidth: 640 }}>
         <h1 className="h4">ページが見つかりません</h1>
         <p>URLが正しいか、運営者にご確認ください。まだ公開されていない可能性もあります。</p>
+        <p>
+          <a href={withBase("/")}>トップページへ</a>
+        </p>
       </main>
     );
   }

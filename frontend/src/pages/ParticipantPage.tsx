@@ -12,6 +12,7 @@ import { OpinionForm } from "../components/OpinionForm.tsx";
 import { getVoterId } from "../lib/reactions.ts";
 import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
+import { withBase } from "../lib/paths.ts";
 
 /** 見ていることを知らせる間隔。サーバーが数える時間(90秒)より、短くする */
 const PRESENCE_INTERVAL_MS = 30_000;
@@ -116,6 +117,9 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
       <Shell>
         <h1 className="h4">ページが見つかりません</h1>
         <p>URLが正しいか、運営者にご確認ください。まだ公開されていない可能性もあります。</p>
+        <p>
+          <a href={withBase("/")}>トップページへ</a>
+        </p>
       </Shell>
     );
   }
@@ -137,6 +141,12 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
     <Shell>
       <header className="mb-4">
         {!embedded && <p className="text-body-secondary small mb-1">{session.eventName}</p>}
+        {/* 旧URL(/s/<ID>)から開いたときも、イベントのほかのテーマへ行けるようにする */}
+        {!embedded && (
+          <p className="small mb-1">
+            <a href={withBase(`/e/${encodeURIComponent(session.eventId)}`)}>このイベントのほかのテーマを見る</a>
+          </p>
+        )}
         <h1 className="h4">{session.title}</h1>
         <p className="lead mb-0">{session.prompt}</p>
       </header>

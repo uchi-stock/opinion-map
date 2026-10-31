@@ -8,6 +8,7 @@ import { AdminEventPage } from "../src/pages/admin/AdminEventPage.tsx";
 import { AdminSessionNewPage } from "../src/pages/admin/AdminSessionNewPage.tsx";
 import { AdminEventsPage } from "../src/pages/admin/AdminEventsPage.tsx";
 import { AdminSessionPage } from "../src/pages/admin/AdminSessionPage.tsx";
+import { AdminSessionEditPage, AdminSessionNotesPage } from "../src/pages/admin/AdminSessionSubPages.tsx";
 import { clearAdminToken, loadAdminToken, saveAdminToken } from "../src/lib/adminToken.ts";
 import type { EventRecord, Proposal, SessionRecord } from "../src/api/types.ts";
 import { json, opinion, stubFetch } from "./helpers.ts";
@@ -154,6 +155,8 @@ describe("運営者の画面のルーティング", () => {
     expect(routeOf("/admin/events/e1/invite")).toEqual({ page: "adminEventInvite", eventId: "e1" });
     // 「new」は、テーマのIDではなく、追加の画面
     expect(routeOf("/admin/events/e1/sessions/new")).toEqual({ page: "adminSessionNew", eventId: "e1" });
+    expect(routeOf("/admin/events/e1/sessions/s1/edit")).toEqual({ page: "adminSessionEdit", eventId: "e1", sessionId: "s1" });
+    expect(routeOf("/admin/events/e1/sessions/s1/notes")).toEqual({ page: "adminSessionNotes", eventId: "e1", sessionId: "s1" });
     expect(routeOf("/admin/other")).toEqual({ page: "notFound" });
   });
 });
@@ -491,26 +494,28 @@ describe("イベントの画面", () => {
 describe("テーマの画面", () => {
   beforeEach(() => saveAdminToken(TOKEN));
 
-  it("テーマのページには、URLのコピーもQRも出さない(参加者に配るのは、イベントの招待URLだけ)", async () => {
+  it("テーマのページには、URLのコピーもQRも、設定のフォームも出さない", async () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByLabelText("テーマ名");
+    await screen.findByRole("navigation", { name: "このテーマの操作" });
     expect(screen.queryByLabelText("参加者のURL")).toBeNull();
     expect(screen.queryByRole("img", { name: /QRコード/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "コピー" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "テーマの設定" })).toBeNull();
+    expect(screen.queryByLabelText("結論")).toBeNull();
   });
 
-  it("意見(一覧とボード)を、設定や記録より先に出す。参加者の画面を開くリンクを置く", async () => {
+  it("意見(一覧とボード)を出す。参加者の画面を開くリンクと、設定・記録への入口を置く", async () => {
     fakeAdminBackend({
       opinions: [opinion("o1", "一つ目の意見", "idea"), opinion("o2", "二つ目の意見", "question")],
     });
     const user = userEvent.setup();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
     const opinions = await screen.findByRole("region", { name: "投稿された意見" });
-    const settings = screen.getByRole("form", { name: "テーマの設定" });
-    // 意見のセクションが、設定のフォームより前にある
-    expect(opinions.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("link", { name: "参加者の画面を見る" })).toHaveAttribute("href", "/e/e1");
+    const menu = screen.getByRole("navigation", { name: "このテーマの操作" });
+    expect(within(menu).getByRole("link", { name: /^テーマの設定/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1/edit");
+    expect(within(menu).getByRole("link", { name: /^議論の記録/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1/notes");
 
     // 参加者と同じく、ボード(付箋)でも見られる。管理者の操作(非表示)は、一覧に残る
     expect(within(opinions).getAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
@@ -519,11 +524,12 @@ describe("テーマの画面", () => {
     expect(within(opinions).getByText("一つ目の意見")).toBeInTheDocument();
   });
 
-  it("テーマの状態を、最上部に示す", async () => {
+  it("テーマが下書きのときは、状態を示し、設定への入口を警告に添える", async () => {
     fakeAdminBackend({ sessions: [session({ status: "draft" })] });
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByRole("form", { name: "テーマの設定" });
+    await screen.findByRole("navigation", { name: "このテーマの操作" });
     expect(screen.getAllByText("下書き").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "テーマの設定を開く" })).toHaveAttribute("href", "/admin/events/e1/sessions/s1/edit");
   });
 
   it("公開中でないときは、参加者に見えない旨を警告する", async () => {
@@ -535,7 +541,7 @@ describe("テーマの画面", () => {
   it("イベントもテーマも公開中なら、警告を出さない", async () => {
     fakeAdminBackend();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
-    await screen.findByLabelText("テーマ名");
+    await screen.findByRole("navigation", { name: "このテーマの操作" });
     expect(screen.queryByText(/両方とも「公開中」のときだけ/)).toBeNull();
   });
 
@@ -550,22 +556,33 @@ describe("テーマの画面", () => {
     expect(cards[1]).toHaveTextContent("古い意見");
   });
 
-  it("状態を「終了」にすると、すぐに保存する", async () => {
+  it("設定の画面で、状態を「終了」にすると、すぐに保存する", async () => {
     const { calls } = fakeAdminBackend();
     const user = userEvent.setup();
-    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    render(<AdminSessionEditPage eventId="e1" sessionId="s1" />);
     await user.selectOptions(await screen.findByLabelText("状態"), "closed");
     await waitFor(() => expect(calls.some((c) => c.method === "PATCH" && c.body?.status === "closed")).toBe(true));
   });
 
-  it("意見を見せる設定を、切り替えて保存できる", async () => {
+  it("設定の画面で、意見を見せる設定を、切り替えて保存できる。テーマのページへ戻れる", async () => {
     const { calls } = fakeAdminBackend();
     const user = userEvent.setup();
-    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    render(<AdminSessionEditPage eventId="e1" sessionId="s1" />);
     await user.click(await screen.findByLabelText("投稿された意見を、参加者にも見せる"));
     await user.click(screen.getByRole("button", { name: "保存する" }));
     await screen.findByText("保存しました。");
     expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ showOpinionsToParticipants: false });
+    expect(screen.getByRole("link", { name: /テーマ$/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
+  });
+
+  it("議論の記録の画面で、結論を保存できる。存在しないテーマでは、見つからない旨を出す", async () => {
+    fakeAdminBackend();
+    const { unmount } = render(<AdminSessionNotesPage eventId="e1" sessionId="s1" />);
+    expect(await screen.findByLabelText("結論")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /テーマ$/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
+    unmount();
+    render(<AdminSessionNotesPage eventId="e1" sessionId="nope" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("テーマが見つかりません");
   });
 
   it("存在しないテーマでは、見つからない旨を出す", async () => {

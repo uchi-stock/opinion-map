@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/uchi-stock/opinion-map/compare/v1.13.0...v1.14.0) (2026-10-31)
+
+
+### Features
+
+* auto-refresh participant themes and show a viewer estimate ([#118](https://github.com/uchi-stock/opinion-map/issues/118)) ([bb3e4bc](https://github.com/uchi-stock/opinion-map/commit/bb3e4bc1ee072771fe86c2240328f7148194531c))
+
 # [1.13.0](https://github.com/uchi-stock/opinion-map/compare/v1.12.0...v1.13.0) (2026-10-31)
 
 

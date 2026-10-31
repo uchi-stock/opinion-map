@@ -119,3 +119,43 @@ describe("自動更新", () => {
     }
   });
 });
+
+describe("開始を待つ案内", () => {
+  it("下書きのイベントは、まだ始まっていないと出し、公開されたら自動で切り替わる", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let draft = true;
+      stubFetch((url) => {
+        if (url.endsWith("/events/e1/public")) {
+          return draft
+            ? json({ id: "e1", status: "draft", name: "", description: "", openSessionIds: null, sessions: [] })
+            : json({ id: "e1", status: "active", name: "ワークショップ", description: "", openSessionIds: ["sb"], sessions: [sessionB] });
+        }
+        if (url.endsWith("/sessions/sb")) return json(sessionB);
+        if (url.endsWith("/sessions/sb/opinions")) return json({ hidden: false, opinions: [] });
+        return json({ error: { code: "not_found", message: "なし" } }, 404);
+      });
+      render(<ParticipantEventPage eventId="e1" />);
+      expect(await screen.findByText("このイベントは、まだ始まっていません")).toBeInTheDocument();
+      expect(screen.getByText(/開始をお待ちください/)).toBeInTheDocument();
+      draft = false;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS + 100);
+      });
+      expect(await screen.findByText("Bの問い")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("公開済みでも、テーマがまだ無いときは、開始をお待ちくださいと出す", async () => {
+    stubFetch((url) =>
+      url.endsWith("/events/e1/public")
+        ? json({ id: "e1", status: "active", name: "ワークショップ", description: "", openSessionIds: null, sessions: [] })
+        : json({ error: { code: "not_found", message: "なし" } }, 404),
+    );
+    render(<ParticipantEventPage eventId="e1" />);
+    expect(await screen.findByText("テーマは、まだ公開されていません")).toBeInTheDocument();
+    expect(screen.getByText(/開始をお待ちください/)).toBeInTheDocument();
+  });
+});

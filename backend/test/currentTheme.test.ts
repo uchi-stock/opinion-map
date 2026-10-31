@@ -34,10 +34,16 @@ describe("イベントの招待URLと、いまのテーマ(API)", () => {
     expect(after.sessions.map((s: { isCurrent: boolean }) => s.isCurrent)).toEqual([false, true]);
   });
 
-  it("下書きのイベントは、存在しないものとして扱う", async () => {
+  it("下書きのイベントは、まだ始まっていないと伝える。名前や中身は返さない", async () => {
     const t = createTestApp();
-    const event = (await t.call("POST", "/events", { admin: true, body: { name: "準備中" } })).json;
-    expect((await t.call("GET", `/events/${event.id}/public`)).statusCode).toBe(404);
+    const event = (await t.call("POST", "/events", { admin: true, body: { name: "準備中の名前" } })).json;
+    const res = await t.call("GET", `/events/${event.id}/public`);
+    expect(res.statusCode).toBe(200);
+    expect(res.json).toMatchObject({ id: event.id, status: "draft", name: "", sessions: [] });
+    expect(res.body).not.toContain("準備中の名前");
+    expect((await t.call("GET", "/events/nope/public")).statusCode).toBe(404);
+    await t.call("PATCH", `/events/${event.id}`, { admin: true, body: { status: "active" } });
+    expect((await t.call("GET", `/events/${event.id}/public`)).json.status).toBe("active");
   });
 
   it("いまのテーマにだけ投稿できる。切り替えると、前のテーマには投稿できない", async () => {

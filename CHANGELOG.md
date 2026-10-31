@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/uchi-stock/opinion-map/compare/v1.27.1...v1.28.0) (2026-10-31)
+
+
+### Features
+
+* show buttons as a single emoji for a cleaner app-like UI ([#171](https://github.com/uchi-stock/opinion-map/issues/171)) ([9b95163](https://github.com/uchi-stock/opinion-map/commit/9b95163f0dae7102fe430f78c21f5ff7b4fee7d2)), closes [#170](https://github.com/uchi-stock/opinion-map/issues/170)
+
 ## [1.27.1](https://github.com/uchi-stock/opinion-map/compare/v1.27.0...v1.27.1) (2026-10-31)
 
 

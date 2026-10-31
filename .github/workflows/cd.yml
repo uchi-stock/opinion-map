@@ -1,0 +1,21 @@
+name: CD
+run-name: CD ${{ github.event.head_commit.message }}
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # mainへのマージごとに、Conventional Commitsからバージョンを採番する。
+  # デプロイは手動のdeploy.ymlで行う。そのとき、採番済みのpackage.jsonのversionがビルドに入る
+  release:
+    uses: bamiyanapp/dev-standards/.github/workflows/reusable-cd.yml@v2.114.6
+    with:
+      enable_shared_release_config: true
+    secrets:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

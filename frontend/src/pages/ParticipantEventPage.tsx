@@ -5,6 +5,7 @@ import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { PublishedNotes } from "../components/PublishedNotes.tsx";
 import { ProposalSection } from "../components/ProposalSection.tsx";
 import { withBase } from "../lib/paths.ts";
+import { useHashFlag } from "../lib/useHashFlag.ts";
 import { ParticipantPage } from "./ParticipantPage.tsx";
 
 /** テーマの開閉に追従する間隔。DynamoDB の読み取りの費用を抑えるため、長めにする */
@@ -24,6 +25,8 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   const [state, setState] = useState<State>({ status: "loading" });
   // 参加者が選んだテーマ。未選択なら、開いているテーマの最初(なければ最初のテーマ)
   const [picked, setPicked] = useState<string | null>(null);
+  // 投稿画面(#post)のときは、投稿に集中できるよう、ほかの欄を出さない
+  const [composing] = useHashFlag("post");
 
   async function load() {
     try {
@@ -107,6 +110,8 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <p className="text-body-secondary small mb-1">{event.name}</p>
+      {!composing && (
+        <>
       <nav aria-label="テーマの切り替え" className="mb-3">
         <div className="d-flex justify-content-between align-items-center mb-1">
           <h2 className="h6 mb-0">テーマ（{event.sessions.length}件）</h2>
@@ -119,7 +124,10 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
                 type="button"
                 className={`list-group-item list-group-item-action border-0 d-flex justify-content-between align-items-center gap-2 ${s.id === selected.id ? "active" : ""}`}
                 aria-pressed={s.id === selected.id}
-                onClick={() => setPicked(s.id)}
+                onClick={() => {
+                  if (window.location.hash) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+                  setPicked(s.id);
+                }}
               >
                 <span className="text-start">
                   {s.title}
@@ -153,8 +161,10 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
           void load();
         }}
       />
+        </>
+      )}
       <ParticipantPage key={selected.id} sessionId={selected.id} embedded />
-      <PublishedNotes eventId={event.id} />
+      {!composing && <PublishedNotes eventId={event.id} />}
     </main>
   );
 }

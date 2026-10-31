@@ -118,6 +118,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+  // 意見の管理の画面(#manage)の状態を、次のテストに持ち越さない
+  window.history.replaceState(null, "", "/");
 });
 
 describe("運営者のトークンの保存", () => {
@@ -583,7 +585,7 @@ describe("テーマの画面", () => {
     expect(screen.queryByLabelText("結論")).toBeNull();
   });
 
-  it("意見(一覧とボード)を出す。参加者の画面を開くリンクと、設定・記録への入口を置く", async () => {
+  it("ボードが基本。参加者の画面を開くリンクと、設定・記録への入口と、意見を管理するリンクを置く", async () => {
     fakeAdminBackend({
       opinions: [opinion("o1", "一つ目の意見", "idea"), opinion("o2", "二つ目の意見", "question")],
     });
@@ -595,11 +597,20 @@ describe("テーマの画面", () => {
     expect(within(menu).getByRole("link", { name: /^テーマの設定/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1/edit");
     expect(within(menu).getByRole("link", { name: /^議論の記録/ })).toHaveAttribute("href", "/admin/events/e1/sessions/s1/notes");
 
-    // 参加者と同じく、ボード(付箋)でも見られる。管理者の操作(非表示)は、一覧に残る
-    expect(within(opinions).getAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
-    await user.click(within(opinions).getByRole("button", { name: "ボード" }));
+    // 基本は、ボード(付箋)。非表示や削除は、ボードでは出さない
     expect(within(opinions).getAllByTestId("sticky-note").length).toBeGreaterThan(0);
     expect(within(opinions).getByText("一つ目の意見")).toBeInTheDocument();
+    expect(within(opinions).queryByRole("button", { name: "非表示にする" })).toBeNull();
+    // 「意見を管理する」のリンクから、管理者向けの更新画面(一覧と、非表示・削除)が出る
+    await user.click(within(opinions).getByRole("link", { name: "意見を管理する" }));
+    expect(await within(opinions).findAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
+    expect(within(opinions).queryByTestId("sticky-note")).toBeNull();
+    // 管理画面では、分析やメニューを出さない。ボードへ戻れる
+    expect(screen.queryByRole("navigation", { name: "このテーマの操作" })).toBeNull();
+    await user.click(within(opinions).getByRole("button", { name: "ボードへ戻る" }));
+    expect((await within(opinions).findAllByTestId("sticky-note")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("navigation", { name: "このテーマの操作" })).toBeInTheDocument();
+    expect(window.location.hash).toBe("");
   });
 
   it("テーマが下書きのときは、状態を示し、設定への入口を警告に添える", async () => {
@@ -623,12 +634,15 @@ describe("テーマの画面", () => {
     expect(screen.queryByText(/両方とも「公開中」のときだけ/)).toBeNull();
   });
 
-  it("投稿の件数と、意見のカードを表示する（新しい順）", async () => {
+  it("投稿の件数をボードに出し、意見の管理の画面では、カードを新しい順に出す", async () => {
     fakeAdminBackend({
       opinions: [opinion("o1", "古い意見", "idea", "2026-01-01T00:00:00.000Z"), opinion("o2", "新しい意見", "question", "2026-01-01T00:05:00.000Z")],
     });
+    const user = userEvent.setup();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
     expect(await screen.findByText("投稿された意見（2件）")).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "意見を管理する" }));
+    expect(await screen.findByText("意見の管理（2件）")).toBeInTheDocument();
     const cards = screen.getAllByTestId("opinion-card");
     expect(cards[0]).toHaveTextContent("新しい意見");
     expect(cards[1]).toHaveTextContent("古い意見");
@@ -669,10 +683,11 @@ describe("テーマの画面", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("テーマが見つかりません");
   });
 
-  it("不適切な投稿を、非表示にして、表示に戻せる", async () => {
+  it("不適切な投稿を、意見の管理の画面で、非表示にして、表示に戻せる", async () => {
     const { calls } = fakeAdminBackend({ opinions: [opinion("o1", "問題のある意見")] });
     const user = userEvent.setup();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    await user.click(await screen.findByRole("link", { name: "意見を管理する" }));
     await user.click(await screen.findByRole("button", { name: "非表示にする" }));
     expect(await screen.findByText("非表示中")).toBeInTheDocument();
     expect(calls.find((c) => c.path === "/opinions/o1/moderation")?.body).toEqual({ status: "hidden" });
@@ -681,10 +696,11 @@ describe("テーマの画面", () => {
     expect(calls.filter((c) => c.path === "/opinions/o1/moderation").at(-1)?.body).toEqual({ status: "active" });
   });
 
-  it("削除は、確認のあとにだけ実行する", async () => {
+  it("削除は、意見の管理の画面で、確認のあとにだけ実行する", async () => {
     const { calls } = fakeAdminBackend({ opinions: [opinion("o1", "消したい意見")] });
     const user = userEvent.setup();
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    await user.click(await screen.findByRole("link", { name: "意見を管理する" }));
     await user.click(await screen.findByRole("button", { name: "削除する" }));
     expect(calls.some((c) => c.path.endsWith("/moderation"))).toBe(false);
     expect(screen.getByText(/元に戻せません/)).toBeInTheDocument();

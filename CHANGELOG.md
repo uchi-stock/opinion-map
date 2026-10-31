@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/uchi-stock/opinion-map/compare/v1.18.0...v1.19.0) (2026-10-31)
+
+
+### Features
+
+* make the app installable as a PWA and prompt for reload on updates ([#138](https://github.com/uchi-stock/opinion-map/issues/138)) ([eabd6c7](https://github.com/uchi-stock/opinion-map/commit/eabd6c78f09fd76af52e0c2114d0b5c23e574d13)), closes [#134](https://github.com/uchi-stock/opinion-map/issues/134)
+
 # [1.18.0](https://github.com/uchi-stock/opinion-map/compare/v1.17.0...v1.18.0) (2026-10-31)
 
 

@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/uchi-stock/opinion-map/compare/v1.8.0...v1.9.0) (2026-10-31)
+
+
+### Features
+
+* separate the as-posted view from the summarized view ([#85](https://github.com/uchi-stock/opinion-map/issues/85)) ([#103](https://github.com/uchi-stock/opinion-map/issues/103)) ([90c56c0](https://github.com/uchi-stock/opinion-map/commit/90c56c034caadc44e174fa3fa7ac083278a5dcc2))
+
 # [1.8.0](https://github.com/uchi-stock/opinion-map/compare/v1.7.0...v1.8.0) (2026-10-31)
 
 

@@ -94,8 +94,14 @@ export function ProposalSection({
           </label>
           <textarea id="proposal-desc" className="form-control mb-2" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
           <p className="small text-body-secondary mb-2">名前は不要です。個人が特定される情報は書かないでください。</p>
-          <button type="submit" className="btn btn-primary w-100" disabled={!canSubmit}>
-            {busy ? "送っています…" : "議題を提案する"}
+          <button
+            type="submit"
+            className="btn icon-btn btn-primary w-100"
+            disabled={!canSubmit}
+            aria-label={busy ? "送っています…" : "議題を提案する"}
+            title={busy ? "送っています…" : "議題を提案する"}
+          >
+            {busy ? "⏳" : "📨"}
           </button>
           {error && (
             <div className="alert alert-danger mt-2 mb-0" role="alert">
@@ -130,9 +136,7 @@ export function ProposalSection({
                 <div className="d-flex align-items-center gap-2">
                   <ReactionButton opinionId={p.id} count={p.reactionCount} disabled={false} onChanged={() => void load()} react={reactToProposal} />
                   {p.status === "approved" && p.sessionId && onOpenSession && (
-                    <button type="button" className="btn btn-sm btn-outline-success" onClick={() => onOpenSession(p.sessionId!)}>
-                      このテーマを開く
-                    </button>
+                    <button type="button" className="btn icon-btn btn-sm btn-outline-success" onClick={() => onOpenSession(p.sessionId!)} aria-label="このテーマを開く" title="このテーマを開く">➡️</button>
                   )}
                 </div>
               </div>

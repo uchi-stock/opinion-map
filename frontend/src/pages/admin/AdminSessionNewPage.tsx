@@ -87,8 +87,14 @@ function SessionCreateForm({
           投稿された意見を、参加者にも見せる
         </label>
       </div>
-      <button type="submit" className="btn btn-primary w-100" disabled={busy || !valid}>
-        {busy ? "作っています…" : "作る"}
+      <button
+        type="submit"
+        className="btn icon-btn btn-primary w-100"
+        disabled={busy || !valid}
+        aria-label={busy ? "作っています…" : "作る"}
+        title={busy ? "作っています…" : "作る"}
+      >
+        {busy ? "⏳" : "➕"}
       </button>
       {error && (
         <div className="alert alert-danger mt-3" role="alert">

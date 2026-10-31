@@ -142,7 +142,7 @@ describe("NotesOverview と PublishedNotes", () => {
     expect(await screen.findByText("公開中")).toBeInTheDocument();
     expect(screen.getByText("未公開")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Markdownにして、コピーする" }));
-    const field = (await screen.findByLabelText(/Markdown/)) as HTMLTextAreaElement;
+    const field = (await screen.findByRole("textbox", { name: /Markdown（コピーできないとき/ })) as HTMLTextAreaElement;
     expect(field.value).toContain("## 場B");
   });
 

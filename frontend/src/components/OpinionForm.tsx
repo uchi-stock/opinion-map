@@ -115,8 +115,14 @@ export function OpinionForm({ sessionId, maxLength = DEFAULT_MAX_LENGTH, onSubmi
         </div>
       </div>
 
-      <button type="submit" className="btn btn-primary w-100" disabled={!canSubmit}>
-        {submitting ? "送信しています…" : "投稿する"}
+      <button
+        type="submit"
+        className="btn icon-btn btn-primary w-100"
+        disabled={!canSubmit}
+        aria-label={submitting ? "送信しています…" : "投稿する"}
+        title={submitting ? "送信しています…" : "投稿する"}
+      >
+        {submitting ? "⏳" : "📨"}
       </button>
 
       <div aria-live="polite">

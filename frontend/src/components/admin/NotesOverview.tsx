@@ -42,9 +42,7 @@ export function NotesOverview({
     <section aria-label="全テーマの記録">
       <h2 className="h6">全テーマの記録</h2>
       <NotesView entries={state.data} showPublishState />
-      <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={show}>
-        Markdownにして、コピーする
-      </button>
+      <button type="button" className="btn icon-btn btn-sm btn-outline-primary mt-2" onClick={show} aria-label="Markdownにして、コピーする" title="Markdownにして、コピーする">📋</button>
       {markdown !== null && (
         <div className="mt-2">
           {copied && (

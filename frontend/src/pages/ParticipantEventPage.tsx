@@ -70,9 +70,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
         <div className="alert alert-danger" role="alert">
           {state.message}
         </div>
-        <button type="button" className="btn btn-outline-primary" onClick={() => void load()}>
-          もう一度読み込む
-        </button>
+        <button type="button" className="btn icon-btn btn-outline-primary" onClick={() => void load()} aria-label="もう一度読み込む" title="もう一度読み込む">🔄</button>
       </main>
     );
   }
@@ -85,9 +83,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
           <p className="fw-bold mb-1">このイベントは、まだ始まっていません</p>
           <p className="mb-0">開始をお待ちください。始まると、この画面が自動で切り替わります。</p>
         </div>
-        <button type="button" className="btn btn-outline-secondary" onClick={() => void load()}>
-          更新
-        </button>
+        <button type="button" className="btn icon-btn btn-outline-secondary" onClick={() => void load()} aria-label="更新" title="更新">🔄</button>
       </main>
     );
   }
@@ -99,9 +95,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
           <p className="fw-bold mb-1">テーマは、まだ公開されていません</p>
           <p className="mb-0">開始をお待ちください。公開されると、この画面が自動で切り替わります。</p>
         </div>
-        <button type="button" className="btn btn-outline-secondary" onClick={() => void load()}>
-          更新
-        </button>
+        <button type="button" className="btn icon-btn btn-outline-secondary" onClick={() => void load()} aria-label="更新" title="更新">🔄</button>
       </main>
     );
   }
@@ -116,9 +110,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
       <nav aria-label="テーマの切り替え" className="mb-3">
         <div className="d-flex justify-content-between align-items-center mb-1">
           <h2 className="h6 mb-0">テーマ（{event.sessions.length}件）</h2>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void load()}>
-            テーマを更新
-          </button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void load()} aria-label="テーマを更新" title="テーマを更新">🔄</button>
         </div>
         <ul className="list-group">
           {event.sessions.map((s) => (

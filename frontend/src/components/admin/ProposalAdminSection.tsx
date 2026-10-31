@@ -112,21 +112,23 @@ export function ProposalAdminSection({
                 <div className="d-flex flex-wrap gap-2 align-items-center">
                   <button
                     type="button"
-                    className="btn btn-sm btn-primary"
+                    className="btn icon-btn btn-sm btn-primary"
                     disabled={busy}
                     aria-label={`${p.title}を承認する`}
+                    title="承認する"
                     onClick={() => void run(() => api.decideProposal(p.id, { status: "approved" }))}
                   >
-                    承認する
+                    ✅
                   </button>
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-danger"
+                    className="btn icon-btn btn-sm btn-outline-danger"
                     disabled={busy}
                     aria-label={`${p.title}を却下する`}
+                    title="却下する"
                     onClick={() => void run(() => api.decideProposal(p.id, { status: "rejected" }))}
                   >
-                    却下する
+                    ❌
                   </button>
                   {targets.length > 0 && (
                     <>
@@ -145,12 +147,13 @@ export function ProposalAdminSection({
                       </select>
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline-secondary"
+                        className="btn icon-btn btn-sm btn-outline-secondary"
                         disabled={busy || !mergeTarget[p.id]}
                         aria-label={`${p.title}を統合する`}
+                        title="統合する"
                         onClick={() => void run(() => api.decideProposal(p.id, { status: "merged", intoSessionId: mergeTarget[p.id]! }))}
                       >
-                        統合する
+                        🔀
                       </button>
                     </>
                   )}

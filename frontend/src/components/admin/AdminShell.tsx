@@ -54,9 +54,7 @@ function TokenForm({ notice, onSubmit }: { notice: string | null; onSubmit: (tok
           {notice}
         </div>
       )}
-      <button type="submit" className="btn btn-primary w-100" disabled={!value.trim()}>
-        入力する
-      </button>
+      <button type="submit" className="btn icon-btn btn-primary w-100" disabled={!value.trim()} aria-label="入力する" title="入力する">🔑</button>
     </form>
   );
 }
@@ -105,11 +103,15 @@ export function AdminShell({ title, back, children }: Props) {
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <nav className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 small" aria-label="運営者の画面のナビゲーション">
-        {back ? <a href={back.href}>← {back.label}</a> : <span>運営者の画面</span>}
-        <div className="d-flex align-items-center gap-2">
-          <a className="btn btn-sm btn-outline-secondary" href={withBase("/")}>
-            トップページ
+        {back ? (
+          <a className="btn icon-btn btn-sm btn-outline-secondary" href={back.href} aria-label={back.label} title={back.label}>
+            ⬅️
           </a>
+        ) : (
+          <span aria-hidden="true">🛠️</span>
+        )}
+        <div className="d-flex align-items-center gap-2">
+          <a className="btn icon-btn btn-sm btn-outline-secondary" href={withBase("/")} aria-label="トップページ" title="トップページ">🏠</a>
           {/* ログイン中のアカウントは、右上に出す */}
           {api && <AccountMenu api={api} onSignOut={signOut} />}
         </div>

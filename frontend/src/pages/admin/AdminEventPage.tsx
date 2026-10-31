@@ -48,9 +48,7 @@ function EventContent({
       <EventSummary event={state.data.event} />
       <div className="d-flex justify-content-between align-items-center mt-3 mb-2">
         <h2 className="h6 mb-0">テーマ</h2>
-        <a className="btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`}>
-          テーマを追加
-        </a>
+        <a className="btn icon-btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`} aria-label="テーマを追加" title="テーマを追加">➕</a>
       </div>
       <ThemeRadioGroup event={state.data.event} sessions={state.data.sessions} api={api} describeError={describeError} onChanged={reload} />
       {state.data.sessions.length === 0 && <p className="text-body-secondary">まだテーマがありません。</p>}
@@ -119,34 +117,38 @@ function EventSummary({ event }: { event: EventRecord }) {
 function EventMenu({ api, event }: { api: AdminApi; event: EventRecord }) {
   const me = useMe(api);
   const base = withBase(`/admin/events/${encodeURIComponent(event.id)}`);
-  const items: { href: string; label: string; note: string; external?: boolean; ownerOnly?: boolean }[] = [
-    { href: `${base}/edit`, label: "編集", note: "名前、説明、状態" },
-    { href: `${base}/invite`, label: "招待URLとQR", note: "参加者に配るURL" },
-    { href: `${base}/proposals`, label: "議題の提案", note: "参加者の提案を、承認・却下する" },
-    { href: `${base}/notes`, label: "全テーマの記録", note: "結論と次の行動を、まとめて見る" },
-    { href: `${base}/usage`, label: "AIの利用状況", note: "今日の使用量と上限" },
-    { href: `${base}/operators`, label: "運営者のリンク", note: "このイベントだけを操作できるリンク", ownerOnly: true },
-    { href: withBase(`/e/${encodeURIComponent(event.id)}`), label: "参加者の画面を見る", note: "参加者に見える画面を、新しいタブで開く", external: true },
+  /** short は、タイルに見せる短い名前。label は、読み上げ用の名前 */
+  const items: { href: string; emoji: string; label: string; short: string; external?: boolean; ownerOnly?: boolean }[] = [
+    { href: `${base}/edit`, emoji: "✏️", label: "編集", short: "編集" },
+    { href: `${base}/invite`, emoji: "🔗", label: "招待URLとQR", short: "招待URL" },
+    { href: `${base}/proposals`, emoji: "💬", label: "議題の提案", short: "議題" },
+    { href: `${base}/notes`, emoji: "📝", label: "全テーマの記録", short: "記録" },
+    { href: `${base}/usage`, emoji: "📊", label: "AIの利用状況", short: "AI利用" },
+    { href: `${base}/operators`, emoji: "🔑", label: "運営者のリンク", short: "運営者", ownerOnly: true },
+    { href: withBase(`/e/${encodeURIComponent(event.id)}`), emoji: "👀", label: "参加者の画面を見る", short: "参加者画面", external: true },
   ];
   return (
     <nav aria-label="このイベントの操作" className="mt-4">
-      <h2 className="h6">このイベントの操作</h2>
-      <div className="list-group">
+      <div className="row row-cols-3 g-2">
         {items
           .filter((item) => !(item.ownerOnly && me?.role === "operator"))
           .map((item) => (
-            <a
-              key={item.href}
-              className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-              href={item.href}
-              {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-            >
-              <span>
-                {item.label}
-                <span className="d-block small text-body-secondary">{item.note}</span>
-              </span>
-              <span aria-hidden="true">›</span>
-            </a>
+            <div className="col" key={item.href}>
+              <a
+                className="menu-tile btn btn-outline-secondary h-100"
+                href={item.href}
+                aria-label={item.label}
+                title={item.label}
+                {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+              >
+                <span className="menu-emoji" aria-hidden="true">
+                  {item.emoji}
+                </span>
+                <span className="menu-label" aria-hidden="true">
+                  {item.short}
+                </span>
+              </a>
+            </div>
           ))}
       </div>
     </nav>

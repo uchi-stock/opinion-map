@@ -90,9 +90,7 @@ function SessionContent({
           </span>
         </span>
         {/* 参加者に見える画面そのもの。URLのコピーやQRは、イベントの招待URLの画面にある */}
-        <a className="btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer">
-          参加者の画面を見る
-        </a>
+        <a className="btn icon-btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer" aria-label="参加者の画面を見る" title="参加者の画面を見る">👀</a>
       </div>
       {!visible && (
         <div className="alert alert-warning" role="status">
@@ -125,9 +123,7 @@ function SessionContent({
           <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
           <div className="d-flex gap-2">
             <ViewToggle mode={mode} onChange={setMode} />
-            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void reload()}>
-              更新
-            </button>
+            <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void reload()} aria-label="更新" title="更新">🔄</button>
           </div>
         </div>
         {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
@@ -156,19 +152,21 @@ function ThemeMenu({ eventId, sessionId }: { eventId: string; sessionId: string 
   const base = withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`);
   return (
     <nav aria-label="このテーマの操作">
-      <h2 className="h6">このテーマの操作</h2>
-      <div className="list-group">
+      <div className="row row-cols-3 g-2">
         {[
-          { href: `${base}/edit`, label: "テーマの設定", note: "名前、問い、形式、状態" },
-          { href: `${base}/notes`, label: "議論の記録", note: "結論、次の行動、未解決の問い" },
+          { href: `${base}/edit`, emoji: "⚙️", label: "テーマの設定" },
+          { href: `${base}/notes`, emoji: "📝", label: "議論の記録" },
         ].map((item) => (
-          <a key={item.href} className="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href={item.href}>
-            <span>
-              {item.label}
-              <span className="d-block small text-body-secondary">{item.note}</span>
-            </span>
-            <span aria-hidden="true">›</span>
-          </a>
+          <div className="col" key={item.href}>
+            <a className="menu-tile btn btn-outline-secondary h-100" href={item.href} aria-label={item.label} title={item.label}>
+              <span className="menu-emoji" aria-hidden="true">
+                {item.emoji}
+              </span>
+              <span className="menu-label" aria-hidden="true">
+                {item.label}
+              </span>
+            </a>
+          </div>
         ))}
       </div>
     </nav>
@@ -267,21 +265,22 @@ function ModerationControls({
       {confirming ? (
         <>
           <span className="me-2">削除すると、元に戻せません。</span>
-          <button type="button" className="btn btn-sm btn-danger me-2" disabled={busy} onClick={() => void run("deleted")}>
-            削除する
-          </button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setConfirming(false)}>
-            やめる
-          </button>
+          <button type="button" className="btn icon-btn btn-sm btn-danger me-2" disabled={busy} onClick={() => void run("deleted")} aria-label="削除する" title="削除する">🗑️</button>
+          <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => setConfirming(false)} aria-label="やめる" title="やめる">✖️</button>
         </>
       ) : (
         <>
-          <button type="button" className="btn btn-link btn-sm p-0 me-3" disabled={busy} onClick={() => void run(hidden ? "active" : "hidden")}>
-            {hidden ? "表示に戻す" : "非表示にする"}
+          <button
+            type="button"
+            className="btn icon-btn btn-link btn-sm p-0 me-3"
+            disabled={busy}
+            onClick={() => void run(hidden ? "active" : "hidden")}
+            aria-label={hidden ? "表示に戻す" : "非表示にする"}
+            title={hidden ? "表示に戻す" : "非表示にする"}
+          >
+            {hidden ? "👁️" : "🙈"}
           </button>
-          <button type="button" className="btn btn-link btn-sm p-0 text-danger" disabled={busy} onClick={() => setConfirming(true)}>
-            削除する
-          </button>
+          <button type="button" className="btn icon-btn btn-link btn-sm p-0 text-danger" disabled={busy} onClick={() => setConfirming(true)} aria-label="削除する" title="削除する">🗑️</button>
         </>
       )}
       {error && (
@@ -375,9 +374,7 @@ export function SessionForm({
           投稿された意見を、参加者にも見せる
         </label>
       </div>
-      <button type="submit" className="btn btn-primary w-100" disabled={busy || !valid}>
-        保存する
-      </button>
+      <button type="submit" className="btn icon-btn btn-primary w-100" disabled={busy || !valid} aria-label="保存する" title="保存する">💾</button>
       <div aria-live="polite">
         {message && (
           <div className={`alert alert-${message.kind === "ok" ? "success" : "danger"} mt-3 mb-0`} role={message.kind === "error" ? "alert" : undefined}>

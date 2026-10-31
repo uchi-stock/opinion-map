@@ -192,11 +192,13 @@ export function AnalysisPanel({
       </p>
       <button
         type="button"
-        className="btn btn-outline-primary w-100 mb-3"
+        className="btn icon-btn btn-outline-primary w-100 mb-3"
         disabled={busy || active || opinions.length === 0}
         onClick={() => void act(() => api.startAnalysis(sessionId))}
+        aria-label={run ? "もう一度分析する" : "分析する"}
+        title={run ? "もう一度分析する" : "分析する"}
       >
-        {run ? "もう一度分析する" : "分析する"}
+        {run ? "🔁" : "🔍"}
       </button>
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -217,9 +219,7 @@ export function AnalysisPanel({
           {run.status === "failed" && (
             <div className="alert alert-danger" role="alert">
               分析に失敗しました。{run.error?.summary}
-              <button type="button" className="btn btn-sm btn-outline-danger d-block mt-2" disabled={busy} onClick={() => void act(() => api.retryAnalysis(run.id))}>
-                再実行する
-              </button>
+              <button type="button" className="btn icon-btn btn-sm btn-outline-danger d-block mt-2" disabled={busy} onClick={() => void act(() => api.retryAnalysis(run.id))} aria-label="再実行する" title="再実行する">🔁</button>
             </div>
           )}
           {run.status === "succeeded" && (
@@ -243,11 +243,13 @@ export function AnalysisPanel({
                     {insightsAvailable && (
                       <button
                         type="button"
-                        className="btn btn-sm btn-outline-secondary mt-2"
+                        className="btn icon-btn btn-sm btn-outline-secondary mt-2"
                         disabled={generating !== null}
                         onClick={() => void generateInsight(run.id, cluster.id)}
+                        aria-label={generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
+                        title={generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
                       >
-                        {generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
+                        {generating === cluster.id ? "⏳" : insight ? "🔁" : "💡"}
                       </button>
                     )}
                   </>

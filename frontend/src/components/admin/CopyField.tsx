@@ -29,9 +29,7 @@ export function CopyField({ label, value }: { label: string; value: string }) {
       </label>
       <div className="input-group">
         <input id={id} ref={input} className="form-control" readOnly value={value} onFocus={(e) => e.target.select()} />
-        <button type="button" className="btn btn-outline-primary" onClick={() => void copy()}>
-          コピー
-        </button>
+        <button type="button" className="btn icon-btn btn-outline-primary" onClick={() => void copy()} aria-label="コピー" title="コピー">📋</button>
       </div>
       <div aria-live="polite" className="form-text">
         {result === "copied" && "コピーしました。"}

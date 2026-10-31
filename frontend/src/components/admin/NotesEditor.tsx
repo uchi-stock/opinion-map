@@ -88,9 +88,7 @@ export function NotesEditor({
         このテーマで出た結論と、次の行動を残します。担当は名前の文字列だけで、個人が特定される情報は書かないでください。
       </p>
       {draftSource && (
-        <button type="button" className="btn btn-sm btn-outline-secondary mb-2" onClick={importDraft}>
-          要約から下書きを取り込む
-        </button>
+        <button type="button" className="btn icon-btn btn-sm btn-outline-secondary mb-2" onClick={importDraft} aria-label="要約から下書きを取り込む" title="要約から下書きを取り込む">✨</button>
       )}
       {draftImported && (
         <div className="alert alert-warning small" role="status">
@@ -118,18 +116,18 @@ export function NotesEditor({
               value={a.owner}
               onChange={(e) => setActions(actions.map((x, j) => (j === i ? { ...x, owner: e.target.value } : x)))}
             />
-            <button type="button" className="btn btn-outline-danger btn-sm" aria-label={`次の行動 ${i + 1} を消す`} onClick={() => setActions(actions.filter((_, j) => j !== i))}>
-              消す
-            </button>
+            <button type="button" className="btn icon-btn btn-outline-danger btn-sm" aria-label={`次の行動 ${i + 1} を消す`} onClick={() => setActions(actions.filter((_, j) => j !== i))}>🗑️</button>
           </div>
         ))}
         <button
           type="button"
-          className="btn btn-sm btn-outline-secondary mb-3"
+          className="btn icon-btn btn-sm btn-outline-secondary mb-3"
           disabled={actions.length >= MAX_ITEMS}
           onClick={() => setActions([...actions, { text: "", owner: "" }])}
+          aria-label="次の行動を足す"
+          title="次の行動を足す"
         >
-          次の行動を足す
+          ➕
         </button>
         <label htmlFor="notes-questions" className="form-label fw-bold d-block">
           未解決の問い（1行に1つ）
@@ -141,9 +139,7 @@ export function NotesEditor({
             参加者に公開する
           </label>
         </div>
-        <button type="submit" className="btn btn-primary w-100" disabled={busy}>
-          記録を保存する
-        </button>
+        <button type="submit" className="btn icon-btn btn-primary w-100" disabled={busy} aria-label="記録を保存する" title="記録を保存する">💾</button>
         <div aria-live="polite">
           {message && (
             <div className={`alert alert-${message.kind === "ok" ? "success" : "danger"} mt-3 mb-0`} role={message.kind === "error" ? "alert" : undefined}>

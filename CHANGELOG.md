@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/uchi-stock/opinion-map/compare/v1.2.0...v1.3.0) (2026-10-31)
+
+
+### Features
+
+* show a sample whiteboard on the top page ([#64](https://github.com/uchi-stock/opinion-map/issues/64)) ([#70](https://github.com/uchi-stock/opinion-map/issues/70)) ([1050701](https://github.com/uchi-stock/opinion-map/commit/1050701c2f74c6e7c843b52f9f89bfb306626452)), closes [#68](https://github.com/uchi-stock/opinion-map/issues/68)
+
 # [1.2.0](https://github.com/uchi-stock/opinion-map/compare/v1.1.0...v1.2.0) (2026-10-31)
 
 

@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/uchi-stock/opinion-map/compare/v1.9.0...v1.10.0) (2026-10-31)
+
+
+### Features
+
+* import a draft of the notes from the AI summary ([#99](https://github.com/uchi-stock/opinion-map/issues/99)) ([#105](https://github.com/uchi-stock/opinion-map/issues/105)) ([fbad913](https://github.com/uchi-stock/opinion-map/commit/fbad913ee04f155feae4d69ed7d6b637b692bf4b))
+
 # [1.9.0](https://github.com/uchi-stock/opinion-map/compare/v1.8.0...v1.9.0) (2026-10-31)
 
 

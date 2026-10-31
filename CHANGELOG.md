@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/uchi-stock/opinion-map/compare/v1.19.0...v1.20.0) (2026-10-31)
+
+
+### Features
+
+* show account icons on the event list and in an account menu ([#142](https://github.com/uchi-stock/opinion-map/issues/142)) ([0d709f3](https://github.com/uchi-stock/opinion-map/commit/0d709f3ad547afd23fbd4721f014ba4517594a37)), closes [#140](https://github.com/uchi-stock/opinion-map/issues/140) [#141](https://github.com/uchi-stock/opinion-map/issues/141)
+
 # [1.19.0](https://github.com/uchi-stock/opinion-map/compare/v1.18.0...v1.19.0) (2026-10-31)
 
 

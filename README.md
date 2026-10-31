@@ -79,7 +79,7 @@ Node.js 22以上が必要である。
 
 ## Philosophy
 
-The goal is not just to collect opinions or find consensus, but to turn diverse perspectives into meaningful dialogue and new insights.
+The goal is not just to collect opinions or find consensus. It is to turn diverse perspectives into meaningful dialogue and new insights.
 
 ## Docs
 

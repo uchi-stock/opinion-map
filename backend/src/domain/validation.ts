@@ -19,6 +19,8 @@ export const PROMPT_MAX_LENGTH = 300;
 // 改行とタブ以外の制御文字
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS_ALL = /[\u0000-\u001F\u007F]/g;
 const SUBMISSION_ID = /^[A-Za-z0-9_-]{16,64}$/;
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -131,6 +133,18 @@ export function parseEventPatch(body: unknown): EventPatch {
     patch.openSessionIds = value === null ? null : [...new Set(value as string[])];
   }
   return patch;
+}
+
+/** 画面のエラーの報告。メッセージは短く切り、制御文字を除く。アドレスは、パスだけにして、クエリとハッシュを落とす */
+export function parseClientError(body: unknown): { message: string; path: string } {
+  const obj = asObject(body);
+  const clean = (value: unknown, max: number) =>
+    typeof value === "string" ? Array.from(value.replace(CONTROL_CHARS_ALL, " ")).slice(0, max).join("").trim() : "";
+  const message = clean(obj["message"], 200);
+  if (message === "") throw badRequest("required", "メッセージを指定してください");
+  const rawPath = clean(obj["path"], 200);
+  const path = rawPath.split(/[?#]/)[0] ?? "";
+  return { message, path: path.startsWith("/") ? path : "" };
 }
 
 export const PROPOSAL_TITLE_MAX_LENGTH = 50;

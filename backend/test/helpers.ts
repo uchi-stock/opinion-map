@@ -21,6 +21,8 @@ export function createTestApp(overrides: Partial<AppOptions> = {}) {
     // 時刻とIDを固定して、順序を安定させる
     now: () => new Date(Date.UTC(2026, 0, 1, 0, minute++, 0)),
     newId: () => `id-${++counter}`,
+    // 運用監視のログは、テストでは出さない(確かめたいテストは、log を渡す)
+    log: () => {},
     ...overrides,
   });
 

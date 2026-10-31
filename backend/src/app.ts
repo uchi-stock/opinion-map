@@ -6,6 +6,7 @@ import {
   parseProposalCreate,
   parseProposalDecision,
   parseNotes,
+  parseClientError,
   parseModeration,
   parseOpinionCreate,
   parseOpinionEdit,
@@ -22,6 +23,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { consoleLogger, type Logger } from "./lib/log.js";
 import { createUsageService, DEFAULT_DAILY_LIMITS, type DailyLimits } from "./services/usageService.js";
 import { createSummaryService } from "./services/summaryService.js";
 import { createProposalService } from "./services/proposalService.js";
@@ -62,6 +64,8 @@ export interface AppOptions {
   ownerLogin?: OwnerLoginOptions;
   /** セッションごとの投稿頻度の上限。未指定なら、1分に120件 */
   opinionRateLimit?: OpinionRateLimit;
+  /** 運用監視のログの出力先。未指定なら、標準出力にJSONで出す */
+  log?: Logger;
   /** AIの利用の、1日あたりの上限(イベントごと)。未指定なら、既定の上限 */
   dailyLimits?: Partial<DailyLimits>;
   now?: () => Date;
@@ -109,6 +113,7 @@ export function createApp(options: AppOptions) {
     repos: options.repos,
     now: options.now ?? (() => new Date()),
     newId: options.newId ?? (() => globalThis.crypto.randomUUID()),
+    log: options.log ?? consoleLogger,
   };
   const events = createEventService(ctx);
   const sessions = createSessionService(ctx);
@@ -346,6 +351,18 @@ export function createApp(options: AppOptions) {
       }),
     },
     {
+      // 画面の描画エラーの報告。ログに残すだけで、何も保存しない。量は1日の上限で抑える
+      method: "POST",
+      pattern: /^\/client-errors$/,
+      admin: false,
+      handle: async ({ body }) => {
+        const report = parseClientError(body);
+        await usage.consume("clientError", "global");
+        ctx.log("client_error", { message: report.message, path: report.path });
+        return { status: 202, data: { received: true } };
+      },
+    },
+    {
       method: "GET",
       pattern: /^\/events\/(?<id>[^/]+)\/usage$/,
       admin: true,
@@ -537,7 +554,8 @@ export function createApp(options: AppOptions) {
     if (error instanceof AppError) {
       return respond(error.status, { error: { code: error.code, message: error.message } });
     }
-    // 投稿本文などを含みうるため、詳細はログに出さない
+    // 投稿本文などを含みうるため、詳細(メッセージ)はログに出さない。種類の名前だけを残す
+    ctx.log("server_error", { name: error instanceof Error ? error.name : "unknown" });
     return respond(500, { error: { code: "internal_error", message: "サーバーでエラーが発生しました" } });
   }
 

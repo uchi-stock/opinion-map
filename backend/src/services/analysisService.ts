@@ -122,6 +122,7 @@ export function createAnalysisService(
         completedAt: ctx.now().toISOString(),
         error: { code: "provider_start_failed", summary: summarize(e) },
       };
+      ctx.log("analysis_failed", { code: "provider_start_failed" });
       await ctx.repos.analyses.update(failed);
       return failed;
     }
@@ -134,6 +135,8 @@ export function createAnalysisService(
   }
 
   async function fail(run: AnalysisRunRecord, code: string, summary: string): Promise<AnalysisRunRecord> {
+    // 本文を含みうる要約は出さず、コードだけを残す(失敗を検知するため)
+    ctx.log("analysis_failed", { code });
     const failed: AnalysisRunRecord = {
       ...run,
       status: "failed",

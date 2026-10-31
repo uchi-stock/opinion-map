@@ -110,7 +110,7 @@ flowchart TD
 
 </details>
 
-![画面遷移（運営者の入口とイベント） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-2.png?424fa2a18eb5515cf8da51a320f2a1e8abec1bec)
+![画面遷移（運営者の入口とイベント） (rendered)](https://raw.githubusercontent.com/uchi-stock/opinion-map/docs-diagrams/latest/screen-flow-2.png?024ccf855183105b2c92d990965a2fe9b8be0510)
 
 - 下位の画面は、すべて「イベント」へ戻るリンクを持つ。
 

@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/uchi-stock/opinion-map/compare/v1.5.0...v1.6.0) (2026-10-31)
+
+
+### Features
+
+* open several themes at once for OST ([#89](https://github.com/uchi-stock/opinion-map/issues/89)) ([#92](https://github.com/uchi-stock/opinion-map/issues/92)) ([1d873c0](https://github.com/uchi-stock/opinion-map/commit/1d873c0f6b42e0c79bd06563912629d4270d353b)), closes [#84](https://github.com/uchi-stock/opinion-map/issues/84)
+
 # [1.5.0](https://github.com/uchi-stock/opinion-map/compare/v1.4.0...v1.5.0) (2026-10-31)
 
 

@@ -8,6 +8,11 @@ import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
+import ServiceWorkerRegistration from "./pwa/ServiceWorkerRegistration.jsx";
+import UpdateNotifier from "./pwa/UpdateNotifier.jsx";
+
+/** Service Worker は、本番のビルドだけで使う。開発サーバーとデモ版では、キャッシュが邪魔になるため登録しない */
+const USE_SERVICE_WORKER = import.meta.env.PROD && import.meta.env.VITE_DEMO !== "true";
 
 async function start() {
   let banner: ReactNode = null;
@@ -21,6 +26,12 @@ async function start() {
       <ErrorBoundary>
         {banner}
         <App />
+        {USE_SERVICE_WORKER && (
+          <>
+            <ServiceWorkerRegistration swUrl={`${import.meta.env.BASE_URL}sw.js`} />
+            <UpdateNotifier />
+          </>
+        )}
       </ErrorBoundary>
     </StrictMode>,
   );

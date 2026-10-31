@@ -98,3 +98,16 @@ dev-standards の共通テーマ（`shared/ui/bootstrap-theme.css`）を使う�
 - symlink は、リポジトリのルートで `node dev-standards/scripts/bootstrap.js` を実行すると作られる。定義は `sync-manifest.local.json` にある
 - フォントは、外部CDNを使わず、`@fontsource/m-plus-rounded-1c` で配信ファイルに含める
 - ダークモードの切り替え（`data-bs-theme`）は、まだ組み込んでいない
+
+## PWA（ホーム画面に追加）
+
+ホーム画面に追加でき、更新があれば、再読み込みを促す。dev-standards の共通の仕組み（`docs/service-worker-update-pattern.md`）を使う。
+
+- アイコンは、`public/` にある。付箋が3枚重なった絵で、`python3 frontend/scripts/make-icons.py` で作り直せる（Pillow が要る）
+- `public/manifest.json` が、名前、アイコン、起動のURLを定める。`apple-touch-icon` は、iOS Safari のため、`index.html` で別に指定している
+- Service Worker（`public/sw.js`）は、dev-standards への symlink である。設定は `public/sw-config.js` にある
+  - ページ本体は、ネットワーク優先にする。古い画面が出続けないようにするため
+  - `/api` は、キャッシュしない。意見の一覧や人数が、古いまま返らないようにするため
+  - キャッシュの戦略を変えたら、`cacheVersion` を上げる
+- 新しい版を見つけると、画面の下に「新しいバージョンがあります」と「更新する」を出す。入力中の内容を壊さないよう、自動では再読み込みしない
+- 開発サーバーとデモ版では、Service Worker を登録しない（キャッシュが邪魔になるため）

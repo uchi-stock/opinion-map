@@ -1,6 +1,24 @@
 {
   "symlinks": [
-    { "source": "shared/ui/bootstrap-theme.css", "target": "frontend/src/bootstrap-theme.css" },
-    { "source": "shared/ui/common-theme.css", "target": "frontend/src/common-theme.css" }
+    {
+      "source": "shared/ui/bootstrap-theme.css",
+      "target": "frontend/src/bootstrap-theme.css"
+    },
+    {
+      "source": "shared/ui/common-theme.css",
+      "target": "frontend/src/common-theme.css"
+    },
+    {
+      "source": "shared/pwa/sw.js",
+      "target": "frontend/public/sw.js"
+    },
+    {
+      "source": "shared/pwa/ServiceWorkerRegistration.jsx",
+      "target": "frontend/src/pwa/ServiceWorkerRegistration.jsx"
+    },
+    {
+      "source": "shared/pwa/UpdateNotifier.jsx",
+      "target": "frontend/src/pwa/UpdateNotifier.jsx"
+    }
   ]
 }

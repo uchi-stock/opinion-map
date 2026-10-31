@@ -15,7 +15,7 @@ type State =
  */
 export function ParticipantEventPage({ eventId }: { eventId: string }) {
   const [state, setState] = useState<State>({ status: "loading" });
-  // 参加者が選んだテーマ。未選択なら、いまのテーマ(なければ最初のテーマ)
+  // 参加者が選んだテーマ。未選択なら、開いているテーマの最初(なければ最初のテーマ)
   const [picked, setPicked] = useState<string | null>(null);
 
   async function load() {
@@ -74,7 +74,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   }
   const selected =
     event.sessions.find((s) => s.id === picked) ??
-    event.sessions.find((s) => s.id === event.currentSessionId) ??
+    event.sessions.find((s) => s.isOpen) ??
     event.sessions[0]!;
 
   return (
@@ -91,7 +91,12 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
               onClick={() => setPicked(s.id)}
             >
               {s.title}
-              {s.isCurrent && <span className="badge text-bg-light ms-1">投稿中</span>}
+              {s.isOpen ? (
+                <span className="badge text-bg-light ms-1">投稿中</span>
+              ) : (
+                <span className="badge text-bg-secondary ms-1">閲覧のみ</span>
+              )}
+              {s.opinionCount !== undefined && <span className="ms-1 small">（{s.opinionCount}件）</span>}
             </button>
           ))}
           <button type="button" className="btn btn-sm btn-outline-secondary ms-auto" onClick={() => void load()}>
@@ -101,7 +106,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
         {!selected.acceptingOpinions && (
           <p className="small text-body-secondary mt-2 mb-0">
             このテーマは、いま投稿を受け付けていません。意見を見ることはできます。
-            {event.currentSessionId && "投稿できるテーマは、「投稿中」の印がついたものです。"}
+            {event.sessions.some((s) => s.isOpen) && "投稿できるテーマは、「投稿中」の印がついたものです。"}
           </p>
         )}
       </nav>

@@ -83,12 +83,17 @@ export function parseEventCreate(body: unknown): EventInput {
   };
 }
 
+/** 同時に開けるテーマの数の上限。画面が煩雑にならない範囲 */
+export const MAX_OPEN_SESSIONS = 20;
+
 export interface EventPatch {
   name?: string;
   description?: string;
   status?: EventStatus;
   /** いまのテーマ。null で解除する(従来の動きに戻る) */
   currentSessionId?: string | null;
+  /** 開いているテーマ。null で解除する(公開中のテーマすべてが開く) */
+  openSessionIds?: string[] | null;
 }
 export function parseEventPatch(body: unknown): EventPatch {
   const obj = asObject(body);
@@ -108,6 +113,14 @@ export function parseEventPatch(body: unknown): EventPatch {
       throw badRequest("invalid_current_session", "いまのテーマの指定が正しくありません");
     }
     patch.currentSessionId = value as string | null;
+  }
+  if ("openSessionIds" in obj) {
+    const value = obj["openSessionIds"];
+    const valid =
+      value === null ||
+      (Array.isArray(value) && value.length <= MAX_OPEN_SESSIONS && value.every((v) => typeof v === "string" && v.trim() !== "" && v.length <= 128));
+    if (!valid) throw badRequest("invalid_open_sessions", "開くテーマの指定が正しくありません");
+    patch.openSessionIds = value === null ? null : [...new Set(value as string[])];
   }
   return patch;
 }

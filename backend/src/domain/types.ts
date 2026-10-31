@@ -20,6 +20,12 @@ export interface EventRecord {
    * 未設定のイベントは、公開中のセッションすべてに投稿できる(従来の動き)
    */
   currentSessionId?: string;
+  /**
+   * いま開いている(参加者が投稿できる)テーマ。複数を同時に開ける(OST)。
+   * 未設定のイベントは、公開中のテーマすべてが開いている(従来の動き)。
+   * currentSessionId は古い形で、あれば、それ1つだけが開いているものとして読む
+   */
+  openSessionIds?: string[];
   createdAt: string;
   updatedAt: string;
 }

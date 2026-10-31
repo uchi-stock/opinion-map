@@ -95,3 +95,86 @@ describe("イベントの招待URLと、いまのテーマ(API)", () => {
     expect(res.statusCode).toBe(200);
   });
 });
+
+describe("複数のテーマを同時に開く(OST・API)", () => {
+  async function setup() {
+    const t = createTestApp();
+    const event = (await t.call("POST", "/events", { admin: true, body: { name: "OST" } })).json;
+    await t.call("PATCH", `/events/${event.id}`, { admin: true, body: { status: "active" } });
+    const make = async (title: string, status = "active") => {
+      const s = (await t.call("POST", `/events/${event.id}/sessions`, { admin: true, body: { title, prompt: `${title}の問い` } })).json;
+      await t.call("PATCH", `/sessions/${s.id}`, { admin: true, body: { status } });
+      return s.id as string;
+    };
+    const a = await make("場A");
+    const b = await make("場B");
+    const c = await make("場C");
+    const draft = await make("下書き", "draft");
+    const post = (sessionId: string) =>
+      t.call("POST", `/sessions/${sessionId}/opinions`, { body: { submissionId: newSubmissionId(), body: "意見", kind: "idea" } });
+    const open = (ids: string[] | null) =>
+      t.call("PATCH", `/events/${event.id}`, { admin: true, body: { openSessionIds: ids } });
+    return { ...t, eventId: event.id as string, a, b, c, draft, post, open };
+  }
+
+  it("複数のテーマに同時に投稿できる。開いていないテーマには投稿できない", async () => {
+    const t = await setup();
+    expect((await t.open([t.a, t.b])).statusCode).toBe(200);
+    expect((await t.post(t.a)).statusCode).toBe(201);
+    expect((await t.post(t.b)).statusCode).toBe(201);
+    expect((await t.post(t.c)).statusCode).toBe(403);
+  });
+
+  it("公開情報に、開いているテーマと、場ごとの意見の数が出る", async () => {
+    const t = await setup();
+    await t.open([t.a, t.c]);
+    await t.post(t.a);
+    await t.post(t.a);
+    const info = (await t.call("GET", `/events/${t.eventId}/public`)).json;
+    expect(info.openSessionIds).toEqual([t.a, t.c]);
+    const byId = Object.fromEntries(info.sessions.map((s: { id: string }) => [s.id, s]));
+    expect(byId[t.a].isOpen).toBe(true);
+    expect(byId[t.b].isOpen).toBe(false);
+    expect(byId[t.a].opinionCount).toBe(2);
+    expect(byId[t.b].opinionCount).toBe(0);
+  });
+
+  it("閉じたテーマの意見は、見られる", async () => {
+    const t = await setup();
+    await t.open([t.a]);
+    await t.post(t.a);
+    await t.open([t.b]);
+    const list = (await t.call("GET", `/sessions/${t.a}/opinions`)).json;
+    expect(list.opinions).toHaveLength(1);
+    expect((await t.post(t.a)).statusCode).toBe(403);
+  });
+
+  it("下書き・他のイベントのテーマは開けない。重複は1つにまとめ、解除できる", async () => {
+    const t = await setup();
+    expect((await t.open([t.draft])).statusCode).toBe(400);
+    expect((await t.open(["nope"])).statusCode).toBe(400);
+    const other = await t.openSession();
+    expect((await t.open([other.sessionId])).statusCode).toBe(400);
+    expect((await t.call("PATCH", `/events/${t.eventId}`, { admin: true, body: { openSessionIds: "x" } })).statusCode).toBe(400);
+    const dup = (await t.open([t.a, t.a])).json;
+    expect(dup.openSessionIds).toEqual([t.a]);
+    const cleared = await t.open(null);
+    expect(cleared.json.openSessionIds).toBeUndefined();
+    expect((await t.post(t.c)).statusCode).toBe(201);
+  });
+
+  it("空の配列にすると、どのテーマも開かない", async () => {
+    const t = await setup();
+    await t.open([]);
+    expect((await t.post(t.a)).statusCode).toBe(403);
+  });
+
+  it("古い currentSessionId の指定は、そのテーマ1つだけを開く", async () => {
+    const t = await setup();
+    await t.open([t.a, t.b]);
+    await t.call("PATCH", `/events/${t.eventId}`, { admin: true, body: { currentSessionId: t.c } });
+    const info = (await t.call("GET", `/events/${t.eventId}/public`)).json;
+    expect(info.openSessionIds).toEqual([t.c]);
+    expect(info.currentSessionId).toBe(t.c);
+  });
+});

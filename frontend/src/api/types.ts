@@ -10,8 +10,10 @@ export interface PublicSession {
   acceptingOpinions: boolean;
   showOpinions: boolean;
   eventId: string;
-  /** いま参加者が投稿できるテーマとして、運営者が選んでいるか */
-  isCurrent: boolean;
+  /** いま開いている(参加者が投稿できる)テーマか */
+  isOpen: boolean;
+  /** 公開中の意見の数。イベントの公開情報のときだけ付く */
+  opinionCount?: number;
 }
 
 /** 招待URL(イベントごとに1つ)から開く画面の情報 */
@@ -19,7 +21,8 @@ export interface PublicEvent {
   id: string;
   name: string;
   description: string;
-  currentSessionId: string | null;
+  /** 運営者が開くテーマを選んでいるときの一覧。null なら、公開中のテーマすべてが開いている */
+  openSessionIds: string[] | null;
   sessions: PublicSession[];
 }
 
@@ -70,6 +73,7 @@ export interface EventRecord {
   description: string;
   status: EventStatus;
   currentSessionId?: string;
+  openSessionIds?: string[];
   createdAt: string;
   updatedAt: string;
 }

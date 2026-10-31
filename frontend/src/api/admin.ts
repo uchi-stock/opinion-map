@@ -36,7 +36,7 @@ export function createAdminApi(token: string) {
     },
     updateEvent(
       id: string,
-      patch: Partial<{ name: string; description: string; status: EventStatus; currentSessionId: string | null }>,
+      patch: Partial<{ name: string; description: string; status: EventStatus; openSessionIds: string[] | null }>,
     ): Promise<EventRecord> {
       return send("PATCH", `/events/${enc(id)}`, patch);
     },

@@ -51,7 +51,7 @@ function EventContent({
       <InviteSection eventId={eventId} />
       <hr />
       <h2 className="h6">テーマ（セッション）</h2>
-      <CurrentThemeNote event={state.data.event} />
+      <CurrentThemeNote event={state.data.event} api={api} describeError={describeError} onChanged={reload} />
       {state.data.sessions.length === 0 && <p className="text-body-secondary">まだセッションがありません。</p>}
       {state.data.sessions.map((session) => (
         <div key={session.id} className="mb-2">
@@ -62,7 +62,7 @@ function EventContent({
           <div className="card-body py-2 d-flex justify-content-between align-items-center">
             <span className="text-body">
               {session.title}
-              {state.data.event.currentSessionId === session.id && <span className="badge text-bg-primary ms-2">いまのテーマ</span>}
+              {isOpenSession(state.data.event, state.data.sessions, session) && <span className="badge text-bg-primary ms-2">開いている</span>}
             </span>
             <span className="badge text-bg-secondary">{SESSION_STATUS_LABELS[session.status]}</span>
           </div>
@@ -70,6 +70,7 @@ function EventContent({
         <CurrentThemeButton
           api={api}
           event={state.data.event}
+          sessions={state.data.sessions}
           session={session}
           describeError={describeError}
           onChanged={reload}
@@ -99,40 +100,99 @@ function InviteSection({ eventId }: { eventId: string }) {
   );
 }
 
-function CurrentThemeNote({ event }: { event: EventRecord }) {
+/** いま開いているテーマか。選ばれていなければ、公開中のテーマすべてが開いている */
+export function isOpenSession(event: EventRecord, sessions: SessionRecord[], session: SessionRecord): boolean {
+  if (session.status !== "active") return false;
+  const selected = selectedOpenIds(event);
+  return selected === undefined ? sessions.some((s) => s.id === session.id) : selected.includes(session.id);
+}
+
+function selectedOpenIds(event: EventRecord): string[] | undefined {
+  if (event.openSessionIds !== undefined) return event.openSessionIds;
+  if (event.currentSessionId !== undefined) return [event.currentSessionId];
+  return undefined;
+}
+
+function CurrentThemeNote({
+  event,
+  api,
+  describeError,
+  onChanged,
+}: {
+  event: EventRecord;
+  api: AdminApi;
+  describeError: (e: unknown) => string;
+  onChanged: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const selected = selectedOpenIds(event) !== undefined;
+
+  async function clear() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateEvent(event.id, { openSessionIds: null });
+      await onChanged();
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <p className="small text-body-secondary">
-      {event.currentSessionId
-        ? "参加者が投稿できるのは、「いまのテーマ」だけです。切り替えるには、テーマの下のボタンを押します。"
-        : "いまのテーマが未設定です。公開中のテーマすべてに投稿できます。1つ選ぶと、そのテーマだけに投稿できます。"}
-    </p>
+    <div className="small text-body-secondary mb-2">
+      <p className="mb-1">
+        {selected
+          ? "参加者が投稿できるのは、「開いている」テーマだけです。複数のテーマを同時に開けます。閉じたテーマは、見るだけになります。"
+          : "いまは、公開中のテーマすべてに投稿できます。テーマの下のボタンで、開くテーマを選ぶと、そのテーマだけに投稿できます。"}
+      </p>
+      {selected && (
+        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={busy} onClick={() => void clear()}>
+          選択を解除する（公開中のテーマすべてを開く）
+        </button>
+      )}
+      {error && (
+        <span className="text-danger ms-2" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
 
-/** 「いまのテーマにする」「解除する」。公開中のテーマだけ選べる */
+/** 「開く」「閉じる」。公開中のテーマだけ。複数を同時に開ける */
 function CurrentThemeButton({
   api,
   event,
+  sessions,
   session,
   describeError,
   onChanged,
 }: {
   api: AdminApi;
   event: EventRecord;
+  sessions: SessionRecord[];
   session: SessionRecord;
   describeError: (e: unknown) => string;
   onChanged: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isCurrent = event.currentSessionId === session.id;
+  const open = isOpenSession(event, sessions, session);
 
-  async function change(currentSessionId: string | null) {
+  async function toggle() {
     if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      await api.updateEvent(event.id, { currentSessionId });
+      // 選択がまだ無いときは、いま開いているテーマ(公開中のすべて)を出発点にする
+      const current = new Set(sessions.filter((s) => isOpenSession(event, sessions, s)).map((s) => s.id));
+      if (open) current.delete(session.id);
+      else current.add(session.id);
+      await api.updateEvent(event.id, { openSessionIds: [...current] });
       await onChanged();
     } catch (e) {
       setError(describeError(e));
@@ -144,21 +204,16 @@ function CurrentThemeButton({
   if (session.status === "draft") return null;
   return (
     <div className="mt-1 ms-1 small">
-      {isCurrent ? (
-        <button type="button" className="btn btn-sm btn-outline-secondary" disabled={busy} onClick={() => void change(null)}>
-          いまのテーマを解除する
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-primary"
-          disabled={busy}
-          onClick={() => void change(session.id)}
-          aria-label={`${session.title}をいまのテーマにする`}
-        >
-          いまのテーマにする
-        </button>
-      )}
+      <button
+        type="button"
+        className={`btn btn-sm ${open ? "btn-outline-secondary" : "btn-outline-primary"}`}
+        disabled={busy || session.status === "closed"}
+        onClick={() => void toggle()}
+        aria-label={`${session.title}を${open ? "閉じる" : "開く"}`}
+      >
+        {open ? "閉じる" : "開く"}
+      </button>
+      {session.status === "closed" && <span className="ms-2 text-body-secondary">終了したテーマです</span>}
       {error && (
         <span className="text-danger ms-2" role="alert">
           {error}

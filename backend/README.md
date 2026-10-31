@@ -114,3 +114,11 @@ npm run dev
 npm test
 npm run lint
 ```
+
+## 静的解析
+
+`npm run lint` は、oxlint と型の検査（`tsc --noEmit`）を実行する。frontend と同じ oxlint を使う。
+
+- 条件によって項目を足すスプレッド（`...(条件 ? { 項目 } : {})`）は、`exactOptionalPropertyTypes` のもとで、値が無い項目を作らないために必要である。そのため、`no-useless-spread` と `no-useless-fallback-in-spread` は許可している（`.oxlintrc.json`）
+- 制御文字を探す正規表現は、目的が制御文字の検出なので、その行だけ `no-control-regex` を許可している
+- 新しい指摘は、直すか、理由を書いて許可する

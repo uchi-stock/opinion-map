@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "tsc --noEmit",
+    "lint": "oxlint && tsc --noEmit",
     "test": "vitest run && TEST_REPOS=dynamo vitest run",
     "build": "tsc -p tsconfig.build.json",
     "bundle": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --minify --sourcemap --outfile=dist-lambda/handler.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
@@ -19,6 +19,7 @@
     "@types/node": "^22.0.0",
     "esbuild": "^0.25.12",
     "osls": "^4.4.0",
+    "oxlint": "^0.15.15",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

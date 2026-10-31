@@ -6,6 +6,8 @@ const MAX_ITEMS = 5;
 const MAX_LENGTH = 300;
 
 /** 制御文字（改行とタブを除く）を含むか */
+// 制御文字を探すことが目的の正規表現なので、no-control-regex は意図して許可する
+// oxlint-disable-next-line no-control-regex
 const hasControl = (s: string) => /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(s);
 
 /**

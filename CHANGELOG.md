@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/uchi-stock/opinion-map/compare/v1.21.0...v1.22.0) (2026-10-31)
+
+
+### Features
+
+* unify the wording to "theme" and drop the per-theme URL copy and QR ([#148](https://github.com/uchi-stock/opinion-map/issues/148)) ([af217c5](https://github.com/uchi-stock/opinion-map/commit/af217c52fa411e9123129fa46f78b768255184ee)), closes [#147](https://github.com/uchi-stock/opinion-map/issues/147)
+
 # [1.21.0](https://github.com/uchi-stock/opinion-map/compare/v1.20.0...v1.21.0) (2026-10-31)
 
 

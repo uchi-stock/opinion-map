@@ -121,7 +121,7 @@ export interface EventRecord {
   openSessionIds?: string[];
   acceptingProposals?: boolean;
   showPendingProposals?: boolean;
-  /** 作った管理者のメール。トークンで作ったときは "(token)"。以前のイベントや、運営者のトークンの一覧には無い */
+  /** 作った管理者のメール。トークンで作ったときは "(token)"。以前のイベントには無い */
   createdBy?: string;
   /** 作った管理者のプロフィール画像のURL(一覧のときだけ) */
   creatorPicture?: string;
@@ -131,10 +131,9 @@ export interface EventRecord {
 
 /** ログイン中のアカウント */
 export interface Me {
-  role: "owner" | "operator";
+  role: "owner";
   email?: string;
   picture?: string;
-  eventId?: string;
 }
 
 export interface SessionRecord {
@@ -187,14 +186,6 @@ export interface AdminAccount {
   email: string;
   addedAt: string;
   addedBy: string;
-}
-
-export interface OperatorToken {
-  id: string;
-  eventId: string;
-  label: string;
-  createdAt: string;
-  revokedAt?: string;
 }
 
 /** AIの利用の、イベントごと・1日あたりの使用量と上限 */

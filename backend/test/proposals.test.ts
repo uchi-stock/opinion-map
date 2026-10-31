@@ -126,16 +126,12 @@ describe("議題の提案(OST・API)", () => {
     expect((await react("nope")).statusCode).toBe(404);
   });
 
-  it("判断は運営者だけ。担当のイベントの運営者のリンクは使える。認証なしは401", async () => {
+  it("判断は管理者だけ。認証なしは401", async () => {
     const t = await setup();
     await t.settings({ acceptingProposals: true });
     const p = (await t.propose()).json.proposal;
     expect((await t.call("POST", `/proposals/${p.id}/decision`, { body: { status: "approved" } })).statusCode).toBe(401);
-    const issued = (await t.call("POST", `/events/${t.eventId}/operator-tokens`, { admin: true, body: { label: "進行" } })).json;
-    const res = await t.call("POST", `/proposals/${p.id}/decision`, {
-      headers: { authorization: `Bearer ${issued.token}` },
-      body: { status: "rejected" },
-    });
+    const res = await t.call("POST", `/proposals/${p.id}/decision`, { admin: true, body: { status: "rejected" } });
     expect(res.statusCode).toBe(200);
   });
 

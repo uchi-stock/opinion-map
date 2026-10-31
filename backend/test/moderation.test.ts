@@ -141,16 +141,4 @@ describe("運営者による非表示・削除", () => {
     expect((await call("POST", `/opinions/${id}/moderation`, { body: { status: "hidden" } })).statusCode).toBe(401);
     expect((await call("POST", `/opinions/${id}/moderation`, { admin: true, body: { status: "x" } })).statusCode).toBe(400);
   });
-
-  it("運営者は、担当外のイベントの投稿を操作できない", async () => {
-    const { post, call } = await setup();
-    const id = (await post()).json.opinion.id;
-    const other = (await call("POST", "/events", { admin: true, body: { name: "別" } })).json;
-    const token = (await call("POST", `/events/${other.id}/operator-tokens`, { admin: true, body: { label: "x" } })).json.token;
-    const res = await call("POST", `/opinions/${id}/moderation`, {
-      headers: { authorization: `Bearer ${token}` },
-      body: { status: "hidden" },
-    });
-    expect(res.statusCode).toBe(403);
-  });
 });

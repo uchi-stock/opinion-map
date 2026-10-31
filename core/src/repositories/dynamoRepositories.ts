@@ -1,5 +1,5 @@
 import type { AnalysisOpinion, AnalysisRunRecord, AnalysisRunSummary } from "../analysis/types.js";
-import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { KvItem, KvStore } from "./kvStore.js";
 import type { Repositories } from "./types.js";
@@ -47,12 +47,6 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
   });
   const lockKey = (sessionId: string) => `LOCK#ANALYSIS#${sessionId}`;
   const isActive = (r: AnalysisRunRecord) => r.status === "queued" || r.status === "running";
-  const tokenItem = (t: OperatorTokenRecord): KvItem => ({
-    pk: `OPTOKEN#${t.id}`,
-    gsi1pk: `EVENT#${t.eventId}#OPTOKENS`,
-    gsi1sk: sortKey(t.createdAt, t.id),
-    data: t,
-  });
   const proposalItem = (p: ProposalRecord): KvItem => ({
     pk: `PROPOSAL#${p.id}`,
     gsi1pk: `EVENT#${p.eventId}#PROPOSALS`,
@@ -249,29 +243,6 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
     },
     opinions,
     analyses,
-    operatorTokens: {
-      async create(token) {
-        // トークンのハッシュから引くための印も、不可分に書く
-        const result = await store.transactWrite([
-          { type: "put", item: { pk: `OPTOKENHASH#${token.tokenHash}`, data: { tokenId: token.id } }, condition: { type: "notExists" } },
-          { type: "put", item: tokenItem(token), condition: { type: "notExists" } },
-        ]);
-        if (result !== "ok") throw new Error("同じトークンがすでにあります");
-      },
-      async get(id) {
-        return data<OperatorTokenRecord>(await store.get(`OPTOKEN#${id}`));
-      },
-      async getByHash(tokenHash) {
-        const ref = data<{ tokenId: string }>(await store.get(`OPTOKENHASH#${tokenHash}`));
-        return ref ? data<OperatorTokenRecord>(await store.get(`OPTOKEN#${ref.tokenId}`)) : undefined;
-      },
-      async listByEvent(eventId) {
-        return (await store.queryByGsi1(`EVENT#${eventId}#OPTOKENS`)).map((i) => i.data as OperatorTokenRecord);
-      },
-      async update(token) {
-        await store.put(tokenItem(token));
-      },
-    },
     presence: {
       async touch(sessionId, deviceHash, at, ttlSeconds) {
         // 時刻を並べ替えの鍵(gsi1sk)にして、数えるときに、since 以降だけを引く。古い項目は ttl で消える

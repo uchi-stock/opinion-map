@@ -89,17 +89,6 @@ describe("イベントの招待URLと、いまのテーマ(API)", () => {
     expect(cleared.json.currentSessionId).toBeUndefined();
     expect((await t.post(t.b)).statusCode).toBe(201);
   });
-
-  it("運営者のリンクは、担当のイベントのテーマを切り替えられる。認証なしは401", async () => {
-    const t = await setup();
-    expect((await t.call("PATCH", `/events/${t.eventId}`, { body: { currentSessionId: t.a } })).statusCode).toBe(401);
-    const issued = (await t.call("POST", `/events/${t.eventId}/operator-tokens`, { admin: true, body: { label: "進行" } })).json;
-    const res = await t.call("PATCH", `/events/${t.eventId}`, {
-      headers: { authorization: `Bearer ${issued.token}` },
-      body: { currentSessionId: t.a },
-    });
-    expect(res.statusCode).toBe(200);
-  });
 });
 
 describe("複数のテーマを同時に開く(OST・API)", () => {

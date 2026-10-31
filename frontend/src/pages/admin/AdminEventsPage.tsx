@@ -1,11 +1,9 @@
-import { useEffect } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { Avatar } from "../../components/admin/Avatar.tsx";
 import { EVENT_STATUS_LABELS, formatDate } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
-import { useMe } from "../../lib/useMe.ts";
 
 export function AdminEventsPage() {
   return (
@@ -23,20 +21,10 @@ function EventsContent({
   describeError: (e: unknown) => string;
 }) {
   const { state } = useLoad(() => api.listEvents(), describeError, [api]);
-  const me = useMe(api);
-  const isOperator = me?.role === "operator";
-
-  // 運営者のトークン(担当のイベントだけ操作できる人)は、一覧に用がない。自分のイベントのページへ、すぐ移す
-  useEffect(() => {
-    if (isOperator && state.status === "ready" && state.data.length === 1) {
-      window.location.replace(withBase(`/admin/events/${encodeURIComponent(state.data[0]!.id)}`));
-    }
-  }, [isOperator, state]);
 
   return (
     <>
-      {/* 作る・管理者は、オーナーだけが使う。運営者のトークンの人には、出さない */}
-      {me?.role === "owner" && (
+      {(
         <div className="d-flex gap-2 mb-3">
           <a className="btn icon-btn btn-primary flex-grow-1" href={withBase("/admin/events/new")} aria-label="イベントを作る" title="イベントを作る">➕</a>
           <a className="btn icon-btn btn-outline-secondary" href={withBase("/admin/admins")} aria-label="管理者" title="管理者">👥</a>

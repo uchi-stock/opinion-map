@@ -63,14 +63,10 @@ describe("議論の記録(OST・API)", () => {
     expect((await t.call("GET", `/events/${t.eventId}/public`)).body).not.toContain("朝会");
   });
 
-  it("保存は運営者だけ。担当のイベントの運営者のリンクは使える。認証なしは401", async () => {
+  it("保存は管理者だけ。認証なしは401", async () => {
     const t = await setup();
     expect((await t.call("PUT", `/sessions/${t.a}/notes`, { body: NOTES })).statusCode).toBe(401);
-    const issued = (await t.call("POST", `/events/${t.eventId}/operator-tokens`, { admin: true, body: { label: "書記" } })).json;
-    const headers = { authorization: `Bearer ${issued.token}` };
-    expect((await t.call("PUT", `/sessions/${t.a}/notes`, { headers, body: NOTES })).statusCode).toBe(200);
-    const other = await t.openSession();
-    expect((await t.call("PUT", `/sessions/${other.sessionId}/notes`, { headers, body: NOTES })).statusCode).toBe(403);
+    expect((await t.call("PUT", `/sessions/${t.a}/notes`, { admin: true, body: NOTES })).statusCode).toBe(200);
   });
 
   it("入力の検証: 長さ、件数、型", async () => {

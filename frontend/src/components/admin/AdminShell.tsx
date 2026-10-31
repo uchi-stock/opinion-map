@@ -34,7 +34,7 @@ function TokenForm({ notice, onSubmit }: { notice: string | null; onSubmit: (tok
           <p>オーナーは、Googleアカウントでログインします。</p>
           <GoogleLoginButton clientId={GOOGLE_CLIENT_ID} onLogin={onSubmit} />
           <hr />
-          <p>運営者のリンクのトークンや、合言葉でも入れます。</p>
+          <p>管理者のトークン（合言葉）でも入れます。</p>
         </>
       )}
       <p>運営者のトークンを入力してください。このブラウザにだけ保存されます。</p>
@@ -59,27 +59,8 @@ function TokenForm({ notice, onSubmit }: { notice: string | null; onSubmit: (tok
   );
 }
 
-const TOKEN_FRAGMENT = /^#token=(.+)$/;
-
-/**
- * 共有されたリンクの `#token=...` を取り込み、アドレスから消す。
- * フラグメントはサーバーに送られず、アクセスログにも残らない。
- */
-function takeTokenFromUrl(): string | null {
-  try {
-    const match = TOKEN_FRAGMENT.exec(window.location.hash);
-    if (!match) return null;
-    const token = decodeURIComponent(match[1]!);
-    saveAdminToken(token);
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    return token;
-  } catch {
-    return null;
-  }
-}
-
 export function AdminShell({ title, back, children }: Props) {
-  const [token, setToken] = useState<string | null>(() => takeTokenFromUrl() ?? loadAdminToken());
+  const [token, setToken] = useState<string | null>(() => loadAdminToken());
   const [notice, setNotice] = useState<string | null>(null);
   // 再描画のたびに作り直すと、読み込みが繰り返されるため、トークンが変わるときだけ作る
   const api = useMemo(() => (token ? createAdminApi(token) : null), [token]);

@@ -11,7 +11,6 @@ import type {
   NotesEntry,
   SessionNotes,
   Proposal,
-  OperatorToken,
   AdminOpinionList,
   SessionFormat,
   SessionRecord,
@@ -114,15 +113,6 @@ export function createAdminApi(token: string) {
     },
     async removeAdmin(email: string): Promise<void> {
       await send("DELETE", `/admins/${enc(email)}`);
-    },
-    async listOperatorTokens(eventId: string): Promise<OperatorToken[]> {
-      return (await send<{ tokens: OperatorToken[] }>("GET", `/events/${enc(eventId)}/operator-tokens`)).tokens;
-    },
-    issueOperatorToken(eventId: string, label: string): Promise<OperatorToken & { token: string }> {
-      return send("POST", `/events/${enc(eventId)}/operator-tokens`, { label });
-    },
-    revokeOperatorToken(id: string): Promise<OperatorToken> {
-      return send("POST", `/operator-tokens/${enc(id)}/revoke`);
     },
     startAnalysis(sessionId: string): Promise<AnalysisRun> {
       return send("POST", `/sessions/${enc(sessionId)}/analyses`);

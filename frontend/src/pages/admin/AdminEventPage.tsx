@@ -5,7 +5,6 @@ import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { EVENT_STATUS_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
-import { useMe } from "../../lib/useMe.ts";
 
 export function AdminEventPage({ eventId }: { eventId: string }) {
   return (
@@ -51,7 +50,7 @@ function EventContent({
         <a className="btn icon-btn btn-sm btn-outline-primary" href={`${eventPath}/sessions/new`} aria-label="テーマを追加" title="テーマを追加">➕</a>
       </div>
       <ThemeList event={state.data.event} sessions={state.data.sessions} eventId={eventId} api={api} describeError={describeError} onChanged={reload} />
-      <EventMenu api={api} event={state.data.event} />
+      <EventMenu event={state.data.event} />
     </>
   );
 }
@@ -85,24 +84,21 @@ function EventSummary({ event }: { event: EventRecord }) {
 }
 
 /** このイベントでできることの入口。重い操作は、それぞれ別の画面で行う */
-function EventMenu({ api, event }: { api: AdminApi; event: EventRecord }) {
-  const me = useMe(api);
+function EventMenu({ event }: { event: EventRecord }) {
   const base = withBase(`/admin/events/${encodeURIComponent(event.id)}`);
   /** short は、タイルに見せる短い名前。label は、読み上げ用の名前 */
-  const items: { href: string; emoji: string; label: string; short: string; external?: boolean; ownerOnly?: boolean }[] = [
+  const items: { href: string; emoji: string; label: string; short: string; external?: boolean }[] = [
     { href: `${base}/edit`, emoji: "✏️", label: "編集", short: "編集" },
     { href: `${base}/invite`, emoji: "🔗", label: "招待URLとQR", short: "招待URL" },
     { href: `${base}/proposals`, emoji: "💬", label: "議題の提案", short: "議題" },
     { href: `${base}/notes`, emoji: "📝", label: "全テーマの記録", short: "記録" },
     { href: `${base}/usage`, emoji: "📊", label: "AIの利用状況", short: "AI利用" },
-    { href: `${base}/operators`, emoji: "🔑", label: "運営者のリンク", short: "運営者", ownerOnly: true },
     { href: withBase(`/e/${encodeURIComponent(event.id)}`), emoji: "👀", label: "参加者の画面を見る", short: "参加者画面", external: true },
   ];
   return (
     <nav aria-label="このイベントの操作" className="mt-4">
       <div className="row row-cols-3 g-2">
         {items
-          .filter((item) => !(item.ownerOnly && me?.role === "operator"))
           .map((item) => (
             <div className="col" key={item.href}>
               <a

@@ -1,6 +1,6 @@
 import type { InsightRecord } from "../../../core/src/insights/types.ts";
 import type { AnalysisRunRecord } from "../../../core/src/analysis/types.ts";
-import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../core/src/domain/types.ts";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OpinionRecord, SessionRecord } from "../../../core/src/domain/types.ts";
 import type { Repositories } from "../../../core/src/repositories/types.ts";
 
 export const DEMO_DATA_KEY = "opinion-map-demo-data";
@@ -10,7 +10,6 @@ interface Data {
   sessions: SessionRecord[];
   opinions: OpinionRecord[];
   analyses: AnalysisRunRecord[];
-  operatorTokens: OperatorTokenRecord[];
   admins: AdminRecord[];
   reactions: ReactionRecord[];
   proposals: ProposalRecord[];
@@ -22,7 +21,7 @@ interface Data {
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], usage: {}, presence: {}, insights: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], admins: [], reactions: [], proposals: [], usage: {}, presence: {}, insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -42,7 +41,6 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         sessions: parsed.sessions ?? [],
         opinions: parsed.opinions ?? [],
         analyses: parsed.analyses ?? [],
-        operatorTokens: parsed.operatorTokens ?? [],
         admins: parsed.admins ?? [],
         reactions: parsed.reactions ?? [],
         proposals: parsed.proposals ?? [],
@@ -175,29 +173,6 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
             const { input, ...rest } = r;
             return { ...rest, input: { hash: input.hash, opinionIds: input.opinions.map((o) => o.id) } };
           });
-      },
-    },
-    operatorTokens: {
-      async create(token) {
-        const d = read();
-        d.operatorTokens.push(token);
-        write(d);
-      },
-      async get(id) {
-        return read().operatorTokens.find((t) => t.id === id);
-      },
-      async getByHash(tokenHash) {
-        return read().operatorTokens.find((t) => t.tokenHash === tokenHash);
-      },
-      async listByEvent(eventId) {
-        return read()
-          .operatorTokens.filter((t) => t.eventId === eventId)
-          .sort(byCreatedAt);
-      },
-      async update(token) {
-        const d = read();
-        d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
-        write(d);
       },
     },
     presence: {

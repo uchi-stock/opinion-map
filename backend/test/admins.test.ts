@@ -53,14 +53,8 @@ describe("管理者の一覧(API)", () => {
     expect(list.map((a: { email: string }) => a.email)).toEqual(["second@example.com"]);
   });
 
-  it("認証なしは401、運営者トークンは403", async () => {
+  it("認証なしは401", async () => {
     const t = setup();
     expect((await t.call("GET", "/admins")).statusCode).toBe(401);
-    const { eventId } = await t.openSession();
-    const issued = (await t.call("POST", `/events/${eventId}/operator-tokens`, { admin: true, body: { label: "会場係" } })).json;
-    const headers = { authorization: `Bearer ${issued.token}` };
-    expect((await t.call("GET", "/admins", { headers })).statusCode).toBe(403);
-    expect((await t.call("POST", "/admins", { headers, body: { email: "x@example.com" } })).statusCode).toBe(403);
-    expect((await t.call("DELETE", "/admins/x%40example.com", { headers })).statusCode).toBe(403);
   });
 });

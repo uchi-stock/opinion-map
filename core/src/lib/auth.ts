@@ -1,6 +1,4 @@
-import { sha256Hex } from "./hash.js";
 import { verifySession } from "./jwt.js";
-import type { OperatorTokenRepository } from "../repositories/types.js";
 
 import { safeEqual } from "./safeEqual.js";
 
@@ -21,20 +19,16 @@ export function createAdminAuthenticator(adminToken: string | undefined) {
   };
 }
 
-/** 認証された運営者。オーナーはすべてを操作でき、運営者は、割り当てられたイベントだけを操作できる */
-export type Principal = { kind: "owner"; email?: string } | { kind: "operator"; eventId: string; tokenId: string };
-
-export const OPERATOR_TOKEN_PREFIX = "opm_";
+/** 認証された管理者。環境変数のトークンか、Googleのログインで入る。管理者はすべてを操作できる */
+export type Principal = { kind: "owner"; email?: string };
 
 /**
- * リクエストの Bearer トークンから、運営者を特定する。
- * - 環境変数のオーナーのトークンと一致すれば、オーナー
- * - それ以外は、ハッシュを引いて、失効していない運営者トークンを探す
- * 運営者トークンは、推測できない乱数であり、イベントのIDなどを認証の代わりにしない。
+ * リクエストの Bearer トークンから、管理者を特定する。
+ * - 環境変数の管理者のトークンと一致すれば、管理者
+ * - Googleのログインで発行したセッショントークンで、管理者の一覧にあるメールなら、管理者
  */
 export function createAuthenticator(
   ownerToken: string | undefined,
-  tokens: Pick<OperatorTokenRepository, "getByHash">,
   options: {
     /** Googleのログインで発行したセッショントークンを、オーナーとして受け付ける */
     session?: { secret: string; isOwnerEmail: (email: string) => Promise<boolean>; now?: () => Date };
@@ -53,11 +47,7 @@ export function createAuthenticator(
       if (claims && (await options.session.isOwnerEmail(claims.email))) {
         return { kind: "owner", email: claims.email };
       }
-      return null;
     }
-    if (!presented.startsWith(OPERATOR_TOKEN_PREFIX)) return null;
-    const record = await tokens.getByHash(await sha256Hex(presented));
-    if (!record || record.revokedAt) return null;
-    return { kind: "operator", eventId: record.eventId, tokenId: record.id };
+    return null;
   };
 }

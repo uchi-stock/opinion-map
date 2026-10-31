@@ -140,12 +140,3 @@ export interface AdminRecord {
   picture?: string;
 }
 
-export interface OperatorTokenRecord {
-  id: string;
-  eventId: string;
-  /** 配った相手が分かるようにする名前（例: 会場係） */
-  label: string;
-  tokenHash: string;
-  createdAt: string;
-  revokedAt?: string;
-}

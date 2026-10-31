@@ -7,7 +7,7 @@ import { AdminEventInvitePage } from "../src/pages/admin/AdminEventInvitePage.ts
 import { AdminAdminsPage } from "../src/pages/admin/AdminAdminsPage.tsx";
 import { AdminEventNewPage } from "../src/pages/admin/AdminEventNewPage.tsx";
 import { AdminEventPage } from "../src/pages/admin/AdminEventPage.tsx";
-import { AdminNotesPage, AdminOperatorsPage, AdminProposalsPage, AdminUsagePage } from "../src/pages/admin/AdminEventSubPages.tsx";
+import { AdminNotesPage, AdminProposalsPage, AdminUsagePage } from "../src/pages/admin/AdminEventSubPages.tsx";
 import { AdminSessionNewPage } from "../src/pages/admin/AdminSessionNewPage.tsx";
 import { AdminEventsPage } from "../src/pages/admin/AdminEventsPage.tsx";
 import { AdminSessionPage } from "../src/pages/admin/AdminSessionPage.tsx";
@@ -160,7 +160,6 @@ describe("運営者の画面のルーティング", () => {
     expect(routeOf("/admin/admins")).toEqual({ page: "adminAdmins" });
     expect(routeOf("/admin/events/e1/proposals")).toEqual({ page: "adminEventProposals", eventId: "e1" });
     expect(routeOf("/admin/events/e1/notes")).toEqual({ page: "adminEventNotes", eventId: "e1" });
-    expect(routeOf("/admin/events/e1/operators")).toEqual({ page: "adminEventOperators", eventId: "e1" });
     expect(routeOf("/admin/events/e1/usage")).toEqual({ page: "adminEventUsage", eventId: "e1" });
     expect(routeOf("/admin/events/e1/edit")).toEqual({ page: "adminEventEdit", eventId: "e1" });
     expect(routeOf("/admin/events/e1/invite")).toEqual({ page: "adminEventInvite", eventId: "e1" });
@@ -355,16 +354,6 @@ describe("イベント一覧", () => {
     expect(screen.queryByLabelText("追加するGoogleアカウントのメールアドレス")).toBeNull();
   });
 
-  it("運営者のトークンの人には、作る・管理者を出さず、自分のイベントのページへ移す", async () => {
-    const replace = vi.fn();
-    vi.stubGlobal("location", { ...window.location, replace });
-    fakeAdminBackend({ me: { role: "operator", eventId: "e1" } });
-    render(<AdminEventsPage />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/events/e1"));
-    expect(screen.queryByRole("link", { name: "イベントを作る" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "管理者" })).toBeNull();
-  });
-
   it("管理者の追加と削除は、別の画面", async () => {
     fakeAdminBackend();
     render(<AdminAdminsPage />);
@@ -490,27 +479,18 @@ describe("イベントの画面", () => {
     expect(within(menu).getByRole("link", { name: /^議題の提案/ })).toHaveAttribute("href", "/admin/events/e1/proposals");
     expect(within(menu).getByRole("link", { name: /^全テーマの記録/ })).toHaveAttribute("href", "/admin/events/e1/notes");
     expect(within(menu).getByRole("link", { name: /^AIの利用状況/ })).toHaveAttribute("href", "/admin/events/e1/usage");
-    expect(within(menu).getByRole("link", { name: /^運営者のリンク/ })).toHaveAttribute("href", "/admin/events/e1/operators");
+    expect(within(menu).queryByRole("link", { name: /運営者のリンク/ })).toBeNull();
     expect(within(menu).getByRole("link", { name: /^参加者の画面を見る/ })).toHaveAttribute("href", "/e/e1");
     // 重い操作の中身は、このページに出さない
     expect(screen.queryByLabelText("イベント名")).toBeNull();
     expect(screen.queryByRole("img", { name: "招待URLのQRコード" })).toBeNull();
     expect(screen.queryByLabelText("議題の提案を受け付ける")).toBeNull();
-    expect(screen.queryByRole("button", { name: "リンクを発行する" })).toBeNull();
     expect(screen.queryByText("AIの利用状況（今日）")).toBeNull();
-  });
-
-  it("運営者のトークンの人には、「運営者のリンク」を出さない", async () => {
-    fakeAdminBackend({ me: { role: "operator", eventId: "e1" } });
-    render(<AdminEventPage eventId="e1" />);
-    const menu = await screen.findByRole("navigation", { name: "このイベントの操作" });
-    await screen.findByRole("link", { name: /^編集/ });
-    expect(within(menu).queryByRole("link", { name: /^運営者のリンク/ })).toBeNull();
   });
 
   it("イベントの下位の画面は、イベントのページへ戻れる", async () => {
     fakeAdminBackend();
-    for (const Page of [AdminNotesPage, AdminUsagePage, AdminOperatorsPage]) {
+    for (const Page of [AdminNotesPage, AdminUsagePage]) {
       const { unmount } = render(<Page eventId="e1" />);
       expect(await screen.findByRole("link", { name: /イベント$/ })).toHaveAttribute("href", "/admin/events/e1");
       unmount();

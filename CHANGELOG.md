@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/uchi-stock/opinion-map/compare/v1.20.0...v1.21.0) (2026-10-31)
+
+
+### Features
+
+* make the admin event page compact by moving forms to their own screens ([#145](https://github.com/uchi-stock/opinion-map/issues/145)) ([6350d7b](https://github.com/uchi-stock/opinion-map/commit/6350d7b050878fe8548679ae4fdb87801bea9614)), closes [#143](https://github.com/uchi-stock/opinion-map/issues/143)
+
 # [1.20.0](https://github.com/uchi-stock/opinion-map/compare/v1.19.0...v1.20.0) (2026-10-31)
 
 

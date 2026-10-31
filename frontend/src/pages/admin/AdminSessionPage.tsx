@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { AdminOpinion, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
+import type { AdminOpinion, AnalysisResult, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
+import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
+import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
 import { FORMAT_LABELS, participantUrl, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -20,6 +22,19 @@ export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sess
   );
 }
 
+/** 最新の分析の結果。なければ null(ボードは種類ごとにまとめる) */
+async function latestAnalysisResult(api: AdminApi, sessionId: string): Promise<AnalysisResult | null> {
+  try {
+    const runs = await api.listAnalyses(sessionId);
+    const latest = runs[runs.length - 1];
+    if (!latest || latest.status !== "succeeded") return null;
+    const run = await api.getAnalysis(latest.id);
+    return run.result && run.result.clusters.length > 0 ? run.result : null;
+  } catch {
+    return null;
+  }
+}
+
 function SessionContent({
   api,
   describeError,
@@ -33,19 +48,22 @@ function SessionContent({
 }) {
   const { state, reload } = useLoad(
     async () => {
-      const [events, sessions, opinions] = await Promise.all([
+      const [events, sessions, opinions, analysis] = await Promise.all([
         api.listEvents(),
         api.listSessions(eventId),
         api.listOpinions(sessionId),
+        latestAnalysisResult(api, sessionId),
       ]);
       const event = events.find((e) => e.id === eventId);
       const session = sessions.find((s) => s.id === sessionId);
       if (!event || !session) throw new Error("not_found");
-      return { event, session, opinions: opinions.opinions };
+      return { event, session, opinions: opinions.opinions, analysis };
     },
     (e) => (e instanceof Error && e.message === "not_found" ? "セッションが見つかりません。" : describeError(e)),
     [api, eventId, sessionId],
   );
+
+  const [mode, setMode] = useState<ViewMode>("list");
 
   if (state.status === "loading") return <p role="status">読み込んでいます…</p>;
   if (state.status === "error")
@@ -55,7 +73,7 @@ function SessionContent({
       </div>
     );
 
-  const { event, session, opinions } = state.data;
+  const { event, session, opinions, analysis } = state.data;
   const url = participantUrl(session.id);
   const visible = event.status === "active" && session.status === "active";
 
@@ -78,12 +96,19 @@ function SessionContent({
       <section aria-label="投稿された意見">
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void reload()}>
-            更新
-          </button>
+          <div className="d-flex gap-2">
+            <ViewToggle mode={mode} onChange={setMode} />
+            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void reload()}>
+              更新
+            </button>
+          </div>
         </div>
         {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
-        {[...opinions].reverse().map((o) => (
+        {mode === "board" && opinions.length > 0 && (
+          <StickyBoard groups={analysis ? groupByClusters(opinions, analysis) : groupByKind(opinions)} />
+        )}
+        {mode === "list" &&
+          [...opinions].reverse().map((o) => (
           <div key={o.id} id={opinionAnchor(o.id)}>
             <OpinionCard opinion={o} actions={<small className="text-body-secondary">いいね {o.reactionCount ?? 0}</small>} />
             <ModerationControls api={api} opinion={o} describeError={describeError} onChanged={reload} />

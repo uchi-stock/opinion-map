@@ -31,20 +31,31 @@ export function createEventService(ctx: ServiceContext) {
 
     async update(id: string, patch: EventPatch): Promise<EventRecord> {
       const event = await this.get(id);
-      const { currentSessionId, ...rest } = patch;
+      const { currentSessionId, openSessionIds, ...rest } = patch;
       const next: EventRecord = { ...event, ...rest, updatedAt: ctx.now().toISOString() };
-      if (currentSessionId === null) {
+      // 開くテーマは、このイベントの、下書きでないセッションだけ
+      const checkOpenable = async (sessionIds: string[]) => {
+        for (const sessionId of sessionIds) {
+          const session = await ctx.repos.sessions.get(sessionId);
+          if (!session || session.eventId !== id) {
+            throw badRequest("invalid_open_sessions", "このイベントのテーマを指定してください");
+          }
+          if (session.status === "draft") {
+            throw badRequest("invalid_open_sessions", "下書きのテーマは、開けません");
+          }
+        }
+      };
+      if (openSessionIds !== undefined) {
+        if (openSessionIds !== null) await checkOpenable(openSessionIds);
         delete next.currentSessionId;
+        if (openSessionIds === null) delete next.openSessionIds;
+        else next.openSessionIds = openSessionIds;
       } else if (currentSessionId !== undefined) {
-        // いまのテーマは、このイベントの、下書きでないセッションだけ
-        const session = await ctx.repos.sessions.get(currentSessionId);
-        if (!session || session.eventId !== id) {
-          throw badRequest("invalid_current_session", "このイベントのテーマを指定してください");
-        }
-        if (session.status === "draft") {
-          throw badRequest("invalid_current_session", "下書きのテーマは、いまのテーマにできません");
-        }
-        next.currentSessionId = currentSessionId;
+        // 古い指定。そのテーマ1つだけを開く
+        if (currentSessionId !== null) await checkOpenable([currentSessionId]);
+        delete next.currentSessionId;
+        if (currentSessionId === null) delete next.openSessionIds;
+        else next.openSessionIds = [currentSessionId];
       }
       await ctx.repos.events.update(next);
       return next;

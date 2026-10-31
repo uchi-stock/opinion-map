@@ -218,15 +218,24 @@ describe("イベントの画面", () => {
     expect(within(section).getByRole("img", { name: "招待URLのQRコード" })).toBeInTheDocument();
   });
 
-  it("「いまのテーマにする」で切り替える。下書きのテーマには、ボタンを出さない", async () => {
+  it("「開く」「閉じる」でテーマを切り替える。複数を同時に開ける。下書きには、ボタンを出さない", async () => {
     const { calls } = fakeAdminBackend({
-      sessions: [session(), session({ id: "s2", title: "下書きのテーマ", status: "draft" })],
+      events: [event({ openSessionIds: ["s1"] })],
+      sessions: [session(), session({ id: "s2", title: "場B" }), session({ id: "s3", title: "下書きのテーマ", status: "draft" })],
     });
     const user = userEvent.setup();
     render(<AdminEventPage eventId="e1" />);
-    await user.click(await screen.findByRole("button", { name: "ワークショップAをいまのテーマにする" }));
-    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ currentSessionId: "s1" }));
-    expect(screen.queryByRole("button", { name: "下書きのテーマをいまのテーマにする" })).toBeNull();
+    await user.click(await screen.findByRole("button", { name: "場Bを開く" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s1", "s2"] }));
+    expect(screen.queryByRole("button", { name: /下書きのテーマを/ })).toBeNull();
+  });
+
+  it("選択が無いときは、公開中のすべてが開いている。1つ閉じると、残りを開いた状態で選択になる", async () => {
+    const { calls } = fakeAdminBackend({ sessions: [session(), session({ id: "s2", title: "場B" })] });
+    const user = userEvent.setup();
+    render(<AdminEventPage eventId="e1" />);
+    await user.click(await screen.findByRole("button", { name: "場Bを閉じる" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s1"] }));
   });
 
   it("存在しないイベントでは、見つからない旨を出す", async () => {

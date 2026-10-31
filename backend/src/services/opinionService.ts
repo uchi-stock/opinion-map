@@ -17,8 +17,12 @@ export interface PublicSession {
   showOpinions: boolean;
   /** このセッションが属するイベント(招待URLと、テーマの切り替えに使う) */
   eventId: string;
-  /** いま参加者が投稿できるテーマか */
+  /** いま開いている(参加者が投稿できる)テーマか。未設定のイベントでは、公開中のテーマすべてが開いている */
+  isOpen: boolean;
+  /** 運営者が開くテーマを選んでいるイベントで、選ばれているテーマか(古い画面との互換) */
   isCurrent: boolean;
+  /** 公開中の意見の数。イベントの画面で、場ごとの賑わいの目安に使う(イベントの公開情報だけ) */
+  opinionCount?: number;
 }
 
 /** 参加者向けの、イベントの公開情報。下書きのテーマは含めない */
@@ -26,17 +30,28 @@ export interface PublicEvent {
   id: string;
   name: string;
   description: string;
+  /** 開くテーマが選ばれているときの、最初の1つ(古い画面との互換)。未設定なら null */
   currentSessionId: string | null;
+  /** 開くテーマが選ばれているときの一覧。未設定なら null(公開中のテーマすべてが開いている) */
+  openSessionIds: string[] | null;
   sessions: PublicSession[];
 }
 
-function isCurrent(event: EventRecord, session: SessionRecord): boolean {
-  return event.currentSessionId === undefined || event.currentSessionId === session.id;
+/** 運営者が選んだ、開くテーマ。古い currentSessionId は、それ1つだけを開く指定として読む */
+function selectedOpenIds(event: EventRecord): string[] | undefined {
+  if (event.openSessionIds !== undefined) return event.openSessionIds;
+  if (event.currentSessionId !== undefined) return [event.currentSessionId];
+  return undefined;
 }
 
-/** 投稿を受け付けるのは、公開中のイベントの、公開中で、いまのテーマ(設定があれば)のセッションだけ */
+function isOpen(event: EventRecord, session: SessionRecord): boolean {
+  const selected = selectedOpenIds(event);
+  return selected === undefined || selected.includes(session.id);
+}
+
+/** 投稿を受け付けるのは、公開中のイベントの、公開中で、開いているテーマ(選ばれていれば)のセッションだけ */
 function isAccepting(event: EventRecord, session: SessionRecord): boolean {
-  return event.status === "active" && session.status === "active" && isCurrent(event, session);
+  return event.status === "active" && session.status === "active" && isOpen(event, session);
 }
 
 function toPublicSession(event: EventRecord, session: SessionRecord): PublicSession {
@@ -50,7 +65,8 @@ function toPublicSession(event: EventRecord, session: SessionRecord): PublicSess
     eventName: event.name,
     acceptingOpinions: isAccepting(event, session),
     showOpinions: session.showOpinionsToParticipants,
-    isCurrent: event.currentSessionId !== undefined && event.currentSessionId === session.id,
+    isOpen: isOpen(event, session),
+    isCurrent: selectedOpenIds(event)?.includes(session.id) ?? false,
   };
 }
 
@@ -137,12 +153,22 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const event = await ctx.repos.events.get(eventId);
       if (!event || event.status === "draft") throw notFound("イベント");
       const sessions = (await ctx.repos.sessions.listByEvent(eventId)).filter((s) => s.status !== "draft");
+      const selected = selectedOpenIds(event);
+      const withCounts = await Promise.all(
+        sessions.map(async (s) => {
+          const base = toPublicSession(event, s);
+          // 意見を参加者に見せない設定のテーマは、件数も見せない
+          if (!s.showOpinionsToParticipants) return base;
+          return { ...base, opinionCount: (await ctx.repos.opinions.listBySession(s.id)).length };
+        }),
+      );
       return {
         id: event.id,
         name: event.name,
         description: event.description,
-        currentSessionId: event.currentSessionId ?? null,
-        sessions: sessions.map((s) => toPublicSession(event, s)),
+        currentSessionId: selected?.[0] ?? null,
+        openSessionIds: selected ?? null,
+        sessions: withCounts,
       };
     },
 

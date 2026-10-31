@@ -9,13 +9,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const sessionA = { ...SESSION, id: "sa", title: "テーマA", prompt: "Aの問い", eventId: "e1", isCurrent: false, acceptingOpinions: false };
-const sessionB = { ...SESSION, id: "sb", title: "テーマB", prompt: "Bの問い", eventId: "e1", isCurrent: true, acceptingOpinions: true };
+const sessionA = { ...SESSION, id: "sa", title: "テーマA", prompt: "Aの問い", eventId: "e1", isOpen: false, opinionCount: 1, acceptingOpinions: false };
+const sessionB = { ...SESSION, id: "sb", title: "テーマB", prompt: "Bの問い", eventId: "e1", isOpen: true, opinionCount: 2, acceptingOpinions: true };
 
 function backend() {
   return stubFetch((url) => {
     if (url.endsWith("/events/e1/public")) {
-      return json({ id: "e1", name: "ワークショップ", description: "", currentSessionId: "sb", sessions: [sessionA, sessionB] });
+      return json({ id: "e1", name: "ワークショップ", description: "", openSessionIds: ["sb"], sessions: [sessionA, sessionB] });
     }
     if (url.endsWith("/sessions/sa")) return json(sessionA);
     if (url.endsWith("/sessions/sb")) return json(sessionB);
@@ -38,7 +38,10 @@ describe("招待URLの画面", () => {
     render(<ParticipantEventPage eventId="e1" />);
     expect(await screen.findByText("Bの問い")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /テーマB/ })).toHaveAttribute("aria-pressed", "true");
-    expect(within(screen.getByRole("navigation", { name: "テーマの切り替え" })).getByText("投稿中")).toBeInTheDocument();
+    const nav = within(screen.getByRole("navigation", { name: "テーマの切り替え" }));
+    expect(nav.getByText("投稿中")).toBeInTheDocument();
+    expect(nav.getByText("閲覧のみ")).toBeInTheDocument();
+    expect(nav.getByText("（2件）")).toBeInTheDocument();
     expect(screen.getByRole("form", { name: "意見の投稿フォーム" })).toBeInTheDocument();
   });
 

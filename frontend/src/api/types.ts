@@ -21,6 +21,8 @@ export interface PublicSession {
 /** 招待URL(イベントごとに1つ)から開く画面の情報 */
 export interface PublicEvent {
   id: string;
+  /** 下書きなら "draft"(名前や中身は返らない) */
+  status: "draft" | "active" | "archived";
   name: string;
   description: string;
   /** 運営者が開くテーマを選んでいるときの一覧。null なら、公開中のテーマすべてが開いている */

@@ -74,11 +74,27 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   }
 
   const { event } = state;
+  if (event.status === "draft") {
+    return (
+      <main className="container py-4" style={{ maxWidth: 640 }}>
+        <div className="alert alert-secondary" role="status">
+          <p className="fw-bold mb-1">このイベントは、まだ始まっていません</p>
+          <p className="mb-0">開始をお待ちください。始まると、この画面が自動で切り替わります。</p>
+        </div>
+        <button type="button" className="btn btn-outline-secondary" onClick={() => void load()}>
+          更新
+        </button>
+      </main>
+    );
+  }
   if (event.sessions.length === 0) {
     return (
       <main className="container py-4" style={{ maxWidth: 640 }}>
         <p className="text-body-secondary small mb-1">{event.name}</p>
-        <p>まだテーマが公開されていません。運営者からの案内をお待ちください。</p>
+        <div className="alert alert-secondary" role="status">
+          <p className="fw-bold mb-1">テーマは、まだ公開されていません</p>
+          <p className="mb-0">開始をお待ちください。公開されると、この画面が自動で切り替わります。</p>
+        </div>
         <button type="button" className="btn btn-outline-secondary" onClick={() => void load()}>
           更新
         </button>

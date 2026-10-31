@@ -31,6 +31,7 @@ import { createProposalService } from "./services/proposalService.js";
 import { createAdminService } from "./services/adminService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
 import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
+import { createTimerService } from "./services/timerService.js";
 import { createSessionService } from "./services/sessionService.js";
 
 export interface HttpRequest {
@@ -638,6 +639,10 @@ export function createApp(options: AppOptions) {
     }
   }
 
-  return { handleRequest };
+  const timer = createTimerService(ctx, analyses);
+  /** 制限時間が過ぎたテーマを締め切り、分析を始める(定期実行から呼ぶ)。締め切ったテーマの数を返す */
+  const sweepTimers = () => timer.sweep();
+
+  return { handleRequest, sweepTimers };
 }
 export type App = ReturnType<typeof createApp>;

@@ -89,6 +89,8 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
+      # 制限時間が過ぎたテーマを締め切り、AIの分析を始める
+      - schedule: rate(1 minute)
 
 resources:
   Conditions:

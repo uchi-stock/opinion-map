@@ -25,6 +25,9 @@ export interface PublicSession {
   opinionCount?: number;
   /** いま見ている端末の数の目安。少人数だと個人を推測できるため、FEW_VIEWERS 未満は "few"(少数)。イベントの公開情報だけ */
   viewers?: number | "few";
+  /** 制限時間があるときの締め切り(ISO)と、サーバーの現在時刻。残り時間は、端末の時計でなく、この差で出す */
+  deadlineAt?: string;
+  serverNow?: string;
 }
 
 /** この人数に満たないときは、人数を出さず、「少数」とだけ示す */
@@ -76,11 +79,12 @@ function isOpen(event: EventRecord, session: SessionRecord): boolean {
 }
 
 /** 投稿を受け付けるのは、公開中のイベントの、公開中で、開いているテーマ(選ばれていれば)だけ */
-function isAccepting(event: EventRecord, session: SessionRecord): boolean {
+function isAccepting(event: EventRecord, session: SessionRecord, now: Date): boolean {
+  if (session.deadlineAt !== undefined && Date.parse(session.deadlineAt) <= now.getTime()) return false;
   return event.status === "active" && session.status === "active" && isOpen(event, session);
 }
 
-function toPublicSession(event: EventRecord, session: SessionRecord): PublicSession {
+function toPublicSession(event: EventRecord, session: SessionRecord, now: Date): PublicSession {
   return {
     id: session.id,
     eventId: event.id,
@@ -89,7 +93,8 @@ function toPublicSession(event: EventRecord, session: SessionRecord): PublicSess
     format: session.format,
     status: session.status,
     eventName: event.name,
-    acceptingOpinions: isAccepting(event, session),
+    acceptingOpinions: isAccepting(event, session, now),
+    ...(session.status === "active" && session.deadlineAt !== undefined ? { deadlineAt: session.deadlineAt, serverNow: now.toISOString() } : {}),
     showOpinions: session.showOpinionsToParticipants,
     isOpen: isOpen(event, session),
     isCurrent: selectedOpenIds(event)?.includes(session.id) ?? false,
@@ -174,7 +179,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
   return {
     async getPublicSession(sessionId: string): Promise<PublicSession> {
       const { event, session } = await loadForParticipant(sessionId);
-      return toPublicSession(event, session);
+      return toPublicSession(event, session, ctx.now());
     },
 
     /** 招待URL(イベントごとに1つ)から開く画面の情報。下書きのイベントは、存在しないものとして扱う */
@@ -189,7 +194,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       const selected = selectedOpenIds(event);
       const withCounts = await Promise.all(
         sessions.map(async (s) => {
-          const base = toPublicSession(event, s);
+          const base = toPublicSession(event, s, ctx.now());
           const since = new Date(ctx.now().getTime() - PRESENCE_WINDOW_SECONDS * 1000).toISOString();
           const watching = await ctx.repos.presence.countSince(s.id, since);
           const viewers = watching < FEW_VIEWERS ? ("few" as const) : roundViewers(watching);
@@ -228,7 +233,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     /** 同じ送信IDなら、新しく作らず既存の投稿を返す */
     async submit(sessionId: string, input: OpinionInput): Promise<{ opinion: PublicOpinion; created: boolean }> {
       const { event, session } = await loadForParticipant(sessionId);
-      if (!isAccepting(event, session)) {
+      if (!isAccepting(event, session, ctx.now())) {
         throw forbidden("not_accepting", "このテーマは、いま投稿を受け付けていません");
       }
       // 再送(同じ送信ID)は、頻度の制限の対象にしない
@@ -272,7 +277,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
       if (!opinion || opinion.status !== "active") throw notFound("投稿");
       const { event, session } = await loadForParticipant(opinion.sessionId);
       if (!session.showOpinionsToParticipants) throw notFound("投稿");
-      if (!isAccepting(event, session)) {
+      if (!isAccepting(event, session, ctx.now())) {
         throw forbidden("not_accepting", "このテーマは、いま投票を受け付けていません");
       }
       const voterHash = await sha256Hex(voterId);
@@ -303,7 +308,7 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
     async edit(id: string, input: OpinionEdit): Promise<PublicOpinion> {
       const opinion = await authorize(id, input.editKey);
       const { event, session } = await loadForParticipant(opinion.sessionId);
-      if (!isAccepting(event, session)) {
+      if (!isAccepting(event, session, ctx.now())) {
         throw forbidden("not_accepting", "このテーマは、いま投稿を受け付けていません");
       }
       const next: OpinionRecord = {

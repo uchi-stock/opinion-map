@@ -17,6 +17,7 @@ export function createSessionService(ctx: ServiceContext) {
         format: input.format,
         status: "draft",
         showOpinionsToParticipants: input.showOpinionsToParticipants,
+        ...(input.timerSeconds === undefined ? {} : { timerSeconds: input.timerSeconds }),
         createdAt: at,
         updatedAt: at,
       };
@@ -68,7 +69,19 @@ export function createSessionService(ctx: ServiceContext) {
 
     async update(id: string, patch: SessionPatch): Promise<SessionRecord> {
       const session = await this.get(id);
-      const next: SessionRecord = { ...session, ...patch, updatedAt: ctx.now().toISOString() };
+      const { timerSeconds, ...rest } = patch;
+      const now = ctx.now();
+      const next: SessionRecord = { ...session, ...rest, updatedAt: now.toISOString() };
+      if (timerSeconds === null) delete next.timerSeconds;
+      else if (timerSeconds !== undefined) next.timerSeconds = timerSeconds;
+      // 公開中にした時点で、締め切りを決める。公開中でなくなれば、締め切りは消す
+      if (next.status !== "active") delete next.deadlineAt;
+      else if (session.status !== "active" || timerSeconds !== undefined) {
+        if (next.timerSeconds === undefined) delete next.deadlineAt;
+        else if (session.status !== "active" || session.deadlineAt === undefined) {
+          next.deadlineAt = new Date(now.getTime() + next.timerSeconds * 1000).toISOString();
+        }
+      }
       await ctx.repos.sessions.update(next);
       return next;
     },

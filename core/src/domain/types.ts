@@ -71,6 +71,10 @@ export interface SessionRecord {
   notesPublished?: boolean;
   /** 要約(AIによる分析の結果と、採用された案)を参加者に見せるか。既定は見せない(運営者が確認してから公開する) */
   summaryPublished?: boolean;
+  /** 制限時間(秒)。任意。設定すると、テーマを公開中にした時点から数える */
+  timerSeconds?: number;
+  /** 締め切りの時刻(ISO)。公開中にしたときに、timerSeconds から決まる。この時刻を過ぎると、投稿を受け付けない */
+  deadlineAt?: string;
   createdAt: string;
   updatedAt: string;
 }

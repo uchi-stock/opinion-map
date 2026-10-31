@@ -7,6 +7,7 @@ import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
+import { NotesEditor } from "../../components/admin/NotesEditor.tsx";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
 import { FORMAT_LABELS, participantUrl, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
@@ -92,6 +93,14 @@ function SessionContent({
         </div>
       </section>
       <SessionForm api={api} session={session} describeError={describeError} onSaved={reload} />
+      <hr />
+      <NotesEditor
+        api={api}
+        sessionId={session.id}
+        initial={session.notes}
+        initialPublished={session.notesPublished === true}
+        describeError={describeError}
+      />
       <hr />
       <section aria-label="投稿された意見">
         <div className="d-flex justify-content-between align-items-center mb-2">

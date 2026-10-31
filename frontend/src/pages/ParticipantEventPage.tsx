@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, getPublicEvent } from "../api/client.ts";
 import type { PublicEvent } from "../api/types.ts";
+import { PublishedNotes } from "../components/PublishedNotes.tsx";
 import { ProposalSection } from "../components/ProposalSection.tsx";
 import { ParticipantPage } from "./ParticipantPage.tsx";
 
@@ -119,6 +120,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
         }}
       />
       <ParticipantPage key={selected.id} sessionId={selected.id} embedded />
+      <PublishedNotes eventId={event.id} />
     </main>
   );
 }

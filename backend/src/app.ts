@@ -5,6 +5,7 @@ import {
   parseReaction,
   parseProposalCreate,
   parseProposalDecision,
+  parseNotes,
   parseModeration,
   parseOpinionCreate,
   parseOpinionEdit,
@@ -336,6 +337,26 @@ export function createApp(options: AppOptions) {
         status: 200,
         data: await proposals.decide(params["id"]!, parseProposalDecision(body)),
       }),
+    },
+    {
+      method: "PUT",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/notes$/,
+      admin: true,
+      eventIdOf: eventOfSession,
+      handle: async ({ params, body }) => {
+        const session = await sessions.saveNotes(params["id"]!, parseNotes(body));
+        return { status: 200, data: { notes: session.notes, published: session.notesPublished === true } };
+      },
+    },
+    {
+      method: "GET",
+      pattern: /^\/events\/(?<id>[^/]+)\/notes$/,
+      admin: false,
+      handle: async ({ params, principal }) => {
+        // 運営者は、担当のイベントの記録を、未公開を含めてすべて見られる
+        const isAdmin = principal?.kind === "owner" || (principal?.kind === "operator" && principal.eventId === params["id"]);
+        return { status: 200, data: { notes: await sessions.listNotes(params["id"]!, isAdmin) } };
+      },
     },
     {
       method: "GET",

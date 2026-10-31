@@ -6,6 +6,8 @@ import type {
   Insight,
   InsightContent,
   AdminAccount,
+  NotesEntry,
+  SessionNotes,
   Proposal,
   OperatorToken,
   AdminOpinionList,
@@ -77,6 +79,15 @@ export function createAdminApi(token: string) {
     },
     updateInsight(id: string, patch: { edited?: InsightContent; approved?: boolean }): Promise<Insight> {
       return send("PATCH", `/insights/${enc(id)}`, patch);
+    },
+    async listNotes(eventId: string): Promise<NotesEntry[]> {
+      return (await send<{ notes: NotesEntry[] }>("GET", `/events/${enc(eventId)}/notes`)).notes;
+    },
+    saveNotes(
+      sessionId: string,
+      input: { conclusion: string; nextActions: { text: string; owner: string }[]; openQuestions: string[]; published: boolean },
+    ): Promise<{ notes: SessionNotes; published: boolean }> {
+      return send("PUT", `/sessions/${enc(sessionId)}/notes`, input);
     },
     async listProposals(eventId: string): Promise<Proposal[]> {
       return (await send<{ proposals: Proposal[] }>("GET", `/events/${enc(eventId)}/proposals`)).proposals;

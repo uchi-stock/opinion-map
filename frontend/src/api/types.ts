@@ -45,6 +45,21 @@ export interface ProposalList {
   proposals: Proposal[];
 }
 
+/** テーマごとの議論の記録(OST)。担当者の名前は文字列だけ */
+export interface SessionNotes {
+  conclusion: string;
+  nextActions: { text: string; owner: string }[];
+  openQuestions: string[];
+  updatedAt: string;
+}
+
+export interface NotesEntry {
+  sessionId: string;
+  title: string;
+  published: boolean;
+  notes: SessionNotes;
+}
+
 export interface PublicOpinion {
   id: string;
   body: string;
@@ -107,6 +122,8 @@ export interface SessionRecord {
   format: SessionFormat;
   status: SessionStatus;
   showOpinionsToParticipants: boolean;
+  notes?: SessionNotes;
+  notesPublished?: boolean;
   createdAt: string;
   updatedAt: string;
 }

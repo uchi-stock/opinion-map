@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/uchi-stock/opinion-map/compare/v1.17.0...v1.18.0) (2026-10-31)
+
+
+### Features
+
+* add a link back to the top page on every admin screen ([#136](https://github.com/uchi-stock/opinion-map/issues/136)) ([5257c07](https://github.com/uchi-stock/opinion-map/commit/5257c074af9d457f3e04d4d5dfdd6b259a3f02cb)), closes [#135](https://github.com/uchi-stock/opinion-map/issues/135)
+
 # [1.17.0](https://github.com/uchi-stock/opinion-map/compare/v1.16.0...v1.17.0) (2026-10-31)
 
 

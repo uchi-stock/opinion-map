@@ -124,6 +124,7 @@ export interface SessionRecord {
   showOpinionsToParticipants: boolean;
   notes?: SessionNotes;
   notesPublished?: boolean;
+  summaryPublished?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -191,3 +192,25 @@ export interface Insight {
   edited?: InsightContent;
   approved: boolean;
 }
+
+/** 参加者に見せる要約。運営者が公開したものだけ(AIによる要約) */
+export type PublicSummaryResponse =
+  | { published: false }
+  | {
+      published: true;
+      overview: string;
+      completedAt?: string;
+      newOpinionCount: number;
+      clusters: {
+        id: string;
+        level: number;
+        parentId: string | null;
+        title: string;
+        summary: string;
+        opinionCount: number;
+        opinionIds?: string[];
+      }[];
+      unclassifiedCount: number;
+      unclassifiedOpinionIds?: string[];
+      insights: { clusterId: string; content: InsightContent }[];
+    };

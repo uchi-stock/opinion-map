@@ -238,6 +238,7 @@ export interface SessionPatch {
   format?: SessionFormat;
   status?: SessionStatus;
   showOpinionsToParticipants?: boolean;
+  summaryPublished?: boolean;
 }
 export function parseSessionPatch(body: unknown): SessionPatch {
   const obj = asObject(body);
@@ -260,6 +261,11 @@ export function parseSessionPatch(body: unknown): SessionPatch {
   if (show !== undefined) {
     if (typeof show !== "boolean") throw badRequest("invalid_type", "showOpinionsToParticipants は真偽値で指定してください");
     patch.showOpinionsToParticipants = show;
+  }
+  const summaryPublished = obj["summaryPublished"];
+  if (summaryPublished !== undefined) {
+    if (typeof summaryPublished !== "boolean") throw badRequest("invalid_type", "summaryPublished は真偽値で指定してください");
+    patch.summaryPublished = summaryPublished;
   }
   return patch;
 }

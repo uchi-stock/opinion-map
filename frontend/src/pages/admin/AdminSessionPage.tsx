@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { AdminOpinion, AnalysisResult, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
+import type { AdminOpinion, AnalysisRun, Insight, SessionFormat, SessionRecord, SessionStatus } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { CopyField } from "../../components/admin/CopyField.tsx";
 import { QrCode } from "../../components/admin/QrCode.tsx";
+import { SummaryView } from "../../components/SummaryView.tsx";
+import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { NotesEditor } from "../../components/admin/NotesEditor.tsx";
@@ -23,14 +25,16 @@ export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sess
   );
 }
 
-/** 最新の分析の結果。なければ null(ボードは種類ごとにまとめる) */
-async function latestAnalysisResult(api: AdminApi, sessionId: string): Promise<AnalysisResult | null> {
+/** 最新の分析と、その案。なければ null(ボードは種類ごとにまとめる。要約のビューは出さない) */
+async function latestAnalysis(api: AdminApi, sessionId: string): Promise<{ run: AnalysisRun; insights: Insight[] } | null> {
   try {
     const runs = await api.listAnalyses(sessionId);
     const latest = runs[runs.length - 1];
     if (!latest || latest.status !== "succeeded") return null;
     const run = await api.getAnalysis(latest.id);
-    return run.result && run.result.clusters.length > 0 ? run.result : null;
+    if (!run.result || run.result.clusters.length === 0) return null;
+    const insights = await api.listInsights(run.id).catch(() => [] as Insight[]);
+    return { run, insights };
   } catch {
     return null;
   }
@@ -49,22 +53,23 @@ function SessionContent({
 }) {
   const { state, reload } = useLoad(
     async () => {
-      const [events, sessions, opinions, analysis] = await Promise.all([
+      const [events, sessions, opinions, latest] = await Promise.all([
         api.listEvents(),
         api.listSessions(eventId),
         api.listOpinions(sessionId),
-        latestAnalysisResult(api, sessionId),
+        latestAnalysis(api, sessionId),
       ]);
       const event = events.find((e) => e.id === eventId);
       const session = sessions.find((s) => s.id === sessionId);
       if (!event || !session) throw new Error("not_found");
-      return { event, session, opinions: opinions.opinions, analysis };
+      return { event, session, opinions: opinions.opinions, latest, analysis: latest?.run.result ?? null };
     },
     (e) => (e instanceof Error && e.message === "not_found" ? "セッションが見つかりません。" : describeError(e)),
     [api, eventId, sessionId],
   );
 
   const [mode, setMode] = useState<ViewMode>("list");
+  const [view, setView] = useState<ContentView>("raw");
 
   if (state.status === "loading") return <p role="status">読み込んでいます…</p>;
   if (state.status === "error")
@@ -74,7 +79,7 @@ function SessionContent({
       </div>
     );
 
-  const { event, session, opinions, analysis } = state.data;
+  const { event, session, opinions, latest, analysis } = state.data;
   const url = participantUrl(session.id);
   const visible = event.status === "active" && session.status === "active";
 
@@ -102,6 +107,24 @@ function SessionContent({
         describeError={describeError}
       />
       <hr />
+      <ViewTabs view={view} onChange={setView} summaryAvailable={latest !== null} />
+      {view === "summary" && latest ? (
+        <section aria-label="要約">
+          <SummaryPublishToggle api={api} session={session} describeError={describeError} onChanged={reload} />
+          <SummaryView
+            audience="admin"
+            opinions={opinions}
+            data={{
+              overview: latest.run.result!.overview,
+              clusters: latest.run.result!.clusters.map((c) => ({ ...c, opinionCount: c.opinionIds.length })),
+              unclassifiedCount: latest.run.result!.unclassifiedOpinionIds.length,
+              unclassifiedOpinionIds: latest.run.result!.unclassifiedOpinionIds,
+              insights: latest.insights.map((i) => ({ clusterId: i.clusterId, content: i.edited ?? i.ai, approved: i.approved })),
+              newOpinionCount: latest.run.newOpinionCount,
+            }}
+          />
+        </section>
+      ) : (
       <section aria-label="投稿された意見">
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
@@ -124,9 +147,64 @@ function SessionContent({
           </div>
         ))}
       </section>
+      )}
       <hr />
       <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
     </>
+  );
+}
+
+/** 要約を参加者に公開するか。AIの要約なので、運営者が確認してから公開する。採用した案だけが、一緒に出る */
+function SummaryPublishToggle({
+  api,
+  session,
+  describeError,
+  onChanged,
+}: {
+  api: AdminApi;
+  session: SessionRecord;
+  describeError: (e: unknown) => string;
+  onChanged: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function change(published: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateSession(session.id, { summaryPublished: published });
+      await onChanged();
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-3">
+      <div className="form-check">
+        <input
+          id="summary-published"
+          type="checkbox"
+          className="form-check-input"
+          checked={session.summaryPublished === true}
+          disabled={busy}
+          onChange={(e) => void change(e.target.checked)}
+        />
+        <label htmlFor="summary-published" className="form-check-label">
+          この要約を参加者に公開する
+        </label>
+      </div>
+      <p className="small text-body-secondary mb-0">公開すると、参加者は「要約（AI）」を見られます。案は、採用したものだけが出ます。</p>
+      {error && (
+        <div className="text-danger small" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 

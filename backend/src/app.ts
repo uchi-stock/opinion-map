@@ -22,6 +22,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { createSummaryService } from "./services/summaryService.js";
 import { createProposalService } from "./services/proposalService.js";
 import { createAdminService } from "./services/adminService.js";
 import { createOperatorTokenService } from "./services/operatorTokenService.js";
@@ -111,6 +112,7 @@ export function createApp(options: AppOptions) {
   const opinions = createOpinionService(ctx, options.opinionRateLimit);
   const operatorTokens = createOperatorTokenService(ctx);
   const proposals = createProposalService(ctx);
+  const summaries = createSummaryService(ctx);
   const login = options.ownerLogin;
   const admins = createAdminService(ctx, login?.ownerEmails ?? []);
   if (login && login.sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
@@ -337,6 +339,12 @@ export function createApp(options: AppOptions) {
         status: 200,
         data: await proposals.decide(params["id"]!, parseProposalDecision(body)),
       }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/summary$/,
+      admin: false,
+      handle: async ({ params }) => ({ status: 200, data: await summaries.getPublished(params["id"]!) }),
     },
     {
       method: "PUT",

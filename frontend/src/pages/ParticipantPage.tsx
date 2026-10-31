@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, getSession, listOpinions } from "../api/client.ts";
-import type { OpinionList, OpinionResult, PublicSession } from "../api/types.ts";
+import { ApiError, getPublicSummary, getSession, listOpinions } from "../api/client.ts";
+import type { OpinionList, OpinionResult, PublicSession, PublicSummaryResponse } from "../api/types.ts";
 import { OpinionCard } from "../components/OpinionCard.tsx";
 import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
 import { ReactionButton } from "../components/ReactionButton.tsx";
+import { SummaryView } from "../components/SummaryView.tsx";
+import { ViewTabs, type ContentView } from "../components/ViewTabs.tsx";
 import { StickyBoard, ViewToggle, type ViewMode } from "../components/StickyBoard.tsx";
 import { groupByKind } from "../lib/board.ts";
 import { OpinionForm } from "../components/OpinionForm.tsx";
@@ -47,6 +49,9 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
   // 自分の投稿の鍵。このブラウザにだけある
   const [mine, setMine] = useState<Record<string, string>>(() => loadMyOpinions());
   const [mode, setMode] = useState<ViewMode>("list");
+  // 運営者が公開した要約があるときだけ、「要約」の見方を出す
+  const [summary, setSummary] = useState<PublicSummaryResponse | null>(null);
+  const [view, setView] = useState<ContentView>("raw");
 
   const loadSession = useCallback(async () => {
     setSessionState({ status: "loading" });
@@ -69,7 +74,9 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
   useEffect(() => {
     void loadSession();
     void loadList();
-  }, [loadSession, loadList]);
+    // 要約が読めなくても、原文の閲覧と投稿は続けられる
+    getPublicSummary(sessionId).then(setSummary, () => setSummary(null));
+  }, [loadSession, loadList, sessionId]);
 
   function handleSubmitted(_result: OpinionResult) {
     setMine(loadMyOpinions());
@@ -119,6 +126,22 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
         <p className="lead mb-0">{session.prompt}</p>
       </header>
 
+      <ViewTabs view={view} onChange={setView} summaryAvailable={summary?.published === true} />
+      {view === "summary" && summary?.published === true ? (
+        <SummaryView
+          audience="participant"
+          opinions={listState.status === "ready" ? listState.list.opinions : []}
+          data={{
+            overview: summary.overview,
+            clusters: summary.clusters,
+            unclassifiedCount: summary.unclassifiedCount,
+            ...(summary.unclassifiedOpinionIds ? { unclassifiedOpinionIds: summary.unclassifiedOpinionIds } : {}),
+            insights: summary.insights.map((i) => ({ ...i, approved: true })),
+            newOpinionCount: summary.newOpinionCount,
+          }}
+        />
+      ) : (
+        <>
       <section className="mb-4" aria-label="投稿について">
         <div className="card bg-body-tertiary">
           <div className="card-body small">
@@ -213,6 +236,8 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
               </div>
             ))}
         </section>
+      )}
+        </>
       )}
     </Shell>
   );

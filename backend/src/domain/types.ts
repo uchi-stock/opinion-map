@@ -67,6 +67,8 @@ export interface SessionRecord {
   notes?: SessionNotes;
   /** 記録を参加者に見せるか。既定は見せない(運営者が確認してから公開する) */
   notesPublished?: boolean;
+  /** 要約(AIによる分析の結果と、採用された案)を参加者に見せるか。既定は見せない(運営者が確認してから公開する) */
+  summaryPublished?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -93,6 +93,47 @@ describe("NotesEditor", () => {
   });
 });
 
+describe("NotesEditor: 要約からの下書き", () => {
+  const source = { overview: "アクセスの話が中心でした", clusterTitles: ["アクセス", "予約"], questions: ["どう改善する？", "遅刻者への共有は？"] };
+
+  it("取り込みボタンは、要約があるときだけ出す", () => {
+    const api = { saveNotes: vi.fn() } as unknown as AdminApi;
+    const { rerender } = render(<NotesEditor api={api} sessionId="s1" initial={undefined} initialPublished={false} describeError={String} draftSource={null} />);
+    expect(screen.queryByRole("button", { name: "要約から下書きを取り込む" })).toBeNull();
+    rerender(<NotesEditor api={api} sessionId="s1" initial={undefined} initialPublished={false} describeError={String} draftSource={source} />);
+    expect(screen.getByRole("button", { name: "要約から下書きを取り込む" })).toBeInTheDocument();
+  });
+
+  it("取り込んでも、保存も公開もしない。AIの下書きと分かる注意を出し、既にある内容は消さない", async () => {
+    const saveNotes = vi.fn(async () => ({ notes: entry().notes, published: false }));
+    const api = { saveNotes } as unknown as AdminApi;
+    const user = userEvent.setup();
+    render(<NotesEditor api={api} sessionId="s1" initial={{ ...entry().notes, openQuestions: ["遅刻者への共有は？"] }} initialPublished={false} describeError={String} draftSource={source} />);
+    await user.click(screen.getByRole("button", { name: "要約から下書きを取り込む" }));
+    expect(saveNotes).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("AIによる下書きを取り込みました");
+    const conclusion = screen.getByLabelText("結論") as HTMLTextAreaElement;
+    expect(conclusion.value).toContain("朝会を15分にそろえる");
+    expect(conclusion.value).toContain("アクセスの話が中心でした");
+    expect(conclusion.value).toContain("主なまとまり: アクセス、予約");
+    // 問いは重複せず、後ろに足される
+    expect((screen.getByLabelText(/未解決の問い/) as HTMLTextAreaElement).value).toBe("遅刻者への共有は？\nどう改善する？");
+    expect(screen.getByLabelText("参加者に公開する")).not.toBeChecked();
+  });
+
+  it("確認して保存すると、注意は消える。取り込んだだけでは、公開の状態は変わらない", async () => {
+    const saveNotes = vi.fn(async () => ({ notes: entry().notes, published: false }));
+    const api = { saveNotes } as unknown as AdminApi;
+    const user = userEvent.setup();
+    render(<NotesEditor api={api} sessionId="s1" initial={undefined} initialPublished={false} describeError={String} draftSource={source} />);
+    await user.click(screen.getByRole("button", { name: "要約から下書きを取り込む" }));
+    await user.click(screen.getByRole("button", { name: "記録を保存する" }));
+    expect(saveNotes).toHaveBeenCalledWith("s1", expect.objectContaining({ published: false }));
+    await screen.findByText("保存しました。参加者には見えません。");
+    expect(screen.queryByText(/AIによる下書きを取り込みました/)).toBeNull();
+  });
+});
+
 describe("NotesOverview と PublishedNotes", () => {
   it("運営者は全テーマの記録を、公開の状態つきで見て、Markdown にできる", async () => {
     const api = { listNotes: vi.fn(async () => [entry(), entry({ sessionId: "s2", title: "場B", published: false })]) } as unknown as AdminApi;

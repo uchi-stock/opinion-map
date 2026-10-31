@@ -190,3 +190,74 @@ describe("オーナーのGoogleログイン(API)", () => {
     expect(me.json).toEqual({ role: "operator", eventId: event.id });
   });
 });
+
+describe("イベントの作成者とアイコン", () => {
+  const PICTURE = "https://lh3.googleusercontent.com/a/abc123";
+
+  async function setup() {
+    const g = await makeGoogle();
+    const t = createTestApp({
+      now: () => new Date(NOW),
+      ownerLogin: { googleClientId: CLIENT_ID, sessionSecret: SECRET, ownerEmails: ["owner@example.com"], fetch: g.fetchStub },
+    });
+    const login = async (claims: Record<string, unknown> = {}) => {
+      const res = await t.call("POST", "/auth/session", { headers: { authorization: `Bearer ${await g.idToken(claims)}` } });
+      return { headers: { authorization: `Bearer ${res.json.token as string}` } };
+    };
+    return { ...t, login };
+  }
+
+  it("ログインしたときの Google のプロフィール画像を覚え、ログイン中のアカウントとして返す", async () => {
+    const { call, login } = await setup();
+    const session = await login({ picture: PICTURE });
+    expect((await call("GET", "/me", session)).json).toEqual({ role: "owner", email: "owner@example.com", picture: PICTURE });
+  });
+
+  it("Google の配信元でない画像のURLは、覚えない", async () => {
+    const { call, login } = await setup();
+    for (const picture of ["https://evil.example.com/a.png", "http://lh3.googleusercontent.com/a", "javascript:alert(1)", "https://lh3.googleusercontent.com.evil.com/a", 42]) {
+      const session = await login({ picture });
+      expect((await call("GET", "/me", session)).json).toEqual({ role: "owner", email: "owner@example.com" });
+    }
+  });
+
+  it("画像が変わったら更新し、画像が無くなったら消す", async () => {
+    const { call, login } = await setup();
+    const next = "https://lh3.googleusercontent.com/a/new";
+    await login({ picture: PICTURE });
+    const session = await login({ picture: next });
+    expect((await call("GET", "/me", session)).json.picture).toBe(next);
+    const without = await login();
+    expect((await call("GET", "/me", without)).json.picture).toBeUndefined();
+  });
+
+  it("作ったイベントに、作成者のメールを記録し、一覧に、作成者の画像を添える", async () => {
+    const { call, login } = await setup();
+    const session = await login({ picture: PICTURE });
+    const created = (await call("POST", "/events", { ...session, body: { name: "新しいイベント" } })).json;
+    expect(created.createdBy).toBe("owner@example.com");
+    const list = (await call("GET", "/events", session)).json.events as { id: string; createdBy?: string; creatorPicture?: string }[];
+    expect(list.find((e) => e.id === created.id)).toMatchObject({ createdBy: "owner@example.com", creatorPicture: PICTURE });
+  });
+
+  it("合言葉(トークン)で作ったイベントは、(token) と記録する。画像は添えない", async () => {
+    const { call } = await setup();
+    const created = (await call("POST", "/events", { admin: true, body: { name: "合言葉で作った" } })).json;
+    expect(created.createdBy).toBe("(token)");
+    const list = (await call("GET", "/events", { admin: true })).json.events as { id: string; creatorPicture?: string }[];
+    expect(list.find((e) => e.id === created.id)?.creatorPicture).toBeUndefined();
+  });
+
+  it("運営者のトークンの一覧には、管理者のメールを見せない", async () => {
+    const { call, login } = await setup();
+    const session = await login();
+    const created = (await call("POST", "/events", { ...session, body: { name: "共有するイベント" } })).json;
+    const issued = (await call("POST", `/events/${created.id}/operator-tokens`, { ...session, body: { label: "会場係" } })).json;
+    const operator = { headers: { authorization: `Bearer ${issued.token as string}` } };
+    const events = (await call("GET", "/events", operator)).json.events as Record<string, unknown>[];
+    expect(events).toHaveLength(1);
+    expect(events[0]).not.toHaveProperty("createdBy");
+    expect(events[0]).not.toHaveProperty("creatorPicture");
+    expect(JSON.stringify(events)).not.toContain("owner@example.com");
+  });
+});

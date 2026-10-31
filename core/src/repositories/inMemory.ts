@@ -211,6 +211,9 @@ export function createInMemoryRepositories(): Repositories {
         admins.set(admin.email, { ...admin });
         return true;
       },
+      async update(admin) {
+        admins.set(admin.email, { ...admin });
+      },
       async remove(email) {
         return admins.delete(email);
       },

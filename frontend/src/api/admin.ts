@@ -5,6 +5,7 @@ import type {
   EventStatus,
   Insight,
   InsightContent,
+  Me,
   AdminAccount,
   UsageSummary,
   NotesEntry,
@@ -32,6 +33,9 @@ export function createAdminApi(token: string) {
   const enc = encodeURIComponent;
 
   return {
+    me(): Promise<Me> {
+      return send("GET", "/me");
+    },
     async listEvents(): Promise<EventRecord[]> {
       return (await send<{ events: EventRecord[] }>("GET", "/events")).events;
     },

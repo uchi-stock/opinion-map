@@ -106,6 +106,8 @@ export interface AdminRepository {
   list(): Promise<AdminRecord[]>;
   /** なければ作って true。すでにあれば何もせず false（並行して来ても1つだけ作る） */
   createIfAbsent(admin: AdminRecord): Promise<boolean>;
+  /** 記録を上書きする(プロフィール画像の更新に使う) */
+  update(admin: AdminRecord): Promise<void>;
   /** 消せたら true。なければ false */
   remove(email: string): Promise<boolean>;
 }

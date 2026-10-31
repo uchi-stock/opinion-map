@@ -363,6 +363,9 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
           throw error;
         }
       },
+      async update(admin) {
+        await store.put(adminItem(admin));
+      },
       async remove(email) {
         return store.delete(`ADMIN#${email}`);
       },

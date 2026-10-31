@@ -5,13 +5,14 @@ import type { ServiceContext } from "./context.js";
 
 export function createEventService(ctx: ServiceContext) {
   return {
-    async create(input: EventInput): Promise<EventRecord> {
+    async create(input: EventInput, createdBy?: string): Promise<EventRecord> {
       const at = ctx.now().toISOString();
       const event: EventRecord = {
         id: ctx.newId(),
         name: input.name,
         description: input.description,
         status: "draft",
+        ...(createdBy ? { createdBy } : {}),
         createdAt: at,
         updatedAt: at,
       };

@@ -3,19 +3,21 @@ import { AppError } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
 
 /** AIの利用の種類。どちらも実行のたびに課金が発生する */
-export type UsageKind = "analysis" | "insight";
+export type UsageKind = "analysis" | "insight" | "clientError";
 
 export interface DailyLimits {
   /** 分析(広聴AI + Gemini)の開始。イベントごと・1日あたり */
   analysis: number;
   /** 共通点・相違点・問いの案(Gemini)の生成。イベントごと・1日あたり */
   insight: number;
+  /** 画面のエラーの報告。ログが溢れないよう、全体で1日あたり */
+  clientError: number;
 }
 
 /** 既定の上限。控えめにしてあり、環境変数で変えられる */
-export const DEFAULT_DAILY_LIMITS: DailyLimits = { analysis: 10, insight: 100 };
+export const DEFAULT_DAILY_LIMITS: DailyLimits = { analysis: 10, insight: 100, clientError: 200 };
 
-const LABELS: Record<UsageKind, string> = { analysis: "分析", insight: "案の生成" };
+const LABELS: Record<UsageKind, string> = { analysis: "分析", insight: "案の生成", clientError: "エラーの報告" };
 
 export function createUsageService(ctx: ServiceContext, limits: DailyLimits = DEFAULT_DAILY_LIMITS) {
   const scope = (kind: UsageKind, eventId: string) => `${kind}:${eventId}`;

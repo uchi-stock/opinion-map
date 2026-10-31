@@ -116,3 +116,21 @@ export function reactToOpinion(opinionId: string, voterId: string, reacted: bool
 export function deleteOpinion(opinionId: string, editKey: string): Promise<{ deleted: true }> {
   return request(`/opinions/${enc(opinionId)}/delete`, jsonPost("POST", { editKey }));
 }
+
+/**
+ * 画面のエラーを、サーバーのログに知らせる。失敗しても何もしない(エラーの報告で、さらにエラーを出さない)。
+ * 送るのは、エラーの種類と短いメッセージと、パスだけ。クエリとハッシュ(トークンが入りうる)は送らない。
+ */
+export function reportClientError(error: unknown): void {
+  try {
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    void fetch(`${apiBaseUrl()}/client-errors`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: message.slice(0, 200), path: window.location.pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // 報告できなくても、画面の動作には影響させない
+  }
+}

@@ -61,6 +61,7 @@ jobs:
       OWNER_EMAILS: ${{ secrets.OWNER_EMAILS || vars.OWNER_EMAILS }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       # AIの利用の、イベントごと・1日あたりの上限。未登録なら既定(分析10、案の生成100)
+      ALERT_EMAIL: ${{ secrets.ALERT_EMAIL || vars.ALERT_EMAIL }}
       ANALYSIS_DAILY_LIMIT: ${{ vars.ANALYSIS_DAILY_LIMIT }}
       INSIGHT_DAILY_LIMIT: ${{ vars.INSIGHT_DAILY_LIMIT }}
       STACK_NAME: opinion-map-prod
@@ -97,6 +98,9 @@ jobs:
               [ -z "${!name}" ] && echo "::warning::${name} が設定されていません。"
             done
             problems=1
+          fi
+          if [ -z "$ALERT_EMAIL" ]; then
+            echo "::warning::ALERT_EMAIL が設定されていません。障害の通知メールは届きません。"
           fi
           if [ -z "$GEMINI_API_KEY" ]; then
             echo "::warning::GEMINI_API_KEY が設定されていません。分析と、共通点・相違点の案は、動きません。"

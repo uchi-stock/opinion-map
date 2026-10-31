@@ -14,6 +14,8 @@ provider:
   timeout: 29
   httpApi:
     payload: "2.0"
+  # ログは30日で消す(費用と、残る情報の量を抑える)
+  logRetentionInDays: 30
   environment:
     TABLE_NAME: !Ref Table
     # CloudFront が /api/* を転送するため、先頭の /api を取り除いて処理する
@@ -89,7 +91,102 @@ functions:
           method: ANY
 
 resources:
+  Conditions:
+    # 通知先のメールアドレスが登録されているときだけ、購読を作る
+    HasAlertEmail: !Not [!Equals ["${env:ALERT_EMAIL, ''}", ""]]
   Resources:
+    # 運用監視: 障害を、メールで知らせる。メールの購読は、届いた確認メールのリンクを開いて完了する
+    AlertTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: opinion-map alert
+    AlertSubscription:
+      Type: AWS::SNS::Subscription
+      Condition: HasAlertEmail
+      Properties:
+        TopicArn: !Ref AlertTopic
+        Protocol: email
+        Endpoint: ${env:ALERT_EMAIL, ''}
+    # API(Lambda)がエラーを返した。1回でも通知する
+    ApiErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: API(Lambda)でエラーが出ています
+        Namespace: AWS/Lambda
+        MetricName: Errors
+        Dimensions:
+          - Name: FunctionName
+            Value: !Ref ApiLambdaFunction
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertTopic]
+    # API Gateway が5xxを返した。続くときだけ通知する
+    Api5xxAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: APIが5xxを返しています
+        Namespace: AWS/ApiGateway
+        MetricName: 5xx
+        Dimensions:
+          - Name: ApiId
+            Value: !Ref HttpApi
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 3
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertTopic]
+    # 分析の失敗(アプリが記録するログの出来事 analysis_failed)
+    AnalysisFailedMetricFilter:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        LogGroupName: !Ref ApiLogGroup
+        FilterPattern: '{ $.event = "analysis_failed" }'
+        MetricTransformations:
+          - MetricNamespace: OpinionMap
+            MetricName: AnalysisFailed
+            MetricValue: "1"
+    AnalysisFailedAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: 広聴AIの分析が失敗しました
+        Namespace: OpinionMap
+        MetricName: AnalysisFailed
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertTopic]
+    # 参加者の画面の描画エラー(ログの出来事 client_error)。少数では通知せず、まとまって出たときだけ
+    ClientErrorMetricFilter:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        LogGroupName: !Ref ApiLogGroup
+        FilterPattern: '{ $.event = "client_error" }'
+        MetricTransformations:
+          - MetricNamespace: OpinionMap
+            MetricName: ClientErrors
+            MetricValue: "1"
+    ClientErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: 画面のエラーが、まとまって出ています
+        Namespace: OpinionMap
+        MetricName: ClientErrors
+        Statistic: Sum
+        Period: 900
+        EvaluationPeriods: 1
+        Threshold: 20
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertTopic]
     Table:
       Type: AWS::DynamoDB::Table
       # データを失わないよう、スタックを消しても残す
@@ -381,6 +478,8 @@ resources:
       Value: !Ref Distribution
     TableName:
       Value: !Ref Table
+    AlertTopicArn:
+      Value: !Ref AlertTopic
     RunnerRepositoryUri:
       Value: !GetAtt RunnerRepository.RepositoryUri
     AnalysisClusterName:

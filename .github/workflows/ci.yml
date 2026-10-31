@@ -29,7 +29,8 @@ jobs:
       enable_auto_merge: false
       # 静的チェック(dev-standardsの標準)。違反するコミットは、CIで止まる
       enable_standards_check: true
-      # 秘密情報の検知(enable_secret_scan)は、組織のリポジトリで gitleaks-action のライセンスキーが要るため、まだ有効にしない(#97)
+      # 秘密情報の検知(enable_secret_scan)は、gitleaks-action が組織のリポジトリでライセンスキーを要るため使わない。
+      # 代わりに、下の secret-scan ジョブで gitleaks の CLI(OSS)を直接実行する(#97)
       enable_text_lint: true
       text_lint_paths: |
         docs/**/*.md
@@ -97,6 +98,43 @@ jobs:
     if: needs.changes.outputs.runner == 'true'
     uses: ./.github/workflows/runner-image.yml
 
+  # 誤ってコミットされた秘密情報(APIキー、トークンなど)を検知する。
+  # gitleaks-action は、組織のリポジトリでライセンスキーを要るため、OSS の gitleaks を直接実行する。
+  # バイナリは、版を固定し、公開されているチェックサムで確かめてから使う。
+  # PR は、base からの差分のコミットだけ。main への push は、push された範囲だけを調べる
+  secret-scan:
+    name: "秘密情報の検知"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GITLEAKS_VERSION: "8.21.2"
+      GITLEAKS_SHA256: "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks を取得して、チェックサムを確かめる
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar xzf gitleaks.tar.gz gitleaks
+      - name: 秘密情報を調べる
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          # 検知した値は、ログに出さない(--redact)
+          if [ "$EVENT" = "pull_request" ]; then
+            ./gitleaks detect --source . --redact --no-banner --log-opts="${BASE_SHA}..${HEAD_SHA}"
+          elif [ "$EVENT" = "push" ] && [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            ./gitleaks detect --source . --redact --no-banner --log-opts="${BEFORE_SHA}..HEAD"
+          else
+            ./gitleaks detect --source . --redact --no-banner
+          fi
+
   # 循環依存と、frontend と backend の越境 import を検知する。
   # reusable-ci のアーキテクチャ検査は、TypeScript を解析するための typescript が無く、.ts を読まない。
   # そのため、typescript を足して実行する(dev-standards 側の修正を待つ間の代わり)
@@ -155,7 +193,7 @@ jobs:
   # CI・評価・イメージの確認が成功してからマージする。評価とイメージの確認は、対象外ならスキップを成功とみなす
   gate:
     name: "自動マージ"
-    needs: [ci, changes, eval, runner-image, dynamodb-local, architecture]
+    needs: [ci, changes, eval, runner-image, dynamodb-local, architecture, secret-scan]
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
@@ -164,6 +202,7 @@ jobs:
       needs.changes.result == 'success' &&
       needs.dynamodb-local.result == 'success' &&
       needs.architecture.result == 'success' &&
+      needs.secret-scan.result == 'success' &&
       (needs.eval.result == 'success' || needs.eval.result == 'skipped') &&
       (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped')
     runs-on: ubuntu-latest

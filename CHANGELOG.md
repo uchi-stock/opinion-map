@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/uchi-stock/opinion-map/compare/v1.1.0...v1.2.0) (2026-10-31)
+
+
+### Features
+
+* add a sticky-note board view of opinions ([#54](https://github.com/uchi-stock/opinion-map/issues/54)) ([#68](https://github.com/uchi-stock/opinion-map/issues/68)) ([f5f6133](https://github.com/uchi-stock/opinion-map/commit/f5f61339a38e8874966d27c0d35c87c3234f45ad))
+
 # [1.1.0](https://github.com/uchi-stock/opinion-map/compare/v1.0.0...v1.1.0) (2026-10-31)
 
 

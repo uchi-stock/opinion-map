@@ -82,31 +82,23 @@ function SessionContent({
 
   return (
     <>
-      <p className="text-body-secondary small mb-3">{event.name}</p>
+      <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <span className="text-body-secondary small text-break">
+          {event.name}
+          <span className={`badge ms-2 ${session.status === "active" ? "text-bg-primary" : session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
+            {SESSION_STATUS_LABELS[session.status]}
+          </span>
+        </span>
+        {/* 参加者に見える画面そのもの。URLのコピーやQRは、イベントの招待URLの画面にある */}
+        <a className="btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer">
+          参加者の画面を見る
+        </a>
+      </div>
       {!visible && (
         <div className="alert alert-warning" role="status">
           参加者が投稿できるのは、イベントとテーマが、両方とも「公開中」のときだけです。
         </div>
       )}
-      <SessionForm api={api} session={session} describeError={describeError} onSaved={reload} />
-      <hr />
-      <NotesEditor
-        api={api}
-        sessionId={session.id}
-        initial={session.notes}
-        initialPublished={session.notesPublished === true}
-        describeError={describeError}
-        draftSource={
-          latest?.run.result
-            ? {
-                overview: latest.run.result.overview,
-                clusterTitles: latest.run.result.clusters.filter((c) => c.level === Math.min(...latest.run.result!.clusters.map((x) => x.level))).map((c) => c.title),
-                questions: latest.insights.flatMap((i) => (i.edited ?? i.ai).questions),
-              }
-            : null
-        }
-      />
-      <hr />
       <ViewTabs view={view} onChange={setView} summaryAvailable={latest !== null} />
       {view === "summary" && latest ? (
         <section aria-label="要約">
@@ -150,6 +142,25 @@ function SessionContent({
       )}
       <hr />
       <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
+      <hr />
+      <SessionForm api={api} session={session} describeError={describeError} onSaved={reload} />
+      <hr />
+      <NotesEditor
+        api={api}
+        sessionId={session.id}
+        initial={session.notes}
+        initialPublished={session.notesPublished === true}
+        describeError={describeError}
+        draftSource={
+          latest?.run.result
+            ? {
+                overview: latest.run.result.overview,
+                clusterTitles: latest.run.result.clusters.filter((c) => c.level === Math.min(...latest.run.result!.clusters.map((x) => x.level))).map((c) => c.title),
+                questions: latest.insights.flatMap((i) => (i.edited ?? i.ai).questions),
+              }
+            : null
+        }
+      />
     </>
   );
 }

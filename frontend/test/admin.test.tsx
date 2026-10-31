@@ -500,6 +500,32 @@ describe("テーマの画面", () => {
     expect(screen.queryByRole("button", { name: "コピー" })).toBeNull();
   });
 
+  it("意見(一覧とボード)を、設定や記録より先に出す。参加者の画面を開くリンクを置く", async () => {
+    fakeAdminBackend({
+      opinions: [opinion("o1", "一つ目の意見", "idea"), opinion("o2", "二つ目の意見", "question")],
+    });
+    const user = userEvent.setup();
+    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    const opinions = await screen.findByRole("region", { name: "投稿された意見" });
+    const settings = screen.getByRole("form", { name: "テーマの設定" });
+    // 意見のセクションが、設定のフォームより前にある
+    expect(opinions.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("link", { name: "参加者の画面を見る" })).toHaveAttribute("href", "/e/e1");
+
+    // 参加者と同じく、ボード(付箋)でも見られる。管理者の操作(非表示)は、一覧に残る
+    expect(within(opinions).getAllByRole("button", { name: "非表示にする" })).toHaveLength(2);
+    await user.click(within(opinions).getByRole("button", { name: "ボード" }));
+    expect(within(opinions).getAllByTestId("sticky-note").length).toBeGreaterThan(0);
+    expect(within(opinions).getByText("一つ目の意見")).toBeInTheDocument();
+  });
+
+  it("テーマの状態を、最上部に示す", async () => {
+    fakeAdminBackend({ sessions: [session({ status: "draft" })] });
+    render(<AdminSessionPage eventId="e1" sessionId="s1" />);
+    await screen.findByRole("form", { name: "テーマの設定" });
+    expect(screen.getAllByText("下書き").length).toBeGreaterThan(0);
+  });
+
   it("公開中でないときは、参加者に見えない旨を警告する", async () => {
     fakeAdminBackend({ sessions: [session({ status: "draft" })] });
     render(<AdminSessionPage eventId="e1" sessionId="s1" />);

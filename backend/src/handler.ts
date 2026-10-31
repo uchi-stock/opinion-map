@@ -3,12 +3,12 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import { S3Client } from "@aws-sdk/client-s3";
 import { createAwsRunnerPort } from "./adapters/awsRunnerPort.js";
-import { KouchouFargateProvider } from "./adapters/kouchouFargate.js";
-import { createApp } from "./app.js";
-import { GeminiInsightProvider } from "./insights/geminiProvider.js";
+import { KouchouFargateProvider } from "../../core/src/adapters/kouchouFargate.js";
+import { createApp } from "../../core/src/app.js";
+import { GeminiInsightProvider } from "../../core/src/insights/geminiProvider.js";
 import { toHttpApiResult, toHttpRequest, type HttpApiEvent, type HttpApiResult } from "./lambdaAdapter.js";
 import { DynamoKvStore } from "./repositories/dynamoKvStore.js";
-import { createDynamoRepositories } from "./repositories/dynamoRepositories.js";
+import { createDynamoRepositories } from "../../core/src/repositories/dynamoRepositories.js";
 
 /**
  * Lambda のエントリポイント。AWS SDK への依存は、ここと repositories/dynamo* に閉じ込める。

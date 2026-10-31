@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
-import { validateResult } from "../src/analysis/validation.js";
-import { KouchouAiProvider, clusterCounts, parseKouchouResult } from "../src/adapters/kouchouAi.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
+import { validateResult } from "../../core/src/analysis/validation.js";
+import { KouchouAiProvider, clusterCounts, parseKouchouResult } from "../../core/src/adapters/kouchouAi.js";
 import { createTestApp, newSubmissionId } from "./helpers.js";
 
 async function setup(opinionCount = 3) {

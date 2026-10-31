@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { AnalysisRunRecord } from "../src/analysis/types.js";
-import type { OpinionRecord } from "../src/domain/types.js";
-import { createDynamoRepositories } from "../src/repositories/dynamoRepositories.js";
-import { MemoryKvStore } from "../src/repositories/kvStore.js";
+import type { AnalysisRunRecord } from "../../core/src/analysis/types.js";
+import type { OpinionRecord } from "../../core/src/domain/types.js";
+import { createDynamoRepositories } from "../../core/src/repositories/dynamoRepositories.js";
+import { MemoryKvStore } from "../../core/src/repositories/kvStore.js";
 
 const at = "2026-01-01T00:00:00.000Z";
 const opinion = (id: string, submissionId: string, over: Partial<OpinionRecord> = {}): OpinionRecord => ({

@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "oxlint && tsc --noEmit",
+    "lint": "oxlint -c .oxlintrc.json . && (cd ../core && ../backend/node_modules/.bin/oxlint -c ../backend/.oxlintrc.json .) && tsc --noEmit",
     "test": "vitest run --coverage && TEST_REPOS=dynamo vitest run",
     "build": "tsc -p tsconfig.build.json",
     "bundle": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --minify --sourcemap --outfile=dist-lambda/handler.mjs --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",

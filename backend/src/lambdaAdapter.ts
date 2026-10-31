@@ -1,4 +1,4 @@
-import type { HttpRequest, HttpResponse } from "./app.js";
+import type { HttpRequest, HttpResponse } from "../../core/src/app.js";
 
 /** API Gateway HTTP API（payload format 2.0）のイベントのうち、使う項目だけ */
 export interface HttpApiEvent {

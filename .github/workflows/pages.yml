@@ -12,6 +12,7 @@ on:
     paths:
       - "frontend/**"
       - "backend/src/**"
+      - "core/src/**"
       - ".github/workflows/pages.yml"
 
 permissions:

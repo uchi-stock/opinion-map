@@ -45,6 +45,8 @@ jobs:
         backend/README.md
         frontend/README.md
       # コードの重複。まず報告だけ(しきい値0)。実測は0.6%と低いので、しきい値は後で決める
+      # 循環依存と越境 import の検知。TypeScript まで見る検査は、下の architecture ジョブで行う
+      enable_architecture_check: true
       enable_duplication_check: true
       duplication_threshold: 0
     secrets: inherit
@@ -93,6 +95,24 @@ jobs:
     if: needs.changes.outputs.runner == 'true'
     uses: ./.github/workflows/runner-image.yml
 
+  # 循環依存と、frontend と backend の越境 import を検知する。
+  # reusable-ci のアーキテクチャ検査は、TypeScript を解析するための typescript が無く、.ts を読まない。
+  # そのため、typescript を足して実行する(dev-standards 側の修正を待つ間の代わり)
+  architecture:
+    name: "アーキテクチャ検査(TypeScript込み)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: dependency-cruiser を実行する
+        run: npx --yes -p typescript@5 -p dependency-cruiser@16 depcruise --config dependency-cruiser.config.cjs --output-type err frontend backend
+
   # 実際の DynamoDB(DynamoDB Local)に対して、保存先の契約と、並行の競合を確かめる。
   # 本物の DynamoDB の挙動(条件付き書き込み、トランザクション、GSI)の違いで壊れるのを、デプロイの前に見つける
   dynamodb-local:
@@ -132,13 +152,14 @@ jobs:
   # CI・評価・イメージの確認が成功してからマージする。評価とイメージの確認は、対象外ならスキップを成功とみなす
   gate:
     name: "自動マージ"
-    needs: [ci, changes, eval, runner-image, dynamodb-local]
+    needs: [ci, changes, eval, runner-image, dynamodb-local, architecture]
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
       needs.ci.result == 'success' &&
       needs.changes.result == 'success' &&
       needs.dynamodb-local.result == 'success' &&
+      needs.architecture.result == 'success' &&
       (needs.eval.result == 'success' || needs.eval.result == 'skipped') &&
       (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped')
     runs-on: ubuntu-latest

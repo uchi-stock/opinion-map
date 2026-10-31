@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
-import { FakeInsightProvider } from "../src/insights/fakeProvider.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
+import { FakeInsightProvider } from "../../core/src/insights/fakeProvider.js";
 import { createTestApp, newSubmissionId } from "./helpers.js";
 
 describe("要約のビュー(参加者向けAPI)", () => {

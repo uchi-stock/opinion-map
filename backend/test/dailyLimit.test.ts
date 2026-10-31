@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
-import { FakeInsightProvider } from "../src/insights/fakeProvider.js";
-import { jstDayKey, nextJstMidnightIso } from "../src/lib/dayKey.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
+import { FakeInsightProvider } from "../../core/src/insights/fakeProvider.js";
+import { jstDayKey, nextJstMidnightIso } from "../../core/src/lib/dayKey.js";
 import { createTestApp, newSubmissionId } from "./helpers.js";
 
 describe("日本時間の日付", () => {

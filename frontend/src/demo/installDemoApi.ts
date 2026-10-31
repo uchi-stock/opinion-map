@@ -1,7 +1,7 @@
-import { FakeAnalysisProvider } from "../../../backend/src/analysis/fakeProvider.ts";
-import { FakeInsightProvider } from "../../../backend/src/insights/fakeProvider.ts";
-import { createApp, type App } from "../../../backend/src/app.ts";
-import type { Repositories } from "../../../backend/src/repositories/types.ts";
+import { FakeAnalysisProvider } from "../../../core/src/analysis/fakeProvider.ts";
+import { FakeInsightProvider } from "../../../core/src/insights/fakeProvider.ts";
+import { createApp, type App } from "../../../core/src/app.ts";
+import type { Repositories } from "../../../core/src/repositories/types.ts";
 import { apiBaseUrl } from "../api/client.ts";
 import { createStorageRepositories } from "./storageRepositories.ts";
 

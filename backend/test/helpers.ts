@@ -1,7 +1,7 @@
-import { createApp, type AppOptions, type HttpResponse } from "../src/app.js";
-import { createDynamoRepositories } from "../src/repositories/dynamoRepositories.js";
-import { createInMemoryRepositories } from "../src/repositories/inMemory.js";
-import { MemoryKvStore } from "../src/repositories/kvStore.js";
+import { createApp, type AppOptions, type HttpResponse } from "../../core/src/app.js";
+import { createDynamoRepositories } from "../../core/src/repositories/dynamoRepositories.js";
+import { createInMemoryRepositories } from "../../core/src/repositories/inMemory.js";
+import { MemoryKvStore } from "../../core/src/repositories/kvStore.js";
 
 export const ADMIN_TOKEN = "test-admin-token";
 

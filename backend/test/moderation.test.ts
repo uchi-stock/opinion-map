@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
 import { createTestApp, newSubmissionId } from "./helpers.js";
 
 const KEY = "k".repeat(22);

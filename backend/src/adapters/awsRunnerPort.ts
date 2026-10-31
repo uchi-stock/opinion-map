@@ -1,6 +1,6 @@
 import { DescribeTasksCommand, RunTaskCommand, type ECSClient } from "@aws-sdk/client-ecs";
 import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
-import type { RunnerPort } from "./kouchouFargate.js";
+import type { RunnerPort } from "../../../core/src/adapters/kouchouFargate.js";
 
 /** 使う操作だけに絞る。テストでは send を差し替える */
 type Sender = { send: (command: never) => Promise<unknown> };

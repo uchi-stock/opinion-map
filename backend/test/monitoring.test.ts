@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
 import { createTestApp, createTestRepositories, newSubmissionId } from "./helpers.js";
 
 type LogEntry = { event: string; fields: Record<string, unknown> };

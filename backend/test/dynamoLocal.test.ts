@@ -1,9 +1,9 @@
 import { CreateTableCommand, DynamoDBClient, UpdateTimeToLiveCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it } from "vitest";
-import { createDynamoRepositories } from "../src/repositories/dynamoRepositories.js";
+import { createDynamoRepositories } from "../../core/src/repositories/dynamoRepositories.js";
 import { DynamoKvStore, GSI1_NAME } from "../src/repositories/dynamoKvStore.js";
-import { MemoryKvStore, type KvItem, type KvStore } from "../src/repositories/kvStore.js";
+import { MemoryKvStore, type KvItem, type KvStore } from "../../core/src/repositories/kvStore.js";
 
 /**
  * DynamoDB Local(実際の DynamoDB と同じ挙動の、手元用の実装)に対する、保存先の契約テスト。

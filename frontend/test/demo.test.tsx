@@ -160,6 +160,9 @@ describe("デモ版の画面（本物の画面とバックエンドのコード�
   });
   afterEach(() => {
     globalThis.fetch = realFetch;
+    // 差し替えた location を戻し、投稿画面(#post)の状態も、次のテストに持ち越さない
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/");
   });
 
   it("運営者の画面でイベントを作ると、そのイベントのページへ移り、一覧にも出る", async () => {
@@ -183,6 +186,7 @@ describe("デモ版の画面（本物の画面とバックエンドのコード�
     const { sampleSessionId } = await installDemoApi({ storage: window.localStorage, apiBase: "/api" });
     const user = userEvent.setup();
     render(<ParticipantPage sessionId={sampleSessionId!} />);
+    await user.click(await screen.findByRole("link", { name: "意見を投稿する" }));
     await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "デモからの投稿");
     await user.click(screen.getByRole("button", { name: "投稿する" }));
     expect(await screen.findByText("デモからの投稿")).toBeInTheDocument();

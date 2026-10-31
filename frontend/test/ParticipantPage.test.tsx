@@ -7,7 +7,19 @@ import { json, opinion, postCalls, SESSION, stubFetch } from "./helpers.ts";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // 投稿画面(#post)の状態を、次のテストに持ち越さない
+  window.history.replaceState(null, "", "/");
 });
+
+/** 「投稿する」のリンクから、投稿画面を開く */
+async function openPost(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("link", { name: "意見を投稿する" }));
+}
+
+/** ボードが基本。一覧(自分の投稿の編集・削除ができる)へ切り替える */
+async function showList(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "一覧" }));
+}
 
 /** テーマと意見一覧に応答する、簡単なバックエンドの代わり */
 function fakeBackend(options: { session?: object; opinions?: object[]; hidden?: boolean } = {}) {
@@ -26,25 +38,49 @@ function fakeBackend(options: { session?: object; opinions?: object[]; hidden?: 
 }
 
 describe("参加者の画面", () => {
-  it("イベント名・タイトル・問い・投稿についての案内を表示する", async () => {
-    fakeBackend();
+  it("最初は、ボードを見せる。イベント名・タイトル・問いを出し、投稿の案内は、投稿画面に出す", async () => {
+    fakeBackend({ opinions: [opinion("o1", "ボードの意見")] });
+    const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
     expect(await screen.findByText(SESSION.prompt)).toBeInTheDocument();
     expect(screen.getByText(SESSION.eventName)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: SESSION.title })).toBeInTheDocument();
-    const notice = screen.getByRole("region", { name: "投稿について" });
+    // 基本は、ボード(付箋)。投稿のフォームも、案内も、まだ出ない
+    expect((await screen.findAllByTestId("sticky-note")).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("textbox", { name: "あなたの意見" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "投稿について" })).toBeNull();
+    // 「投稿する」のリンクから、従来の投稿画面が出る
+    await openPost(user);
+    const notice = await screen.findByRole("region", { name: "投稿について" });
     expect(within(notice).getByText(/名前の入力は不要/)).toBeInTheDocument();
     expect(within(notice).getByText(/AIを使って意見を分析/)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "あなたの意見" })).toBeInTheDocument();
+    // 投稿画面では、意見のボードを出さない(投稿に集中する)
+    expect(screen.queryByTestId("sticky-note")).toBeNull();
   });
 
-  it("投稿された意見を、新しい順にカードで表示する", async () => {
+  it("投稿画面から、ボードへ戻れる", async () => {
+    fakeBackend({ opinions: [opinion("o1", "ボードの意見")] });
+    const user = userEvent.setup();
+    render(<ParticipantPage sessionId="s1" />);
+    await openPost(user);
+    await screen.findByRole("textbox", { name: "あなたの意見" });
+    await user.click(screen.getByRole("button", { name: "ボードへ戻る" }));
+    expect(await screen.findByText("ボードの意見")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "あなたの意見" })).toBeNull();
+    expect(window.location.hash).toBe("");
+  });
+
+  it("一覧に切り替えると、投稿された意見を、新しい順にカードで表示する", async () => {
     fakeBackend({
       opinions: [
         opinion("o1", "古い意見", "idea", "2026-01-01T00:00:00.000Z"),
         opinion("o2", "新しい意見", "experience", "2026-01-01T00:05:00.000Z"),
       ],
     });
+    const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
+    await showList(user);
     const cards = await screen.findAllByTestId("opinion-card");
     expect(cards.map((c) => c.textContent)).toEqual([expect.stringContaining("新しい意見"), expect.stringContaining("古い意見")]);
   });
@@ -55,18 +91,22 @@ describe("参加者の画面", () => {
     expect(await screen.findByText("まだ投稿はありません。")).toBeInTheDocument();
   });
 
-  it("投稿を受け付けていないときは、フォームを出さない", async () => {
+  it("投稿を受け付けていないときは、投稿リンクを出さず、その旨を出す", async () => {
     fakeBackend({ session: { acceptingOpinions: false, status: "closed" } });
     render(<ParticipantPage sessionId="s1" />);
     expect(await screen.findByText("現在、投稿を受け付けていません。")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "意見を投稿する" })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
-  it("一覧を見せない設定のときは、一覧を出さず、案内にも書く", async () => {
+  it("一覧を見せない設定のときは、ボードを出さず、投稿画面の案内にも書く", async () => {
     fakeBackend({ session: { showOpinions: false }, hidden: true });
+    const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
-    expect(await screen.findByText(/運営者にだけ表示されます/)).toBeInTheDocument();
+    await screen.findByRole("link", { name: "意見を投稿する" });
     expect(screen.queryByRole("region", { name: "投稿された意見" })).toBeNull();
+    await openPost(user);
+    expect(await screen.findByText(/運営者にだけ表示されます/)).toBeInTheDocument();
   });
 
   it("存在しないテーマでは、見つからない旨を表示する", async () => {
@@ -90,14 +130,18 @@ describe("参加者の画面", () => {
     expect(await screen.findByText(SESSION.prompt)).toBeInTheDocument();
   });
 
-  it("投稿すると、一覧に自分の意見が加わる", async () => {
+  it("投稿すると、ボードに戻り、投稿しましたと出て、自分の意見が加わる", async () => {
     const mock = fakeBackend({ opinions: [opinion("o1", "既存の意見")] });
     const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
+    await openPost(user);
     await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "私の意見です");
     await user.click(screen.getByRole("button", { name: "投稿する" }));
+    // ボードに戻る
+    expect(await screen.findByText("投稿しました。ありがとうございます。")).toBeInTheDocument();
     expect(await screen.findByText("私の意見です")).toBeInTheDocument();
     expect(screen.getByText("既存の意見")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "あなたの意見" })).toBeNull();
     expect(postCalls(mock)).toHaveLength(1);
     const [, init] = postCalls(mock)[0] ?? [];
     const sent = JSON.parse(String((init as RequestInit).body));
@@ -108,23 +152,27 @@ describe("参加者の画面", () => {
     expect(sent.editKey).not.toBe(sent.submissionId);
   });
 
-  it("自分の投稿にだけ、編集と削除の操作を出す", async () => {
+  it("自分の投稿にだけ、編集と削除の操作を出す(一覧で)", async () => {
     window.localStorage.removeItem("opinion-map-my-opinions");
     fakeBackend({ opinions: [opinion("o1", "他の人の意見")] });
     const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
+    await openPost(user);
     await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "私の意見です");
     await user.click(screen.getByRole("button", { name: "投稿する" }));
     await screen.findByText("私の意見です");
+    await showList(user);
     // 操作が出るのは、自分の投稿の1件だけ
-    expect(screen.getAllByRole("button", { name: "編集する" })).toHaveLength(1);
+    expect(await screen.findAllByRole("button", { name: "編集する" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "削除する" })).toHaveLength(1);
   });
 
-  it("投稿を受け付けていないときは、削除だけできる", async () => {
+  it("投稿を受け付けていないときは、削除だけできる(一覧で)", async () => {
     window.localStorage.setItem("opinion-map-my-opinions", JSON.stringify({ o1: "k".repeat(22) }));
     fakeBackend({ session: { acceptingOpinions: false }, opinions: [opinion("o1", "自分の意見")] });
+    const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
+    await showList(user);
     await screen.findByText("自分の意見");
     expect(screen.queryByRole("button", { name: "編集する" })).toBeNull();
     expect(screen.getByRole("button", { name: "削除する" })).toBeInTheDocument();
@@ -135,10 +183,11 @@ describe("参加者の画面", () => {
     const mock = fakeBackend();
     const user = userEvent.setup();
     render(<ParticipantPage sessionId="s1" />);
+    await openPost(user);
     await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "一度だけ");
     const button = screen.getByRole("button", { name: "投稿する" });
     await user.dblClick(button);
-    await waitFor(() => expect(screen.getAllByTestId("opinion-card")).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByTestId("sticky-note")).toHaveLength(1));
     expect(postCalls(mock)).toHaveLength(1);
   });
 
@@ -190,7 +239,7 @@ describe("見ていることの通知", () => {
       return json({ error: { code: "not_found", message: "なし" } }, 404);
     });
     render(<ParticipantPage sessionId="s1" />);
-    await screen.findByRole("form", { name: "意見の投稿フォーム" });
+    await screen.findByRole("link", { name: "意見を投稿する" });
     const sent = mock.mock.calls.filter(([url]) => String(url).endsWith("/sessions/s1/presence"));
     expect(sent).toHaveLength(1);
     const body = JSON.parse(String((sent[0]![1] as RequestInit).body)) as { deviceId: string };
@@ -209,7 +258,7 @@ describe("イベントのほかのテーマへの導線", () => {
     expect(await screen.findByRole("link", { name: "このイベントのほかのテーマを見る" })).toHaveAttribute("href", "/e/e1");
     unmount();
     render(<ParticipantPage sessionId="s1" embedded />);
-    await screen.findByRole("form", { name: "意見の投稿フォーム" });
+    await screen.findByRole("link", { name: "意見を投稿する" });
     expect(screen.queryByRole("link", { name: "このイベントのほかのテーマを見る" })).toBeNull();
   });
 });

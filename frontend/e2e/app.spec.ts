@@ -24,6 +24,13 @@ test.describe("参加者の画面", () => {
   test("意見を投稿し、一覧に出て、いいねできる", async ({ page }, testInfo) => {
     await page.goto("/");
     await page.getByRole("link", { name: "参加者の画面（サンプル）" }).click();
+    // 基本は、ボード(ホワイトボード)。投稿は、リンクから開く
+    await expect(page.getByTestId("sticky-note").first()).toBeVisible();
+    await expect(page.getByRole("form", { name: "意見の投稿フォーム" })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `participant-board-${testInfo.project.name}`, `参加者のボード(${testInfo.project.name})`);
+
+    await page.getByRole("link", { name: "意見を投稿する" }).click();
     await expect(page.getByRole("form", { name: "意見の投稿フォーム" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `participant-form-${testInfo.project.name}`, `参加者の投稿画面(${testInfo.project.name})`);
@@ -83,9 +90,13 @@ test.describe("管理画面", () => {
     // 設定のフォームより前に、意見が出ている(画面の上のほうにある)
     const top = await opinions.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
     expect(top).toBeLessThan(700);
-    await page.getByRole("button", { name: "ボード" }).click();
+    // 基本はボード。意見の管理は、リンクから開く
     await expect(page.getByTestId("sticky-note").first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await captureScreenshot(page, testInfo, `admin-theme-board-${testInfo.project.name}`, `テーマのページ・ボード(${testInfo.project.name})`);
+    await page.getByRole("link", { name: "意見を管理する" }).click();
+    await expect(page.getByRole("button", { name: "ボードへ戻る" })).toBeVisible();
+    await page.getByRole("button", { name: "ボードへ戻る" }).click();
+    await expect(page.getByTestId("sticky-note").first()).toBeVisible();
   });
 });

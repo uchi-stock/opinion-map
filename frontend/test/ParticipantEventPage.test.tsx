@@ -42,7 +42,9 @@ describe("招待URLの画面", () => {
     expect(nav.getByText("投稿中")).toBeInTheDocument();
     expect(nav.getByText("閲覧のみ")).toBeInTheDocument();
     expect(nav.getByText("（2件）")).toBeInTheDocument();
-    expect(screen.getByRole("form", { name: "意見の投稿フォーム" })).toBeInTheDocument();
+    // 基本は、ボード。投稿は、リンクから開く
+    expect(await screen.findByRole("link", { name: "意見を投稿する" })).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "意見の投稿フォーム" })).toBeNull();
   });
 
   it("別のテーマを選ぶと、その意見を見られる。投稿はできない旨を出す", async () => {

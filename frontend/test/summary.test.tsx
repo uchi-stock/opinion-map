@@ -120,9 +120,9 @@ describe("参加者の画面の、要約の見方", () => {
     await user.click(await screen.findByRole("button", { name: "要約（AI）" }));
     expect(await screen.findByTestId("summary-view")).toBeInTheDocument();
     expect(screen.getByText("公開された概要")).toBeInTheDocument();
-    expect(screen.queryByRole("form", { name: "意見の投稿フォーム" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "意見を投稿する" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "そのまま（原文）" }));
-    expect(await screen.findByRole("form", { name: "意見の投稿フォーム" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "意見を投稿する" })).toBeInTheDocument();
   });
 });
 
@@ -170,7 +170,7 @@ describe("運営者の画面の、要約の見方", () => {
     await user.click(screen.getByLabelText("この要約を参加者に公開する"));
     await vi.waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ summaryPublished: true }));
     await user.click(screen.getByRole("button", { name: "そのまま（原文）" }));
-    expect(await screen.findByTestId("opinion-card")).toHaveTextContent("駅から遠い");
+    expect(await screen.findByTestId("sticky-note")).toHaveTextContent("駅から遠い");
     expect(screen.queryByTestId("summary-view")).toBeNull();
     clearAdminToken();
   });

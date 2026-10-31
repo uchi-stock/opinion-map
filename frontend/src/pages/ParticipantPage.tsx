@@ -13,6 +13,7 @@ import { getVoterId } from "../lib/reactions.ts";
 import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 import { withBase } from "../lib/paths.ts";
+import { useHashFlag } from "../lib/useHashFlag.ts";
 
 /** 見ていることを知らせる間隔。サーバーが数える時間(90秒)より、短くする */
 const PRESENCE_INTERVAL_MS = 30_000;
@@ -54,7 +55,11 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
   const [listState, setListState] = useState<ListState>({ status: "loading" });
   // 自分の投稿の鍵。このブラウザにだけある
   const [mine, setMine] = useState<Record<string, string>>(() => loadMyOpinions());
-  const [mode, setMode] = useState<ViewMode>("list");
+  // ボードが基本。一覧は、自分の投稿の編集・削除に使う
+  const [mode, setMode] = useState<ViewMode>("board");
+  // 「投稿する」のリンク(#post)で、従来の投稿画面を開く
+  const [composing, setComposing] = useHashFlag("post");
+  const [posted, setPosted] = useState(false);
   // 運営者が公開した要約があるときだけ、「要約」の見方を出す
   const [summary, setSummary] = useState<PublicSummaryResponse | null>(null);
   const [view, setView] = useState<ContentView>("raw");
@@ -97,6 +102,9 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
   function handleSubmitted(_result: OpinionResult) {
     setMine(loadMyOpinions());
     void loadList();
+    // 投稿したら、ボードに戻る。投稿できたことは、ボードに出す
+    setPosted(true);
+    setComposing(false);
   }
 
   function handleDeleted(id: string) {
@@ -149,22 +157,19 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
         <p className="lead mb-0">{session.prompt}</p>
       </header>
 
-      <ViewTabs view={view} onChange={setView} summaryAvailable={summary?.published === true} />
-      {view === "summary" && summary?.published === true ? (
-        <SummaryView
-          audience="participant"
-          opinions={listState.status === "ready" ? listState.list.opinions : []}
-          data={{
-            overview: summary.overview,
-            clusters: summary.clusters,
-            unclassifiedCount: summary.unclassifiedCount,
-            ...(summary.unclassifiedOpinionIds ? { unclassifiedOpinionIds: summary.unclassifiedOpinionIds } : {}),
-            insights: summary.insights.map((i) => ({ ...i, approved: true })),
-            newOpinionCount: summary.newOpinionCount,
-          }}
-        />
-      ) : (
+      {composing ? (
         <>
+      <div className="mb-3">
+        <button
+          type="button"
+          className="btn icon-btn btn-sm btn-outline-secondary"
+          onClick={() => setComposing(false)}
+          aria-label="ボードへ戻る"
+          title="ボードへ戻る"
+        >
+          ⬅️
+        </button>
+      </div>
       <section className="mb-4" aria-label="投稿について">
         <div className="card bg-body-tertiary">
           <div className="card-body small">
@@ -199,10 +204,52 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
         )}
       </section>
 
+        </>
+      ) : (
+        <>
+      <ViewTabs view={view} onChange={setView} summaryAvailable={summary?.published === true} />
+      {view === "summary" && summary?.published === true ? (
+        <SummaryView
+          audience="participant"
+          opinions={listState.status === "ready" ? listState.list.opinions : []}
+          data={{
+            overview: summary.overview,
+            clusters: summary.clusters,
+            unclassifiedCount: summary.unclassifiedCount,
+            ...(summary.unclassifiedOpinionIds ? { unclassifiedOpinionIds: summary.unclassifiedOpinionIds } : {}),
+            insights: summary.insights.map((i) => ({ ...i, approved: true })),
+            newOpinionCount: summary.newOpinionCount,
+          }}
+        />
+      ) : (
+        <>
+      {posted && (
+        <div className="alert alert-success" role="status">
+          投稿しました。ありがとうございます。
+        </div>
+      )}
+      <section className="mb-3" aria-label="投稿する">
+        {session.acceptingOpinions ? (
+          <a
+            className="btn icon-btn btn-primary w-100"
+            href="#post"
+            onClick={() => setPosted(false)}
+            aria-label="意見を投稿する"
+            title="意見を投稿する"
+          >
+            ✍️
+          </a>
+        ) : (
+          <div className="alert alert-secondary mb-0" role="status">
+            現在、投稿を受け付けていません。
+          </div>
+        )}
+      </section>
+
       {session.showOpinions && (
         <section aria-label="投稿された意見">
           <div className="d-flex justify-content-between align-items-center mb-2">
-            <h2 className="h5 mb-0">投稿された意見</h2>
+            <h2 className="h6 mb-0">投稿された意見</h2>
             <div className="d-flex gap-2">
               <ViewToggle mode={mode} onChange={setMode} />
               <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void loadList()} aria-label="更新" title="更新">🔄</button>
@@ -257,6 +304,8 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
               </div>
             ))}
         </section>
+      )}
+        </>
       )}
         </>
       )}

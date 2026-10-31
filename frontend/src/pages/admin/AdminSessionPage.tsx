@@ -5,11 +5,12 @@ import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { SummaryView } from "../../components/SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
-import { StickyBoard, ViewToggle, type ViewMode } from "../../components/StickyBoard.tsx";
+import { StickyBoard } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
 import { FORMAT_LABELS, SESSION_STATUS_LABELS } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
+import { useHashFlag } from "../../lib/useHashFlag.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
 export function AdminSessionPage({ eventId, sessionId }: { eventId: string; sessionId: string }) {
@@ -65,7 +66,8 @@ function SessionContent({
     [api, eventId, sessionId],
   );
 
-  const [mode, setMode] = useState<ViewMode>("list");
+  // ボード(ホワイトボード)が基本。「意見を管理する」のリンク(#manage)で、管理者向けの更新画面(一覧と、非表示・削除)を開く
+  const [managing, setManaging] = useHashFlag("manage");
   const [view, setView] = useState<ContentView>("raw");
 
   if (state.status === "loading") return <p role="status">読み込んでいます…</p>;
@@ -119,30 +121,52 @@ function SessionContent({
         </section>
       ) : (
       <section aria-label="投稿された意見">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
-          <div className="d-flex gap-2">
-            <ViewToggle mode={mode} onChange={setMode} />
-            <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void reload()} aria-label="更新" title="更新">🔄</button>
-          </div>
-        </div>
-        {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
-        {mode === "board" && opinions.length > 0 && (
-          <StickyBoard groups={analysis ? groupByClusters(opinions, analysis) : groupByKind(opinions)} />
+        {managing ? (
+          <>
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <button
+                type="button"
+                className="btn icon-btn btn-sm btn-outline-secondary"
+                onClick={() => setManaging(false)}
+                aria-label="ボードへ戻る"
+                title="ボードへ戻る"
+              >
+                ⬅️
+              </button>
+              <h2 className="h6 mb-0">意見の管理（{opinions.length}件）</h2>
+              <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void reload()} aria-label="更新" title="更新">🔄</button>
+            </div>
+            {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
+            {[...opinions].reverse().map((o) => (
+              <div key={o.id} id={opinionAnchor(o.id)}>
+                <OpinionCard opinion={o} actions={<small className="text-body-secondary">いいね {o.reactionCount ?? 0}</small>} />
+                <ModerationControls api={api} opinion={o} describeError={describeError} onChanged={reload} />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
+              <div className="d-flex gap-2">
+                <a className="btn icon-btn btn-sm btn-outline-primary" href="#manage" aria-label="意見を管理する" title="意見を管理する">✏️</a>
+                <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void reload()} aria-label="更新" title="更新">🔄</button>
+              </div>
+            </div>
+            {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
+            {opinions.length > 0 && <StickyBoard groups={analysis ? groupByClusters(opinions, analysis) : groupByKind(opinions)} />}
+          </>
         )}
-        {mode === "list" &&
-          [...opinions].reverse().map((o) => (
-          <div key={o.id} id={opinionAnchor(o.id)}>
-            <OpinionCard opinion={o} actions={<small className="text-body-secondary">いいね {o.reactionCount ?? 0}</small>} />
-            <ModerationControls api={api} opinion={o} describeError={describeError} onChanged={reload} />
-          </div>
-        ))}
       </section>
       )}
-      <hr />
-      <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
-      <hr />
-      <ThemeMenu eventId={eventId} sessionId={sessionId} />
+      {!managing && (
+        <>
+          <hr />
+          <AnalysisPanel api={api} sessionId={sessionId} opinions={opinions} describeError={describeError} />
+          <hr />
+          <ThemeMenu eventId={eventId} sessionId={sessionId} />
+        </>
+      )}
     </>
   );
 }

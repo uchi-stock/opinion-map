@@ -31,6 +31,8 @@ export default defineConfig({
     setupFiles: ["./test/setup.ts"],
     coverage: {
       provider: "v8",
+      // 閾値の判定(CI)が、集計のJSONを読む。閾値を使うときは、設定側で出力する必要がある
+      reporter: ["text", "json-summary"],
       include: ["src/**/*.{ts,tsx}"],
       // 測らないもの(理由つき)
       exclude: [

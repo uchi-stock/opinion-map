@@ -15,6 +15,11 @@ export interface EventRecord {
   name: string;
   description: string;
   status: EventStatus;
+  /**
+   * いま参加者が投稿できるテーマ(セッション)。招待URLがイベントごとに1つなので、運営者が切り替える。
+   * 未設定のイベントは、公開中のセッションすべてに投稿できる(従来の動き)
+   */
+  currentSessionId?: string;
   createdAt: string;
   updatedAt: string;
 }

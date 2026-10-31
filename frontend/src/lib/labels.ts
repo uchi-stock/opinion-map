@@ -19,6 +19,11 @@ export const FORMAT_LABELS: Record<SessionFormat, string> = {
   ost: "オープンスペース",
 };
 
+/** 招待URL。イベントごとに1つで、テーマの切り替えは運営者が行う */
+export function eventInviteUrl(eventId: string): string {
+  return `${window.location.origin}${withBase(`/e/${encodeURIComponent(eventId)}`)}`;
+}
+
 export function participantUrl(sessionId: string): string {
   return `${window.location.origin}${withBase(`/s/${encodeURIComponent(sessionId)}`)}`;
 }

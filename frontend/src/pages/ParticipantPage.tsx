@@ -20,11 +20,28 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; list: OpinionList };
 
+function MainShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="container py-4" style={{ maxWidth: 640 }}>
+      {children}
+    </main>
+  );
+}
+
+function EmbeddedShell({ children }: { children: React.ReactNode }) {
+  return <div>{children}</div>;
+}
+
 function errorMessage(e: unknown): string {
   return e instanceof ApiError ? e.message : "読み込みに失敗しました。";
 }
 
-export function ParticipantPage({ sessionId }: { sessionId: string }) {
+/**
+ * セッション(テーマ)の画面。embedded のときは、イベントの招待URLの画面の中に置かれる
+ * (外側の main と、イベント名は、親が出す)。
+ */
+export function ParticipantPage({ sessionId, embedded = false }: { sessionId: string; embedded?: boolean }) {
+  const Shell = embedded ? EmbeddedShell : MainShell;
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [listState, setListState] = useState<ListState>({ status: "loading" });
   // 自分の投稿の鍵。このブラウザにだけある
@@ -67,37 +84,37 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
 
   if (sessionState.status === "loading") {
     return (
-      <main className="container py-4" style={{ maxWidth: 640 }}>
+      <Shell>
         <p role="status">読み込んでいます…</p>
-      </main>
+      </Shell>
     );
   }
   if (sessionState.status === "notFound") {
     return (
-      <main className="container py-4" style={{ maxWidth: 640 }}>
+      <Shell>
         <h1 className="h4">ページが見つかりません</h1>
         <p>URLが正しいか、運営者にご確認ください。まだ公開されていない可能性もあります。</p>
-      </main>
+      </Shell>
     );
   }
   if (sessionState.status === "error") {
     return (
-      <main className="container py-4" style={{ maxWidth: 640 }}>
+      <Shell>
         <div className="alert alert-danger" role="alert">
           {sessionState.message}
         </div>
         <button type="button" className="btn btn-outline-primary" onClick={() => void loadSession()}>
           もう一度読み込む
         </button>
-      </main>
+      </Shell>
     );
   }
 
   const { session } = sessionState;
   return (
-    <main className="container py-4" style={{ maxWidth: 640 }}>
+    <Shell>
       <header className="mb-4">
-        <p className="text-body-secondary small mb-1">{session.eventName}</p>
+        {!embedded && <p className="text-body-secondary small mb-1">{session.eventName}</p>}
         <h1 className="h4">{session.title}</h1>
         <p className="lead mb-0">{session.prompt}</p>
       </header>
@@ -197,6 +214,6 @@ export function ParticipantPage({ sessionId }: { sessionId: string }) {
             ))}
         </section>
       )}
-    </main>
+    </Shell>
   );
 }

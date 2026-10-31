@@ -1,6 +1,6 @@
 import type { EventRecord } from "../domain/types.js";
 import type { EventInput, EventPatch } from "../domain/validation.js";
-import { notFound } from "../lib/errors.js";
+import { badRequest, notFound } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
 
 export function createEventService(ctx: ServiceContext) {
@@ -31,7 +31,21 @@ export function createEventService(ctx: ServiceContext) {
 
     async update(id: string, patch: EventPatch): Promise<EventRecord> {
       const event = await this.get(id);
-      const next: EventRecord = { ...event, ...patch, updatedAt: ctx.now().toISOString() };
+      const { currentSessionId, ...rest } = patch;
+      const next: EventRecord = { ...event, ...rest, updatedAt: ctx.now().toISOString() };
+      if (currentSessionId === null) {
+        delete next.currentSessionId;
+      } else if (currentSessionId !== undefined) {
+        // いまのテーマは、このイベントの、下書きでないセッションだけ
+        const session = await ctx.repos.sessions.get(currentSessionId);
+        if (!session || session.eventId !== id) {
+          throw badRequest("invalid_current_session", "このイベントのテーマを指定してください");
+        }
+        if (session.status === "draft") {
+          throw badRequest("invalid_current_session", "下書きのテーマは、いまのテーマにできません");
+        }
+        next.currentSessionId = currentSessionId;
+      }
       await ctx.repos.events.update(next);
       return next;
     },

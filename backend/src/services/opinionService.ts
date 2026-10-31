@@ -15,10 +15,43 @@ export interface PublicSession {
   eventName: string;
   acceptingOpinions: boolean;
   showOpinions: boolean;
+  /** このセッションが属するイベント(招待URLと、テーマの切り替えに使う) */
+  eventId: string;
+  /** いま参加者が投稿できるテーマか */
+  isCurrent: boolean;
 }
 
+/** 参加者向けの、イベントの公開情報。下書きのテーマは含めない */
+export interface PublicEvent {
+  id: string;
+  name: string;
+  description: string;
+  currentSessionId: string | null;
+  sessions: PublicSession[];
+}
+
+function isCurrent(event: EventRecord, session: SessionRecord): boolean {
+  return event.currentSessionId === undefined || event.currentSessionId === session.id;
+}
+
+/** 投稿を受け付けるのは、公開中のイベントの、公開中で、いまのテーマ(設定があれば)のセッションだけ */
 function isAccepting(event: EventRecord, session: SessionRecord): boolean {
-  return event.status === "active" && session.status === "active";
+  return event.status === "active" && session.status === "active" && isCurrent(event, session);
+}
+
+function toPublicSession(event: EventRecord, session: SessionRecord): PublicSession {
+  return {
+    id: session.id,
+    eventId: event.id,
+    title: session.title,
+    prompt: session.prompt,
+    format: session.format,
+    status: session.status,
+    eventName: event.name,
+    acceptingOpinions: isAccepting(event, session),
+    showOpinions: session.showOpinionsToParticipants,
+    isCurrent: event.currentSessionId !== undefined && event.currentSessionId === session.id,
+  };
 }
 
 /** 1つのセッションが、一定時間に受け付ける投稿の数。誰が書いたかは見ず、全体の量だけを抑える */
@@ -96,15 +129,20 @@ export function createOpinionService(ctx: ServiceContext, rateLimit: OpinionRate
   return {
     async getPublicSession(sessionId: string): Promise<PublicSession> {
       const { event, session } = await loadForParticipant(sessionId);
+      return toPublicSession(event, session);
+    },
+
+    /** 招待URL(イベントごとに1つ)から開く画面の情報。下書きのイベントは、存在しないものとして扱う */
+    async getPublicEvent(eventId: string): Promise<PublicEvent> {
+      const event = await ctx.repos.events.get(eventId);
+      if (!event || event.status === "draft") throw notFound("イベント");
+      const sessions = (await ctx.repos.sessions.listByEvent(eventId)).filter((s) => s.status !== "draft");
       return {
-        id: session.id,
-        title: session.title,
-        prompt: session.prompt,
-        format: session.format,
-        status: session.status,
-        eventName: event.name,
-        acceptingOpinions: isAccepting(event, session),
-        showOpinions: session.showOpinionsToParticipants,
+        id: event.id,
+        name: event.name,
+        description: event.description,
+        currentSessionId: event.currentSessionId ?? null,
+        sessions: sessions.map((s) => toPublicSession(event, s)),
       };
     },
 

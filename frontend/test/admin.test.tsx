@@ -210,6 +210,25 @@ describe("イベントの画面", () => {
     expect(link).toHaveAttribute("href", "/admin/events/e1/sessions/s1");
   });
 
+  it("イベントの招待URLとQRコードを1つ出す", async () => {
+    fakeAdminBackend();
+    render(<AdminEventPage eventId="e1" />);
+    const section = await screen.findByRole("region", { name: "参加者の招待URL" });
+    expect((within(section).getByLabelText("招待URL") as HTMLInputElement).value).toMatch(/\/e\/e1$/);
+    expect(within(section).getByRole("img", { name: "招待URLのQRコード" })).toBeInTheDocument();
+  });
+
+  it("「いまのテーマにする」で切り替える。下書きのテーマには、ボタンを出さない", async () => {
+    const { calls } = fakeAdminBackend({
+      sessions: [session(), session({ id: "s2", title: "下書きのテーマ", status: "draft" })],
+    });
+    const user = userEvent.setup();
+    render(<AdminEventPage eventId="e1" />);
+    await user.click(await screen.findByRole("button", { name: "ワークショップAをいまのテーマにする" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ currentSessionId: "s1" }));
+    expect(screen.queryByRole("button", { name: "下書きのテーマをいまのテーマにする" })).toBeNull();
+  });
+
   it("存在しないイベントでは、見つからない旨を出す", async () => {
     fakeAdminBackend();
     render(<AdminEventPage eventId="nope" />);

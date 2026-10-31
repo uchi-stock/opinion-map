@@ -1,4 +1,4 @@
-import type { OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
+import type { PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -42,6 +42,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const enc = encodeURIComponent;
+
+export function getPublicEvent(eventId: string): Promise<PublicEvent> {
+  return request<PublicEvent>(`/events/${enc(eventId)}/public`);
+}
 
 export function getSession(sessionId: string): Promise<PublicSession> {
   return request<PublicSession>(`/sessions/${enc(sessionId)}`);

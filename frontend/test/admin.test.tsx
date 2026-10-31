@@ -36,7 +36,13 @@ const session = (over: Partial<SessionRecord> = {}): SessionRecord => ({
 
 /** 運営者向けAPIの代わり。状態を持ち、呼び出しを記録する */
 function fakeAdminBackend(
-  initial: { events?: EventRecord[]; sessions?: SessionRecord[]; opinions?: ReturnType<typeof opinion>[]; proposals?: Proposal[] } = {},
+  initial: {
+    events?: EventRecord[];
+    sessions?: SessionRecord[];
+    opinions?: ReturnType<typeof opinion>[];
+    proposals?: Proposal[];
+    me?: Record<string, unknown>;
+  } = {},
 ) {
   const state = {
     proposals: [...(initial.proposals ?? [])],
@@ -54,6 +60,7 @@ function fakeAdminBackend(
     if (headers["authorization"] !== `Bearer ${TOKEN}`) {
       return json({ error: { code: "unauthorized", message: "認証が必要です" } }, 401);
     }
+    if (method === "GET" && path === "/me") return json(initial.me ?? { role: "owner" });
     if (method === "GET" && path === "/events") return json({ events: state.events });
     if (method === "POST" && path === "/events") {
       const created = event({ id: `e${state.events.length + 1}`, name: body.name, description: body.description, status: "draft" });
@@ -185,15 +192,70 @@ describe("トークンの入力", () => {
     expect(screen.getByLabelText("運営者のトークン")).toBeInTheDocument();
   });
 
-  it("「トークンを消す」で、入力画面に戻る", async () => {
+  it("左上のアイコンをタップして「ログアウト」すると、入力画面に戻る", async () => {
     fakeAdminBackend();
     saveAdminToken(TOKEN);
     const user = userEvent.setup();
     render(<AdminEventsPage />);
     await screen.findByText("カンファレンス");
-    await user.click(screen.getByRole("button", { name: "トークンを消す" }));
+    await user.click(screen.getByRole("button", { name: "アカウントのメニュー" }));
+    await user.click(screen.getByRole("menuitem", { name: "ログアウト" }));
     expect(screen.getByLabelText("運営者のトークン")).toBeInTheDocument();
     expect(loadAdminToken()).toBeNull();
+  });
+});
+
+describe("アカウントのアイコン", () => {
+  beforeEach(() => saveAdminToken(TOKEN));
+
+  it("ログイン中のメールの頭文字がアイコンになり、タップするとメールが出る。もう一度タップすると閉じる", async () => {
+    fakeAdminBackend({ me: { role: "owner", email: "alice@example.com" } });
+    const user = userEvent.setup();
+    render(<AdminEventsPage />);
+    const button = await screen.findByRole("button", { name: "アカウントのメニュー" });
+    expect(await within(button).findByText("A")).toBeInTheDocument();
+    expect(screen.queryByText("alice@example.com")).toBeNull();
+    await user.click(button);
+    expect(screen.getByText("alice@example.com")).toBeInTheDocument();
+    await user.click(button);
+    expect(screen.queryByText("alice@example.com")).toBeNull();
+  });
+
+  it("プロフィール画像があれば画像を出す。リファラーは送らない。Google 以外のURLは使わない", async () => {
+    fakeAdminBackend({ me: { role: "owner", email: "alice@example.com", picture: "https://lh3.googleusercontent.com/a/abc" } });
+    const { unmount } = render(<AdminEventsPage />);
+    // 読み込み前は頭文字の丸(同じ役割)。画像に切り替わるまで待つ
+    await waitFor(() => expect(screen.getByRole("img", { name: "ログイン中のアカウント" }).tagName).toBe("IMG"));
+    const img = screen.getByRole("img", { name: "ログイン中のアカウント" });
+    expect(img).toHaveAttribute("src", "https://lh3.googleusercontent.com/a/abc");
+    expect(img).toHaveAttribute("referrerpolicy", "no-referrer");
+    unmount();
+
+    fakeAdminBackend({ me: { role: "owner", email: "bob@example.com", picture: "https://evil.example.com/x.png" } });
+    render(<AdminEventsPage />);
+    const button = await screen.findByRole("button", { name: "アカウントのメニュー" });
+    expect(await within(button).findByText("B")).toBeInTheDocument();
+    expect(within(button).getByRole("img").tagName).toBe("SPAN");
+  });
+
+  it("メールが無い(トークンでのログイン)ときは、汎用の表示にする", async () => {
+    fakeAdminBackend({ me: { role: "owner" } });
+    const user = userEvent.setup();
+    render(<AdminEventsPage />);
+    await user.click(await screen.findByRole("button", { name: "アカウントのメニュー" }));
+    expect(screen.getByText("トークンでログイン中")).toBeInTheDocument();
+  });
+
+  it("アカウントの情報を読めなくても、ログアウトできる", async () => {
+    const mock = fakeAdminBackend();
+    const original = mock.mock.getMockImplementation()!;
+    mock.mock.mockImplementation(async (url, init) =>
+      String(url).endsWith("/me") ? json({ error: { code: "server_error", message: "失敗" } }, 500) : original(url, init),
+    );
+    const user = userEvent.setup();
+    render(<AdminEventsPage />);
+    await user.click(await screen.findByRole("button", { name: "アカウントのメニュー" }));
+    expect(screen.getByRole("menuitem", { name: "ログアウト" })).toBeInTheDocument();
   });
 });
 
@@ -206,6 +268,25 @@ describe("イベント一覧", () => {
     const link = (await screen.findByText("別のイベント")).closest("a");
     expect(link).toHaveAttribute("href", "/admin/events/e2");
     expect(within(link!).getByText("下書き")).toBeInTheDocument();
+  });
+
+  it("作った管理者のアイコンと、作成日(日本時間)を出す。作成者が不明の以前のイベントは、作成日だけ", async () => {
+    fakeAdminBackend({
+      events: [
+        event({ id: "e1", name: "新しいイベント", createdBy: "alice@example.com", createdAt: "2026-10-31T16:30:00.000Z" }),
+        event({ id: "e2", name: "トークンで作った", createdBy: "(token)" }),
+        event({ id: "e3", name: "以前のイベント" }),
+      ],
+    });
+    render(<AdminEventsPage />);
+    const row = (await screen.findByText("新しいイベント")).closest("a")!;
+    expect(within(row).getByText("作成日 2026/11/1")).toBeInTheDocument();
+    expect(within(row).getByRole("img", { name: "作成者: alice@example.com" })).toHaveTextContent("A");
+    const token = screen.getByText("トークンで作った").closest("a")!;
+    expect(within(token).getByRole("img", { name: "作成者: トークン" })).toBeInTheDocument();
+    const old = screen.getByText("以前のイベント").closest("a")!;
+    expect(within(old).queryByRole("img")).toBeNull();
+    expect(within(old).getByText(/作成日 /)).toBeInTheDocument();
   });
 
   it("イベントがないときは、案内を出す", async () => {

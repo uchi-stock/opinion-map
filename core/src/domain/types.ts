@@ -30,6 +30,8 @@ export interface EventRecord {
   acceptingProposals?: boolean;
   /** 承認前の提案を、参加者に見せるか。既定は見せない(運営者が確認してから見せる) */
   showPendingProposals?: boolean;
+  /** 作った管理者のメール。トークンで作ったときは "(token)"。以前に作ったイベントには無い */
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,6 +136,8 @@ export interface AdminRecord {
   addedAt: string;
   /** 追加した管理者のメール。環境変数からの初期登録は "(seed)" */
   addedBy: string;
+  /** Google のプロフィール画像のURL。ログインしたときに、更新する。無いこともある */
+  picture?: string;
 }
 
 export interface OperatorTokenRecord {

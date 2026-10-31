@@ -27,3 +27,10 @@ export function eventInviteUrl(eventId: string): string {
 export function participantUrl(sessionId: string): string {
   return `${window.location.origin}${withBase(`/s/${encodeURIComponent(sessionId)}`)}`;
 }
+
+/** 日付(日本時間)。例: 2026/10/31。読めない値は、そのまま返す */
+export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "numeric", day: "numeric" }).format(date);
+}

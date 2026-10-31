@@ -2,7 +2,8 @@ import { useState, type FormEvent } from "react";
 import type { AdminApi } from "../../api/admin.ts";
 import { AdminListSection } from "../../components/admin/AdminListSection.tsx";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
-import { EVENT_STATUS_LABELS } from "../../lib/labels.ts";
+import { Avatar } from "../../components/admin/Avatar.tsx";
+import { EVENT_STATUS_LABELS, formatDate } from "../../lib/labels.ts";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
 
@@ -63,9 +64,22 @@ function EventsContent({
               href={withBase(`/admin/events/${encodeURIComponent(event.id)}`)}
               className="card mb-2 text-decoration-none"
             >
-              <div className="card-body py-2 d-flex justify-content-between align-items-center">
-                <span className="text-body">{event.name}</span>
-                <span className="badge text-bg-secondary">{EVENT_STATUS_LABELS[event.status]}</span>
+              <div className="card-body py-2 d-flex justify-content-between align-items-center gap-2">
+                <span className="d-flex align-items-center gap-2 min-w-0">
+                  {event.createdBy !== undefined && (
+                    <Avatar
+                      email={event.createdBy.startsWith("(") ? undefined : event.createdBy}
+                      picture={event.creatorPicture}
+                      size={32}
+                      label={`作成者: ${event.createdBy.startsWith("(") ? "トークン" : event.createdBy}`}
+                    />
+                  )}
+                  <span className="text-body">
+                    {event.name}
+                    <span className="d-block small text-body-secondary">作成日 {formatDate(event.createdAt)}</span>
+                  </span>
+                </span>
+                <span className="badge text-bg-secondary flex-shrink-0">{EVENT_STATUS_LABELS[event.status]}</span>
               </div>
             </a>
           ))}

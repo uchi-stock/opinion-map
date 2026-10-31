@@ -20,6 +20,14 @@ interface Jwk {
 export interface GoogleIdentity {
   sub: string;
   email: string;
+  /** プロフィール画像のURL。Google の画像の配信元(https)のときだけ */
+  picture?: string;
+}
+
+/** 画像のURLは、あとで <img> に使うため、Google の配信元の https だけを受け取る */
+export function safeGooglePicture(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 500) return undefined;
+  return /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.googleusercontent\.com\/[^\s"'<>]*$/.test(value) ? value : undefined;
 }
 
 const invalid = (message = "Googleのトークンが正しくありません") => new AppError(401, "invalid_google_token", message);
@@ -88,6 +96,7 @@ export function createGoogleVerifier(options: GoogleVerifierOptions) {
     if (typeof claims["exp"] !== "number" || claims["exp"] * 1000 <= now().getTime()) throw invalid("Googleのトークンの期限が切れています");
     if (typeof claims["sub"] !== "string" || typeof claims["email"] !== "string") throw invalid();
     if (claims["email_verified"] !== true) throw invalid("Googleのメールアドレスが確認されていません");
-    return { sub: claims["sub"], email: claims["email"] };
+    const picture = safeGooglePicture(claims["picture"]);
+    return { sub: claims["sub"], email: claims["email"], ...(picture ? { picture } : {}) };
   };
 }

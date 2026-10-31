@@ -35,6 +35,14 @@ export function createAdminService(ctx: ServiceContext, seedEmails: readonly str
       return (await ctx.repos.admins.get(email)) !== undefined;
     },
 
+    /** ログインしたときに、プロフィール画像を覚える(イベント一覧のアイコンに使う)。変わっていなければ、書かない */
+    async recordProfile(rawEmail: string, picture: string | undefined): Promise<void> {
+      const admin = await ctx.repos.admins.get(normalizeEmail(rawEmail));
+      if (!admin || admin.picture === picture) return;
+      const { picture: _old, ...rest } = admin;
+      await ctx.repos.admins.update({ ...rest, ...(picture ? { picture } : {}) });
+    },
+
     async list(): Promise<AdminRecord[]> {
       await seedIfEmpty();
       return ctx.repos.admins.list();

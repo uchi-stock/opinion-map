@@ -184,6 +184,7 @@ export function createApp(options: AppOptions) {
         if (!(await admins.isAdmin(identity.email))) {
           throw forbidden("not_owner", "このアカウントは、運営者として登録されていません");
         }
+        await admins.recordProfile(identity.email, identity.picture);
         const iat = Math.floor(ctx.now().getTime() / 1000);
         const exp = iat + (login.sessionSeconds ?? DEFAULT_SESSION_SECONDS);
         const token = await signSession({ sub: identity.sub, email: identity.email, iat, exp }, login.sessionSecret);
@@ -195,13 +196,15 @@ export function createApp(options: AppOptions) {
       pattern: /^\/me$/,
       admin: true,
       anyOperator: true,
-      handle: async ({ principal }) => ({
-        status: 200,
-        data:
-          principal?.kind === "operator"
-            ? { role: "operator", eventId: principal.eventId }
-            : { role: "owner", ...(principal?.email ? { email: principal.email } : {}) },
-      }),
+      handle: async ({ principal }) => {
+        if (principal?.kind === "operator") return { status: 200, data: { role: "operator", eventId: principal.eventId } };
+        // ログイン中のアカウントのアイコン(Googleのプロフィール画像)。無ければ、画面が頭文字で代わりにする
+        const picture = principal?.email ? (await ctx.repos.admins.get(principal.email.toLowerCase()))?.picture : undefined;
+        return {
+          status: 200,
+          data: { role: "owner", ...(principal?.email ? { email: principal.email } : {}), ...(picture ? { picture } : {}) },
+        };
+      },
     },
     {
       method: "GET",
@@ -262,7 +265,10 @@ export function createApp(options: AppOptions) {
       pattern: /^\/events$/,
       admin: true,
       ownerOnly: true,
-      handle: async ({ body }) => ({ status: 201, data: await events.create(parseEventCreate(body)) }),
+      handle: async ({ body, principal }) => ({
+        status: 201,
+        data: await events.create(parseEventCreate(body), principal?.kind === "owner" && principal.email ? principal.email : "(token)"),
+      }),
     },
     {
       method: "GET",
@@ -271,8 +277,18 @@ export function createApp(options: AppOptions) {
       anyOperator: true,
       handle: async ({ principal }) => {
         const all = await events.list();
-        const visible = principal?.kind === "operator" ? all.filter((e) => e.id === principal.eventId) : all;
-        return { status: 200, data: { events: visible } };
+        if (principal?.kind === "operator") {
+          // 運営者のトークンには、管理者のメールを見せない
+          const own = all.filter((e) => e.id === principal.eventId).map(({ createdBy: _hidden, ...rest }) => rest);
+          return { status: 200, data: { events: own } };
+        }
+        // 作った管理者のプロフィール画像を、一覧に添える
+        const pictures = new Map((await admins.list()).map((a) => [a.email, a.picture]));
+        const withCreator = all.map((e) => {
+          const picture = e.createdBy ? pictures.get(e.createdBy) : undefined;
+          return picture ? { ...e, creatorPicture: picture } : e;
+        });
+        return { status: 200, data: { events: withCreator } };
       },
     },
     {

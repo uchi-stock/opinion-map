@@ -114,8 +114,20 @@ export interface EventRecord {
   openSessionIds?: string[];
   acceptingProposals?: boolean;
   showPendingProposals?: boolean;
+  /** 作った管理者のメール。トークンで作ったときは "(token)"。以前のイベントや、運営者のトークンの一覧には無い */
+  createdBy?: string;
+  /** 作った管理者のプロフィール画像のURL(一覧のときだけ) */
+  creatorPicture?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** ログイン中のアカウント */
+export interface Me {
+  role: "owner" | "operator";
+  email?: string;
+  picture?: string;
+  eventId?: string;
 }
 
 export interface SessionRecord {

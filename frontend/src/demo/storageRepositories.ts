@@ -278,6 +278,11 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         write(d);
         return true;
       },
+      async update(admin) {
+        const d = read();
+        d.admins = d.admins.map((a) => (a.email === admin.email ? { ...admin } : a));
+        write(d);
+      },
       async remove(email) {
         const d = read();
         const next = d.admins.filter((a) => a.email !== email);

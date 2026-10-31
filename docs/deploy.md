@@ -75,6 +75,7 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 - ECS、ECR（分析のタスクとイメージ）
 - SNS（障害通知のトピックとメールの購読。`ALERT_EMAIL` を設定したときに要る）
 - CloudWatch（警報の作成。`PutMetricAlarm` など）
+- EventBridge（1分ごとの定期実行の作成。`PutRule`・`PutTargets` など。テーマの制限時間の締め切りに使う）
 - EC2の参照（`DescribeVpcs`・`DescribeSubnets`・`DescribeSecurityGroups`。分析のタスクを置くネットワークを調べる）
 
 権限が足りないと、`osls deploy` が `AccessDenied` で失敗する。失敗した操作名がログに出るので、その権限を足す。
@@ -82,7 +83,7 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 ### 権限の足し方（スマホで完結）
 
 1. スマホのブラウザで、AWS コンソールの IAM → ユーザーを開き、デプロイ用のユーザーを選ぶ
-2. 「許可を追加」→「ポリシーを直接アタッチ」で、`AmazonSNSFullAccess` と `CloudWatchFullAccess` を選んで追加する
+2. 「許可を追加」→「ポリシーを直接アタッチ」で、`AmazonSNSFullAccess`、`CloudWatchFullAccess`、`AmazonEventBridgeFullAccess` を選んで追加する
 3. GitHub の Actions →「CD」→「Run workflow」で、デプロイをやり直す
 
 広い権限なので、気になるときは、次のように絞ったインラインポリシーに置き換えてよい。
@@ -91,6 +92,7 @@ AWS のキーは必須である。オーナーのログインは、Google ログ
 - SNS のトピックの属性・タグ: `GetTopicAttributes`、`SetTopicAttributes`、`TagResource`
 - SNS のメール購読: `Subscribe`、`Unsubscribe`、`ListSubscriptionsByTopic`
 - CloudWatch の警報: `PutMetricAlarm`、`DeleteAlarms`、`DescribeAlarms`、`TagResource`
+- EventBridge の定期実行: `PutRule`、`DeleteRule`、`DescribeRule`、`PutTargets`、`RemoveTargets`
 
 ## 初回によくある失敗
 

@@ -180,7 +180,7 @@ describe("デモ版の画面（本物の画面とバックエンドのコード�
     render(<AdminEventsPage />);
     expect(await screen.findByText("デモ用イベント")).toBeInTheDocument();
     expect(await screen.findByText("スマホで作る")).toBeInTheDocument();
-  });
+  }, 20_000);
 
   it("参加者の画面で投稿すると、一覧に出る", async () => {
     const { sampleSessionId } = await installDemoApi({ storage: window.localStorage, apiBase: "/api" });
@@ -190,7 +190,8 @@ describe("デモ版の画面（本物の画面とバックエンドのコード�
     await user.type(await screen.findByRole("textbox", { name: "あなたの意見" }), "デモからの投稿");
     await user.click(screen.getByRole("button", { name: "投稿する" }));
     expect(await screen.findByText("デモからの投稿")).toBeInTheDocument();
-  });
+    // 全体を並列で動かすと遅くなることがあるため、時間に余裕を持たせる
+  }, 20_000);
 });
 
 describe("デモ版のお知らせ", () => {

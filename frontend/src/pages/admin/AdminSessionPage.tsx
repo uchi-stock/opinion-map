@@ -5,6 +5,7 @@ import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { SummaryView } from "../../components/SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
+import { TimerBadge } from "../../components/TimerBadge.tsx";
 import { StickyBoard } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
@@ -90,6 +91,11 @@ function SessionContent({
           <span className={`badge ms-2 ${session.status === "active" ? "text-bg-primary" : session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
             {SESSION_STATUS_LABELS[session.status]}
           </span>
+          {session.status === "active" && session.deadlineAt && (
+            <span className="ms-2">
+              <TimerBadge deadlineAt={session.deadlineAt} serverNow={new Date().toISOString()} onExpire={reload} />
+            </span>
+          )}
         </span>
         {/* 参加者に見える画面そのもの。URLのコピーやQRは、イベントの招待URLの画面にある */}
         <a className="btn icon-btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer" aria-label="参加者の画面を見る" title="参加者の画面を見る">👀</a>
@@ -331,9 +337,13 @@ export function SessionForm({
   const [prompt, setPrompt] = useState(session.prompt);
   const [format, setFormat] = useState<SessionFormat>(session.format);
   const [show, setShow] = useState(session.showOpinionsToParticipants);
+  // 制限時間(分)。空なら、制限なし
+  const [minutes, setMinutes] = useState(session.timerSeconds === undefined ? "" : String(session.timerSeconds / 60));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
-  const valid = title.trim().length > 0 && prompt.trim().length > 0;
+  const minutesNum = minutes.trim() === "" ? null : Number(minutes);
+  const minutesValid = minutesNum === null || (Number.isInteger(minutesNum) && minutesNum >= 1 && minutesNum <= 1440);
+  const valid = title.trim().length > 0 && prompt.trim().length > 0 && minutesValid;
 
   async function run(patch: Parameters<AdminApi["updateSession"]>[1]) {
     if (busy) return;
@@ -353,7 +363,7 @@ export function SessionForm({
   function save(e: FormEvent) {
     e.preventDefault();
     if (!valid) return;
-    void run({ title: title.trim(), prompt: prompt.trim(), format, showOpinionsToParticipants: show });
+    void run({ title: title.trim(), prompt: prompt.trim(), format, showOpinionsToParticipants: show, timerSeconds: minutesNum === null ? null : minutesNum * 60 });
   }
 
   return (
@@ -392,6 +402,23 @@ export function SessionForm({
           </option>
         ))}
       </select>
+      <label htmlFor="se-timer" className="form-label">
+        制限時間（分・任意）
+      </label>
+      <input
+        id="se-timer"
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={1440}
+        className={`form-control mb-1 ${minutesValid ? "" : "is-invalid"}`}
+        value={minutes}
+        onChange={(e) => setMinutes(e.target.value)}
+        placeholder="空なら、制限なし"
+      />
+      <p className="form-text mb-2">
+        「公開中」にした時点から数えます。時間が来ると、投稿を締め切り、AIの分析を自動で始めます。
+      </p>
       <div className="form-check mb-3">
         <input id="se-show" type="checkbox" className="form-check-input" checked={show} onChange={(e) => setShow(e.target.checked)} />
         <label htmlFor="se-show" className="form-check-label">

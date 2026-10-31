@@ -105,5 +105,10 @@ export async function installDemoApi(options: DemoOptions = {}) {
     });
   };
 
+  // 本物は1分ごとの定期実行。デモでは、画面が開いている間だけ、10秒ごとに締め切りを確かめる
+  if (!options.target && typeof setInterval === "function") {
+    setInterval(() => void app.sweepTimers().catch(() => undefined), 10_000);
+  }
+
   return { repos, sampleSessionId: await findSampleSessionId(repos) };
 }

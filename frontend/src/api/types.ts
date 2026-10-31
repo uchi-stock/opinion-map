@@ -16,6 +16,9 @@ export interface PublicSession {
   opinionCount?: number;
   /** いま見ている端末の数の目安。少人数は "few"(少数)。イベントの公開情報のときだけ付く */
   viewers?: number | "few";
+  /** 制限時間があるときの、締め切り(ISO)と、サーバーの現在時刻 */
+  deadlineAt?: string;
+  serverNow?: string;
 }
 
 /** トップページに出す、公開中のイベント */
@@ -147,6 +150,10 @@ export interface SessionRecord {
   notes?: SessionNotes;
   notesPublished?: boolean;
   summaryPublished?: boolean;
+  /** 制限時間(秒)。任意 */
+  timerSeconds?: number;
+  /** 公開中にした時点で決まる、締め切り(ISO) */
+  deadlineAt?: string;
   createdAt: string;
   updatedAt: string;
 }

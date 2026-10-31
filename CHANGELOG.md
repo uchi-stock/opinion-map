@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/uchi-stock/opinion-map/compare/v1.3.0...v1.4.0) (2026-10-31)
+
+
+### Features
+
+* **ci:** consolidate release and deploy into the CD pipeline and deploy automatically ([#73](https://github.com/uchi-stock/opinion-map/issues/73)) ([2f852ec](https://github.com/uchi-stock/opinion-map/commit/2f852ec986ddd2bddb72cba4935ee5c6fb657d0b)), closes [#72](https://github.com/uchi-stock/opinion-map/issues/72) [#72](https://github.com/uchi-stock/opinion-map/issues/72)
+
 # [1.3.0](https://github.com/uchi-stock/opinion-map/compare/v1.2.0...v1.3.0) (2026-10-31)
 
 

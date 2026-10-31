@@ -1,7 +1,7 @@
-import type { InsightRecord } from "../../../backend/src/insights/types.ts";
-import type { AnalysisRunRecord } from "../../../backend/src/analysis/types.ts";
-import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../backend/src/domain/types.ts";
-import type { Repositories } from "../../../backend/src/repositories/types.ts";
+import type { InsightRecord } from "../../../core/src/insights/types.ts";
+import type { AnalysisRunRecord } from "../../../core/src/analysis/types.ts";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../../../core/src/domain/types.ts";
+import type { Repositories } from "../../../core/src/repositories/types.ts";
 
 export const DEMO_DATA_KEY = "opinion-map-demo-data";
 

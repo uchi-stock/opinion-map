@@ -4,8 +4,8 @@
  * 未分類の件数は、LLMの出力によって変わる。ここでは件数を固定せず、結果をそのまま報告する。
  */
 import { readFileSync } from "node:fs";
-import { parseKouchouResult } from "../../backend/src/adapters/kouchouAi.ts";
-import { validateResult } from "../../backend/src/analysis/validation.ts";
+import { parseKouchouResult } from "../../core/src/adapters/kouchouAi.ts";
+import { validateResult } from "../../core/src/analysis/validation.ts";
 
 const [resultPath, csvPath] = process.argv.slice(2);
 if (!resultPath || !csvPath) {

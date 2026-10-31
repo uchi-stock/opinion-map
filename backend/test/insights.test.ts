@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { FakeAnalysisProvider } from "../src/analysis/fakeProvider.js";
-import { GeminiInsightProvider } from "../src/insights/geminiProvider.js";
-import { FakeInsightProvider } from "../src/insights/fakeProvider.js";
-import { validateInsightContent } from "../src/insights/validation.js";
+import { FakeAnalysisProvider } from "../../core/src/analysis/fakeProvider.js";
+import { GeminiInsightProvider } from "../../core/src/insights/geminiProvider.js";
+import { FakeInsightProvider } from "../../core/src/insights/fakeProvider.js";
+import { validateInsightContent } from "../../core/src/insights/validation.js";
 import { createTestApp, newSubmissionId } from "./helpers.js";
 
 async function setup() {

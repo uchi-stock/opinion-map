@@ -6,7 +6,7 @@ import {
   TransactWriteCommand,
   type DynamoDBDocumentClient,
 } from "@aws-sdk/lib-dynamodb";
-import type { KvItem, KvStore, PutCondition, WriteOp } from "./kvStore.js";
+import type { KvItem, KvStore, PutCondition, WriteOp } from "../../../core/src/repositories/kvStore.js";
 
 /** 使う操作だけに絞る。テストでは send を差し替える */
 export type DocClient = Pick<DynamoDBDocumentClient, "send">;

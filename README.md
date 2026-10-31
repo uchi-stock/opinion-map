@@ -72,7 +72,8 @@ Node.js 22以上が必要である。
 
 | ディレクトリ | 内容 |
 | --- | --- |
-| `backend/` | イベント・セッション・投稿のAPI（TypeScript） |
+| `core/` | アプリ本体（AWS に依存しない。backend と frontend のデモ版が共有する） |
+| `backend/` | AWS への配線（Lambda、DynamoDB、Fargate）とデプロイ |
 | `frontend/` | 参加者の画面（React + Vite） |
 | `docs/` | 調査結果と意思決定の記録 |
 | `eval/kouchou/` | 広聴AIの分析品質を評価するためのサンプルと設定 |

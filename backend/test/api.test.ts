@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_BODY_BYTES } from "../src/app.js";
+import { MAX_BODY_BYTES } from "../../core/src/app.js";
 import { ADMIN_TOKEN, createTestApp, createTestRepositories, newSubmissionId } from "./helpers.js";
 
 describe("運営者の認証", () => {

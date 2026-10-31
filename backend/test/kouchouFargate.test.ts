@@ -2,7 +2,7 @@ import { DescribeTasksCommand, RunTaskCommand } from "@aws-sdk/client-ecs";
 import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { describe, expect, it } from "vitest";
 import { createAwsRunnerPort } from "../src/adapters/awsRunnerPort.js";
-import { csvField, KouchouFargateProvider, toCsv, type RunnerPort } from "../src/adapters/kouchouFargate.js";
+import { csvField, KouchouFargateProvider, toCsv, type RunnerPort } from "../../core/src/adapters/kouchouFargate.js";
 
 /** メモリ上の S3 と、操作できるタスクの状態 */
 function fakePort() {

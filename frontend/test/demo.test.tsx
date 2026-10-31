@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EventRecord, OpinionRecord } from "../../backend/src/domain/types.ts";
+import type { EventRecord, OpinionRecord } from "../../core/src/domain/types.ts";
 import { DemoBanner } from "../src/demo/DemoBanner.tsx";
 import { DEMO_ADMIN_TOKEN, installDemoApi } from "../src/demo/installDemoApi.ts";
 import { createStorageRepositories, DEMO_DATA_KEY, resetDemoData } from "../src/demo/storageRepositories.ts";

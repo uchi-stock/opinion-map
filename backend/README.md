@@ -5,15 +5,26 @@
 ## 構成
 
 dev-standardsのサーバレスAPIパターンに合わせ、層を分けている。
+アプリ本体は、frontend のデモ版とも共有するため、`../core/` に置く。
+AWS やプロセスに依存する部分だけが、この `backend/` にある。
 
-- `src/app.ts`: ルーティング、認証、エラーの変換
-- `src/services/`: ビジネスロジック。永続化の詳細を知らない
-- `src/repositories/`: 永続化の境界。いまは in-memory 実装のみ
-- `src/lambdaAdapter.ts`: API Gateway HTTP API のイベントとの変換
-- `src/localServer.ts`: ローカル開発用のサーバー
+`core/src/` は、AWS に依存せず、frontend のデモ版とも共有する。
 
-DynamoDBの実装とデプロイは、別のIssueで行う。
-それまでは、データはメモリ上にだけある。
+- `app.ts`: ルーティング、認証、エラーの変換
+- `services/`: ビジネスロジック。永続化の詳細を知らない
+- `repositories/`: 永続化の境界。メモリ実装と、保存先（KvStore）の上に作る実装
+- `domain/`、`analysis/`、`insights/`、`lib/`、`adapters/`: 型、検証、分析と案の基盤、道具
+
+`backend/src/` は、AWS やプロセスに依存する。
+
+- `handler.ts`: Lambda の入口。DynamoDB、Fargate、Gemini をつなぐ
+- `lambdaAdapter.ts`: API Gateway HTTP API のイベントとの変換
+- `localServer.ts`: ローカル開発用のサーバー
+- `repositories/dynamoKvStore.ts`: DynamoDB の保存先
+- `adapters/awsRunnerPort.ts`: S3 と ECS の呼び出し
+
+依存の向きは、`frontend` と `backend` から `core` へ、の一方向である。
+`frontend` と `backend` は、互いに import しない（アーキテクチャの検査で守っている）。
 
 ## ローカルで動かす
 

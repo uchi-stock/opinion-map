@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createAdminAuthenticator, safeEqual } from "../src/lib/auth.js";
+import { createAdminAuthenticator, safeEqual } from "../../core/src/lib/auth.js";
 
 describe("文字列の比較", () => {
   it("同じ文字列だけが一致する", () => {

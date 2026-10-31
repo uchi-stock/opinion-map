@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { charLength, parseEventCreate, parseOpinionCreate, parseSessionCreate } from "../src/domain/validation.js";
-import { AppError } from "../src/lib/errors.js";
+import { charLength, parseEventCreate, parseOpinionCreate, parseSessionCreate } from "../../core/src/domain/validation.js";
+import { AppError } from "../../core/src/lib/errors.js";
 
 const valid = { body: "意見です", kind: "idea", submissionId: "submission-00000001" };
 

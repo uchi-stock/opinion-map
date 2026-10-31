@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createGoogleVerifier } from "../src/lib/googleAuth.js";
-import { base64urlEncode, signSession, verifySession } from "../src/lib/jwt.js";
+import { createGoogleVerifier } from "../../core/src/lib/googleAuth.js";
+import { base64urlEncode, signSession, verifySession } from "../../core/src/lib/jwt.js";
 import { createTestApp } from "./helpers.js";
 
 const CLIENT_ID = "test-client.apps.googleusercontent.com";

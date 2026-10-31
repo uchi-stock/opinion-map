@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
-import { createApp } from "./app.js";
-import { GeminiInsightProvider } from "./insights/geminiProvider.js";
-import { createInMemoryRepositories } from "./repositories/inMemory.js";
+import { createApp } from "../../core/src/app.js";
+import { GeminiInsightProvider } from "../../core/src/insights/geminiProvider.js";
+import { createInMemoryRepositories } from "../../core/src/repositories/inMemory.js";
 
 /**
  * ローカル開発用のサーバー。データはメモリ上にあり、再起動すると消える。

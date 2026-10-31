@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "oxlint && tsc -b",
-    "test": "vitest run"
+    "test": "vitest run --coverage"
   },
   "dependencies": {
     "bootstrap": "^5.3.3",

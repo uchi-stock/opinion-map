@@ -14,12 +14,13 @@ interface Data {
   admins: AdminRecord[];
   reactions: ReactionRecord[];
   proposals: ProposalRecord[];
+  usage: Record<string, number>;
   insights: InsightRecord[];
 }
 
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], insights: [] });
+const emptyData = (): Data => ({ events: [], sessions: [], opinions: [], analyses: [], operatorTokens: [], admins: [], reactions: [], proposals: [], usage: {}, insights: [] });
 
 /**
  * デモ版のデータ置き場。ブラウザの localStorage に保存する。
@@ -43,6 +44,7 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         admins: parsed.admins ?? [],
         reactions: parsed.reactions ?? [],
         proposals: parsed.proposals ?? [],
+        usage: parsed.usage ?? {},
         insights: parsed.insights ?? [],
       };
     } catch {
@@ -183,6 +185,20 @@ export function createStorageRepositories(storage: KeyValueStorage): Repositorie
         const d = read();
         d.operatorTokens = d.operatorTokens.map((t) => (t.id === token.id ? token : t));
         write(d);
+      },
+    },
+    usage: {
+      async consume(scope, dayKey, limit) {
+        const d = read();
+        const key = `${scope}#${dayKey}`;
+        const used = d.usage[key] ?? 0;
+        if (used >= limit) return { allowed: false, used };
+        d.usage[key] = used + 1;
+        write(d);
+        return { allowed: true, used: used + 1 };
+      },
+      async used(scope, dayKey) {
+        return read().usage[`${scope}#${dayKey}`] ?? 0;
       },
     },
     proposals: {

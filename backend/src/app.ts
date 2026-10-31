@@ -22,6 +22,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { createUsageService, DEFAULT_DAILY_LIMITS, type DailyLimits } from "./services/usageService.js";
 import { createSummaryService } from "./services/summaryService.js";
 import { createProposalService } from "./services/proposalService.js";
 import { createAdminService } from "./services/adminService.js";
@@ -61,6 +62,8 @@ export interface AppOptions {
   ownerLogin?: OwnerLoginOptions;
   /** セッションごとの投稿頻度の上限。未指定なら、1分に120件 */
   opinionRateLimit?: OpinionRateLimit;
+  /** AIの利用の、1日あたりの上限(イベントごと)。未指定なら、既定の上限 */
+  dailyLimits?: Partial<DailyLimits>;
   now?: () => Date;
   newId?: () => string;
 }
@@ -113,6 +116,7 @@ export function createApp(options: AppOptions) {
   const operatorTokens = createOperatorTokenService(ctx);
   const proposals = createProposalService(ctx);
   const summaries = createSummaryService(ctx);
+  const usage = createUsageService(ctx, { ...DEFAULT_DAILY_LIMITS, ...options.dailyLimits });
   const login = options.ownerLogin;
   const admins = createAdminService(ctx, login?.ownerEmails ?? []);
   if (login && login.sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
@@ -137,9 +141,10 @@ export function createApp(options: AppOptions) {
   const analyses = options.analysisProvider
     ? createAnalysisService(ctx, options.analysisProvider, {
         ...(options.analysisTimeoutMs === undefined ? {} : { timeoutMs: options.analysisTimeoutMs }),
+        usage,
       })
     : undefined;
-  const insights = options.insightProvider ? createInsightService(ctx, options.insightProvider) : undefined;
+  const insights = options.insightProvider ? createInsightService(ctx, options.insightProvider, usage) : undefined;
   const requireInsights = () => {
     if (!insights) throw new AppError(503, "insights_unavailable", "案を作るAIが設定されていません");
     return insights;
@@ -339,6 +344,13 @@ export function createApp(options: AppOptions) {
         status: 200,
         data: await proposals.decide(params["id"]!, parseProposalDecision(body)),
       }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/events\/(?<id>[^/]+)\/usage$/,
+      admin: true,
+      eventIdOf: eventOfEvent,
+      handle: async ({ params }) => ({ status: 200, data: await usage.summary(params["id"]!) }),
     },
     {
       method: "GET",

@@ -8,6 +8,7 @@ import type {
 } from "../analysis/types.js";
 import { AppError, badRequest, conflict, notFound } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
+import type { UsageService } from "./usageService.js";
 
 /** 分析の実行の上限時間。これを超えて終わらない実行は、失敗として扱う */
 export const DEFAULT_ANALYSIS_TIMEOUT_MS = 30 * 60 * 1000;
@@ -40,7 +41,7 @@ function summarize(error: unknown): string {
 export function createAnalysisService(
   ctx: ServiceContext,
   provider: AnalysisProvider,
-  options: { timeoutMs?: number } = {},
+  options: { timeoutMs?: number; usage?: UsageService } = {},
 ) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_ANALYSIS_TIMEOUT_MS;
 
@@ -72,6 +73,10 @@ export function createAnalysisService(
     opinions: AnalysisOpinion[],
     retryOf?: string,
   ): Promise<AnalysisRunRecord> {
+    // 課金が発生する前に、1日の上限を確かめる。実行を作る前の確認は読むだけで、使うのは作れたあと
+    const session = await ctx.repos.sessions.get(sessionId);
+    const eventId = session?.eventId;
+    if (options.usage && eventId) await options.usage.assertAvailable("analysis", eventId);
     const at = ctx.now().toISOString();
     const queued: AnalysisRunRecord = {
       id: ctx.newId(),
@@ -85,6 +90,20 @@ export function createAnalysisService(
     const created = await ctx.repos.analyses.createIfNoActive(queued);
     if (!created.created) {
       throw conflict("analysis_in_progress", "このセッションでは、すでに分析を実行中です");
+    }
+    if (options.usage && eventId) {
+      try {
+        await options.usage.consume("analysis", eventId);
+      } catch (e) {
+        // 並行した実行で上限に達した場合。始めずに、失敗として記録する
+        await ctx.repos.analyses.update({
+          ...queued,
+          status: "failed",
+          completedAt: ctx.now().toISOString(),
+          error: { code: "daily_limit", summary: "1日の上限に達したため、始めませんでした" },
+        });
+        throw e;
+      }
     }
     try {
       const { providerRunId } = await provider.start({ runId: queued.id, sessionId, question, opinions });

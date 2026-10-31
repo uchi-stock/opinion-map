@@ -3,13 +3,14 @@ import { AppError } from "../lib/errors.js";
 import type { InsightContent, InsightProvider, InsightRecord } from "../insights/types.js";
 import { validateInsightContent } from "../insights/validation.js";
 import type { ServiceContext } from "./context.js";
+import type { UsageService } from "./usageService.js";
 
 export interface InsightPatch {
   edited?: unknown;
   approved?: unknown;
 }
 
-export function createInsightService(ctx: ServiceContext, provider: InsightProvider) {
+export function createInsightService(ctx: ServiceContext, provider: InsightProvider, usage?: UsageService) {
   return {
     /**
      * 完了した分析の、1つのクラスタについて、案を作る。
@@ -30,6 +31,8 @@ export function createInsightService(ctx: ServiceContext, provider: InsightProvi
       const session = await ctx.repos.sessions.get(run.sessionId);
       if (!session) throw notFound("セッション");
 
+      // 課金が発生する前に、1日の上限を使う
+      if (usage) await usage.consume("insight", session.eventId);
       let raw: unknown;
       try {
         raw = await provider.generate({

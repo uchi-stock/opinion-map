@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App, routeOf } from "../src/App.tsx";
 import { VersionInfo } from "../src/components/VersionInfo.tsx";
@@ -51,5 +51,22 @@ describe("バージョン表示", () => {
   it("日時が不正なら、不明と表示する", () => {
     render(<VersionInfo version="1.0.0" builtAt="invalid" />);
     expect(screen.getByText(/更新日時: 不明/)).toBeInTheDocument();
+  });
+});
+
+describe("トップページのサンプル", () => {
+  it("盛り上がったサンプルのボードを見せ、サンプルと分かる表示と、招待リンクの案内も残す", () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    render(<App pathname="/" />);
+    const sample = screen.getByRole("region", { name: "サンプル" });
+    expect(within(sample).getByText("サンプル")).toBeInTheDocument();
+    expect(within(sample).getByText(/何も保存されません/)).toBeInTheDocument();
+    expect(within(sample).getAllByTestId("sticky-note").length).toBeGreaterThanOrEqual(10);
+    // 少数意見も、サンプルに含める
+    expect(within(sample).getByRole("region", { name: "どこにも入らなかった意見" })).toBeInTheDocument();
+    expect(screen.getByText(/運営者から共有されたURLを開いてください/)).toBeInTheDocument();
+    // APIを呼ばない
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

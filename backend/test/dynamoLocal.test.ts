@@ -200,6 +200,31 @@ describeLocal("DynamoDB Local に対する保存先の契約", () => {
       expect(results.filter((r) => r.created)).toHaveLength(1);
     });
 
+    it("上限いっぱい(1500件、本文は最大の長さ)の分析の実行を、分けて保存し、すべて読み戻せる", async () => {
+      const repos = createDynamoRepositories(await fresh("dynamo"));
+      const opinions = Array.from({ length: 1500 }, (_, i) => ({
+        id: `o${i}`,
+        body: `${"あ".repeat(296)}${String(i).padStart(4, "0")}`,
+        kind: "idea" as const,
+      }));
+      const run = {
+        id: "big",
+        sessionId: "s-big",
+        status: "queued" as const,
+        requestedAt: at,
+        providerName: "fake",
+        input: { opinions, hash: "h" },
+      };
+      const created = await repos.analyses.createIfNoActive(run);
+      expect(created.created).toBe(true);
+      await repos.analyses.update({ ...run, status: "succeeded", result: { overview: "概要", clusters: [], unclassifiedOpinionIds: opinions.map((o) => o.id) } });
+      const full = await repos.analyses.get("big");
+      expect(full?.input.opinions).toHaveLength(1500);
+      expect(full?.input.opinions[1499]?.body).toBe(opinions[1499]!.body);
+      expect(full?.status).toBe("succeeded");
+      expect((await repos.analyses.listBySession("s-big"))[0]!.input.opinionIds).toHaveLength(1500);
+    }, 60000);
+
     it("1日の上限は、同時に使っても超えない", async () => {
       const repos = createDynamoRepositories(await fresh("dynamo"));
       const results = await Promise.all(Array.from({ length: 12 }, () => repos.usage.consume("analysis:e1", "2026-01-01", 5)));

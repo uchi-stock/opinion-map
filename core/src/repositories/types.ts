@@ -1,4 +1,4 @@
-import type { AnalysisRunRecord } from "../analysis/types.js";
+import type { AnalysisRunRecord, AnalysisRunSummary } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 
@@ -39,15 +39,20 @@ export interface OpinionRepository {
 }
 
 export interface AnalysisRunRepository {
+  // 入力の投稿(本文)は大きいので、update は入力を書き換えない。入力を書き換えるのは replaceInput だけ。
+  // 一覧(listBySession)は、本文を持たない軽い形を返す。
   /**
    * 同じセッションに、進行中（queued か running）の実行がなければ作る。あれば、その実行を返す。
    * 重複した実行を防ぐため、確認と作成は不可分に行うこと（DynamoDB では条件付き書き込み）。
    */
   createIfNoActive(run: AnalysisRunRecord): Promise<{ run: AnalysisRunRecord; created: boolean }>;
   get(id: string): Promise<AnalysisRunRecord | undefined>;
+  /** 状態・結果・エラーなどを更新する。入力の投稿は、書き換えない */
   update(run: AnalysisRunRecord): Promise<void>;
-  /** 古い順 */
-  listBySession(sessionId: string): Promise<AnalysisRunRecord[]>;
+  /** 入力の投稿を書き換える(投稿の削除で、本文を消すときだけ使う) */
+  replaceInput(run: AnalysisRunRecord): Promise<void>;
+  /** 古い順。入力の本文を持たない軽い形 */
+  listBySession(sessionId: string): Promise<AnalysisRunSummary[]>;
 }
 
 export interface OperatorTokenRepository {

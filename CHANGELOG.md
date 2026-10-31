@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/uchi-stock/opinion-map/compare/v1.29.0...v1.30.0) (2026-10-31)
+
+
+### Features
+
+* テーマ選択後はボードを基本画面にする ([#179](https://github.com/uchi-stock/opinion-map/issues/179)) ([72954fb](https://github.com/uchi-stock/opinion-map/commit/72954fb97e397fbb3adb396de02c1e5105da3c70)), closes [#175](https://github.com/uchi-stock/opinion-map/issues/175)
+
 # [1.29.0](https://github.com/uchi-stock/opinion-map/compare/v1.28.0...v1.29.0) (2026-10-31)
 
 

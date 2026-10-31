@@ -29,5 +29,14 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./test/setup.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      // 測らないもの(理由つき)
+      exclude: [
+        "src/main.tsx", // 画面の起動の配線
+        "src/**/*.d.ts",
+      ],
+    },
   },
 });

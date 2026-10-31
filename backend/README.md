@@ -122,3 +122,14 @@ npm run lint
 - 条件によって項目を足すスプレッド（`...(条件 ? { 項目 } : {})`）は、`exactOptionalPropertyTypes` のもとで、値が無い項目を作らないために必要である。そのため、`no-useless-spread` と `no-useless-fallback-in-spread` は許可している（`.oxlintrc.json`）
 - 制御文字を探す正規表現は、目的が制御文字の検出なので、その行だけ `no-control-regex` を許可している
 - 新しい指摘は、直すか、理由を書いて許可する
+
+## カバレッジ
+
+CI で `vitest --coverage` を実行し、行・文・分岐が閾値（`ci.yml` の `coverage_threshold`）を下回ると失敗する。閾値は、実測に近い値から始めて、上げていく。下げない。
+
+- 測らないものは `vitest.config.ts` に、理由つきで書いてある
+  - `localServer.ts`: ローカル開発用のサーバー
+  - `handler.ts`: Lambda の配線。デプロイ後の動作確認で守る
+  - `adapters/awsRunnerPort.ts`: 実 AWS の呼び出し。`verify-analysis` ワークフローで守る
+- CI の計測は、メモリ実装のテストの1回分である。DynamoDB 実装のテスト（`TEST_REPOS=dynamo`）は、別に実行される
+- ローカルでの確認: `npx vitest run --coverage`

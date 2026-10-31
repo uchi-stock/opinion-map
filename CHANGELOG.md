@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/uchi-stock/opinion-map/compare/v1.12.0...v1.13.0) (2026-10-31)
+
+
+### Features
+
+* split the analysis input into chunks to stay under the 400KB item limit ([#51](https://github.com/uchi-stock/opinion-map/issues/51)) ([#115](https://github.com/uchi-stock/opinion-map/issues/115)) ([cf9c739](https://github.com/uchi-stock/opinion-map/commit/cf9c73912c94011bc245a200a607476327961895))
+
 # [1.12.0](https://github.com/uchi-stock/opinion-map/compare/v1.11.0...v1.12.0) (2026-10-31)
 
 

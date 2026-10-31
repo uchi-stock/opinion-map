@@ -26,6 +26,29 @@ export interface EventRecord {
    * currentSessionId は古い形で、あれば、それ1つだけが開いているものとして読む
    */
   openSessionIds?: string[];
+  /** 参加者が議題を提案できるか(OST)。既定は受け付けない */
+  acceptingProposals?: boolean;
+  /** 承認前の提案を、参加者に見せるか。既定は見せない(運営者が確認してから見せる) */
+  showPendingProposals?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProposalStatus = "pending" | "approved" | "rejected" | "merged";
+
+/**
+ * 参加者が出した議題の提案(OST)。提案者の情報は持たない。
+ * 承認するとセッション(テーマ)ができ、統合すると既存のテーマに寄せる。どちらも sessionId で結ぶ。
+ */
+export interface ProposalRecord {
+  id: string;
+  eventId: string;
+  /** 再送の重複を防ぐ、ブラウザが作る乱数 */
+  submissionId: string;
+  title: string;
+  description: string;
+  status: ProposalStatus;
+  sessionId?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,5 +1,5 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
-import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 import type { InsightRecord } from "../insights/types.js";
 import type { KvItem, KvStore } from "./kvStore.js";
 import type { Repositories } from "./types.js";
@@ -52,6 +52,12 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
     gsi1pk: `EVENT#${t.eventId}#OPTOKENS`,
     gsi1sk: sortKey(t.createdAt, t.id),
     data: t,
+  });
+  const proposalItem = (p: ProposalRecord): KvItem => ({
+    pk: `PROPOSAL#${p.id}`,
+    gsi1pk: `EVENT#${p.eventId}#PROPOSALS`,
+    gsi1sk: sortKey(p.createdAt, p.id),
+    data: p,
   });
   const reactionItem = (r: ReactionRecord): KvItem => ({
     pk: `REACTION#${r.opinionId}#${r.voterHash}`,
@@ -198,6 +204,20 @@ export function createDynamoRepositories(store: KvStore, now: () => Date = () =>
       },
       async update(token) {
         await store.put(tokenItem(token));
+      },
+    },
+    proposals: {
+      async create(proposal) {
+        await store.put(proposalItem(proposal), { type: "notExists" });
+      },
+      async get(id) {
+        return data<ProposalRecord>(await store.get(`PROPOSAL#${id}`));
+      },
+      async update(proposal) {
+        await store.put(proposalItem(proposal));
+      },
+      async listByEvent(eventId) {
+        return (await store.queryByGsi1(`EVENT#${eventId}#PROPOSALS`)).map((i) => i.data as ProposalRecord);
       },
     },
     reactions: {

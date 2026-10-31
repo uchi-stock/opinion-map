@@ -6,6 +6,7 @@ import type {
   Insight,
   InsightContent,
   AdminAccount,
+  Proposal,
   OperatorToken,
   AdminOpinionList,
   SessionFormat,
@@ -36,7 +37,14 @@ export function createAdminApi(token: string) {
     },
     updateEvent(
       id: string,
-      patch: Partial<{ name: string; description: string; status: EventStatus; openSessionIds: string[] | null }>,
+      patch: Partial<{
+        name: string;
+        description: string;
+        status: EventStatus;
+        openSessionIds: string[] | null;
+        acceptingProposals: boolean;
+        showPendingProposals: boolean;
+      }>,
     ): Promise<EventRecord> {
       return send("PATCH", `/events/${enc(id)}`, patch);
     },
@@ -69,6 +77,15 @@ export function createAdminApi(token: string) {
     },
     updateInsight(id: string, patch: { edited?: InsightContent; approved?: boolean }): Promise<Insight> {
       return send("PATCH", `/insights/${enc(id)}`, patch);
+    },
+    async listProposals(eventId: string): Promise<Proposal[]> {
+      return (await send<{ proposals: Proposal[] }>("GET", `/events/${enc(eventId)}/proposals`)).proposals;
+    },
+    decideProposal(
+      id: string,
+      decision: { status: "approved" | "rejected" } | { status: "merged"; intoSessionId: string },
+    ): Promise<{ proposal: Proposal }> {
+      return send("POST", `/proposals/${enc(id)}/decision`, decision);
     },
     async listAdmins(): Promise<AdminAccount[]> {
       return (await send<{ admins: AdminAccount[] }>("GET", "/admins")).admins;

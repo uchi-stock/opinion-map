@@ -6,7 +6,7 @@ import { AdminEventPage } from "../src/pages/admin/AdminEventPage.tsx";
 import { AdminEventsPage } from "../src/pages/admin/AdminEventsPage.tsx";
 import { AdminSessionPage } from "../src/pages/admin/AdminSessionPage.tsx";
 import { clearAdminToken, loadAdminToken, saveAdminToken } from "../src/lib/adminToken.ts";
-import type { EventRecord, SessionRecord } from "../src/api/types.ts";
+import type { EventRecord, Proposal, SessionRecord } from "../src/api/types.ts";
 import { json, opinion, stubFetch } from "./helpers.ts";
 
 const TOKEN = "secret-token";
@@ -35,8 +35,11 @@ const session = (over: Partial<SessionRecord> = {}): SessionRecord => ({
 });
 
 /** 運営者向けAPIの代わり。状態を持ち、呼び出しを記録する */
-function fakeAdminBackend(initial: { events?: EventRecord[]; sessions?: SessionRecord[]; opinions?: ReturnType<typeof opinion>[] } = {}) {
+function fakeAdminBackend(
+  initial: { events?: EventRecord[]; sessions?: SessionRecord[]; opinions?: ReturnType<typeof opinion>[]; proposals?: Proposal[] } = {},
+) {
   const state = {
+    proposals: [...(initial.proposals ?? [])],
     events: [...(initial.events ?? [event()])],
     sessions: [...(initial.sessions ?? [session()])],
     opinions: [...(initial.opinions ?? [])],
@@ -73,6 +76,13 @@ function fakeAdminBackend(initial: { events?: EventRecord[]; sessions?: SessionR
     if (method === "PATCH" && m) {
       state.sessions = state.sessions.map((s) => (s.id === m![1] ? { ...s, ...body, updatedAt: `${Date.now()}` } : s));
       return json(state.sessions.find((s) => s.id === m![1]));
+    }
+    m = /^\/events\/([^/]+)\/proposals$/.exec(path);
+    if (method === "GET" && m) return json({ accepting: true, proposals: state.proposals });
+    m = /^\/proposals\/([^/]+)\/decision$/.exec(path);
+    if (method === "POST" && m) {
+      state.proposals = state.proposals.map((p) => (p.id === m![1] ? { ...p, status: body.status } : p));
+      return json({ proposal: state.proposals.find((p) => p.id === m![1]) });
     }
     m = /^\/sessions\/([^/]+)\/opinions$/.exec(path);
     if (method === "GET" && m) return json({ hidden: false, opinions: state.opinions });
@@ -236,6 +246,37 @@ describe("イベントの画面", () => {
     render(<AdminEventPage eventId="e1" />);
     await user.click(await screen.findByRole("button", { name: "場Bを閉じる" }));
     await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ openSessionIds: ["s1"] }));
+  });
+
+  it("議題の提案を受け付ける設定を切り替える", async () => {
+    const { calls } = fakeAdminBackend();
+    const user = userEvent.setup();
+    render(<AdminEventPage eventId="e1" />);
+    await user.click(await screen.findByLabelText("議題の提案を受け付ける"));
+    await waitFor(() => expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({ acceptingProposals: true }));
+  });
+
+  it("提案を承認・却下・統合できる。判断済みには、ボタンを出さない", async () => {
+    const proposal = (over: Partial<Proposal>): Proposal => ({
+      id: "p1",
+      title: "朝の議題",
+      description: "",
+      status: "pending",
+      reactionCount: 3,
+      createdAt: at,
+      ...over,
+    });
+    const { calls } = fakeAdminBackend({
+      proposals: [proposal({}), proposal({ id: "p2", title: "統合したい議題" }), proposal({ id: "p3", title: "済み", status: "approved" })],
+    });
+    const user = userEvent.setup();
+    render(<AdminEventPage eventId="e1" />);
+    await user.click(await screen.findByRole("button", { name: "朝の議題を承認する" }));
+    await waitFor(() => expect(calls.find((c) => c.path === "/proposals/p1/decision")?.body).toEqual({ status: "approved" }));
+    await user.selectOptions(await screen.findByLabelText("統合したい議題の統合先"), "s1");
+    await user.click(screen.getByRole("button", { name: "統合したい議題を統合する" }));
+    await waitFor(() => expect(calls.find((c) => c.path === "/proposals/p2/decision")?.body).toEqual({ status: "merged", intoSessionId: "s1" }));
+    expect(screen.queryByRole("button", { name: "済みを承認する" })).toBeNull();
   });
 
   it("存在しないイベントでは、見つからない旨を出す", async () => {

@@ -94,6 +94,8 @@ export interface EventPatch {
   currentSessionId?: string | null;
   /** 開いているテーマ。null で解除する(公開中のテーマすべてが開く) */
   openSessionIds?: string[] | null;
+  acceptingProposals?: boolean;
+  showPendingProposals?: boolean;
 }
 export function parseEventPatch(body: unknown): EventPatch {
   const obj = asObject(body);
@@ -114,6 +116,12 @@ export function parseEventPatch(body: unknown): EventPatch {
     }
     patch.currentSessionId = value as string | null;
   }
+  for (const key of ["acceptingProposals", "showPendingProposals"] as const) {
+    if (key in obj) {
+      if (typeof obj[key] !== "boolean") throw badRequest("invalid_type", `${key} は真偽値で指定してください`);
+      patch[key] = obj[key] as boolean;
+    }
+  }
   if ("openSessionIds" in obj) {
     const value = obj["openSessionIds"];
     const valid =
@@ -123,6 +131,41 @@ export function parseEventPatch(body: unknown): EventPatch {
     patch.openSessionIds = value === null ? null : [...new Set(value as string[])];
   }
   return patch;
+}
+
+export const PROPOSAL_TITLE_MAX_LENGTH = 50;
+
+export interface ProposalInput {
+  submissionId: string;
+  title: string;
+  description: string;
+}
+export function parseProposalCreate(body: unknown): ProposalInput {
+  const obj = asObject(body);
+  const submissionId = obj["submissionId"];
+  if (typeof submissionId !== "string" || !SUBMISSION_ID.test(submissionId)) {
+    throw badRequest("invalid_submission_id", "送信IDが正しくありません");
+  }
+  return {
+    submissionId,
+    title: text(obj, "title", "議題", PROPOSAL_TITLE_MAX_LENGTH, { required: true })!,
+    description: text(obj, "description", "説明", PROMPT_MAX_LENGTH, { required: false }) ?? "",
+  };
+}
+
+export type ProposalDecision =
+  | { status: "approved" }
+  | { status: "rejected" }
+  | { status: "merged"; intoSessionId: string };
+export function parseProposalDecision(body: unknown): ProposalDecision {
+  const obj = asObject(body);
+  const status = oneOf(obj, "status", "判断", ["approved", "rejected", "merged"] as const, { required: true })!;
+  if (status !== "merged") return { status };
+  const into = obj["intoSessionId"];
+  if (typeof into !== "string" || into.trim() === "" || into.length > 128) {
+    throw badRequest("invalid_session", "統合先のテーマを指定してください");
+  }
+  return { status, intoSessionId: into };
 }
 
 export interface SessionInput {

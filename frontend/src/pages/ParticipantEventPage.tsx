@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, getPublicEvent } from "../api/client.ts";
 import type { PublicEvent } from "../api/types.ts";
+import { ProposalSection } from "../components/ProposalSection.tsx";
 import { ParticipantPage } from "./ParticipantPage.tsx";
 
 type State =
@@ -110,6 +111,13 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
           </p>
         )}
       </nav>
+      <ProposalSection
+        eventId={event.id}
+        onOpenSession={(sessionId) => {
+          setPicked(sessionId);
+          void load();
+        }}
+      />
       <ParticipantPage key={selected.id} sessionId={selected.id} embedded />
     </main>
   );

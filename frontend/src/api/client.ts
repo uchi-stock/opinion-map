@@ -1,4 +1,4 @@
-import type { PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
+import type { Proposal, ProposalList, PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -45,6 +45,29 @@ const enc = encodeURIComponent;
 
 export function getPublicEvent(eventId: string): Promise<PublicEvent> {
   return request<PublicEvent>(`/events/${enc(eventId)}/public`);
+}
+
+export function listProposals(eventId: string): Promise<ProposalList> {
+  return request<ProposalList>(`/events/${enc(eventId)}/proposals`);
+}
+
+export function postProposal(
+  eventId: string,
+  input: { submissionId: string; title: string; description: string },
+): Promise<{ proposal: Proposal; duplicate: boolean }> {
+  return request(`/events/${enc(eventId)}/proposals`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function reactToProposal(proposalId: string, voterId: string, reacted: boolean): Promise<{ reacted: boolean; count: number }> {
+  return request(`/proposals/${enc(proposalId)}/reaction`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ voterId, reacted }),
+  });
 }
 
 export function getSession(sessionId: string): Promise<PublicSession> {

@@ -1,6 +1,6 @@
 import type { AnalysisRunRecord } from "../analysis/types.js";
 import type { InsightRecord } from "../insights/types.js";
-import type { AdminRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
+import type { AdminRecord, ProposalRecord, ReactionRecord, EventRecord, OperatorTokenRecord, OpinionRecord, SessionRecord } from "../domain/types.js";
 
 /**
  * 永続化の境界。サービス層は、この型だけに依存する。
@@ -69,6 +69,14 @@ export interface ReactionRepository {
   listBySession(sessionId: string): Promise<ReactionRecord[]>;
 }
 
+export interface ProposalRepository {
+  create(proposal: ProposalRecord): Promise<void>;
+  get(id: string): Promise<ProposalRecord | undefined>;
+  update(proposal: ProposalRecord): Promise<void>;
+  /** 古い順 */
+  listByEvent(eventId: string): Promise<ProposalRecord[]>;
+}
+
 export interface AdminRepository {
   get(email: string): Promise<AdminRecord | undefined>;
   /** 古い順 */
@@ -95,5 +103,6 @@ export interface Repositories {
   operatorTokens: OperatorTokenRepository;
   admins: AdminRepository;
   reactions: ReactionRepository;
+  proposals: ProposalRepository;
   insights: InsightRepository;
 }

@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/uchi-stock/opinion-map/compare/v1.26.0...v1.27.0) (2026-10-31)
+
+
+### Features
+
+* list public events on the top page without an invitation ([#165](https://github.com/uchi-stock/opinion-map/issues/165)) ([589f5ca](https://github.com/uchi-stock/opinion-map/commit/589f5ca0622736161316365a50d9e2405df651b1)), closes [#164](https://github.com/uchi-stock/opinion-map/issues/164)
+
 # [1.26.0](https://github.com/uchi-stock/opinion-map/compare/v1.25.0...v1.26.0) (2026-10-31)
 
 

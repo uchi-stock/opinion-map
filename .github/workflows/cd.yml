@@ -19,3 +19,14 @@ jobs:
       enable_shared_release_config: true
     secrets:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+  # 新しいバージョンが採番されたときだけ、本番へデプロイする(docsやchoreではデプロイしない)。
+  # releaseジョブがバージョン更新コミットをmainへ入れるため、github.shaではなく
+  # release_commit_shaをデプロイする。そうしないと、画面のバージョンが1つ前のままになる
+  deploy:
+    needs: release
+    if: success() && needs.release.outputs.new_release_published == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.release.outputs.release_commit_sha }}
+    secrets: inherit

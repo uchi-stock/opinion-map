@@ -1,7 +1,9 @@
 name: 本番へデプロイ
-run-name: 本番へデプロイ (${{ github.sha }})
+run-name: 本番へデプロイ (${{ inputs.ref || github.sha }})
 
-# 手動で実行する(Actions 画面の「Run workflow」。スマホのブラウザからも実行できる)。
+# 自動と手動の、どちらでも実行できる。
+#   自動: cd.yml が新しいバージョンを採番したときに、呼び出される(採番後のコミットをデプロイする)
+#   手動: Actions 画面の「Run workflow」。スマホのブラウザからも実行できる(再実行やロールバック用)
 # 流れ: バックエンドをバンドル → osls deploy(DynamoDB・Lambda・API Gateway・S3・CloudFront)
 #       → 画面をビルドして S3 へ → CloudFront のキャッシュを消す → 動作を確かめる
 # 必要な Secrets: AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY
@@ -13,6 +15,13 @@ run-name: 本番へデプロイ (${{ github.sha }})
 # 任意: GEMINI_API_KEY(共通点・相違点・問いの案)、Variables の AWS_REGION(既定 ap-northeast-1)
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: "デプロイするコミット。cd.yml が、バージョン採番後のコミットを渡す"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -81,6 +90,9 @@ jobs:
           exit "$problems"
 
       - uses: actions/checkout@v7
+        with:
+          # 自動のときは、バージョン採番後のコミット。空なら、実行したブランチの先頭
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: "22"

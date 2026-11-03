@@ -10,7 +10,6 @@ import type { createSummaryService } from "../services/summaryService.js";
 import type { UsageService } from "../services/usageService.js";
 import type { createAdminService } from "../services/adminService.js";
 import type { createGoogleVerifier } from "../lib/googleAuth.js";
-import type { OwnerLoginOptions } from "../app.js";
 
 export type Params = Record<string, string>;
 
@@ -44,4 +43,14 @@ export interface RouteDeps {
   requireAnalyses: () => AnalysisService;
   requireInsights: () => ReturnType<typeof createInsightService>;
   opinionMaxLength: number | undefined;
+}
+
+export interface OwnerLoginOptions {
+  googleClientId: string;
+  /** セッショントークンの署名鍵。32文字以上 */
+  sessionSecret: string;
+  ownerEmails: readonly string[];
+  /** セッションの有効期間(秒)。既定は7日 */
+  sessionSeconds?: number;
+  fetch?: typeof fetch;
 }

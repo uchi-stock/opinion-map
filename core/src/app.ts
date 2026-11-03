@@ -22,7 +22,7 @@ import { authRoutes } from "./routes/authRoutes.js";
 import { eventRoutes } from "./routes/eventRoutes.js";
 import { opinionRoutes } from "./routes/opinionRoutes.js";
 import { proposalRoutes } from "./routes/proposalRoutes.js";
-import type { Params, Route, RouteDeps } from "./routes/types.js";
+import type { OwnerLoginOptions, Params, Route, RouteDeps } from "./routes/types.js";
 
 export interface HttpRequest {
   method: string;
@@ -64,15 +64,7 @@ export interface AppOptions {
   newId?: () => string;
 }
 
-export interface OwnerLoginOptions {
-  googleClientId: string;
-  /** セッショントークンの署名鍵。32文字以上 */
-  sessionSecret: string;
-  ownerEmails: readonly string[];
-  /** セッションの有効期間(秒)。既定は7日 */
-  sessionSeconds?: number;
-  fetch?: typeof fetch;
-}
+export type { OwnerLoginOptions };
 
 export { DEFAULT_SESSION_SECONDS, MIN_SESSION_SECRET_LENGTH };
 

@@ -15,6 +15,7 @@ import { createProposalService } from "./services/proposalService.js";
 import { createAdminService } from "./services/adminService.js";
 import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
 import { createTimerService } from "./services/timerService.js";
+import { createTranscriptService } from "./services/transcriptService.js";
 import { createSessionService } from "./services/sessionService.js";
 import { DEFAULT_SESSION_SECONDS, MIN_SESSION_SECRET_LENGTH } from "./routes/constants.js";
 import { analysisRoutes } from "./routes/analysisRoutes.js";
@@ -71,6 +72,14 @@ export { DEFAULT_SESSION_SECONDS, MIN_SESSION_SECRET_LENGTH };
 /** リクエスト本文の上限（バイト）。投稿は短い文章なので、小さく抑える */
 export const MAX_BODY_BYTES = 16 * 1024;
 
+/** 設定されていれば、そのサービスを返す関数。なければ、503 にする */
+function required<T>(service: T | undefined, code: string, message: string): () => T {
+  return () => {
+    if (!service) throw new AppError(503, code, message);
+    return service;
+  };
+}
+
 export function createApp(options: AppOptions) {
   const ctx = {
     repos: options.repos,
@@ -102,14 +111,10 @@ export function createApp(options: AppOptions) {
       })
     : undefined;
   const insights = options.insightProvider ? createInsightService(ctx, options.insightProvider, usage) : undefined;
-  const requireInsights = () => {
-    if (!insights) throw new AppError(503, "insights_unavailable", "案を作るAIが設定されていません");
-    return insights;
-  };
-  const requireAnalyses = () => {
-    if (!analyses) throw new AppError(503, "analysis_unavailable", "分析基盤が設定されていません");
-    return analyses;
-  };
+  const transcripts = options.insightProvider ? createTranscriptService(ctx, options.insightProvider, usage, options.opinionMaxLength) : undefined;
+  const requireInsights = required(insights, "insights_unavailable", "案を作るAIが設定されていません");
+  const requireTranscripts = required(transcripts, "insights_unavailable", "付箋の候補を作るAIが設定されていません");
+  const requireAnalyses = required(analyses, "analysis_unavailable", "分析基盤が設定されていません");
 
   const deps: RouteDeps = {
     ctx,
@@ -124,6 +129,7 @@ export function createApp(options: AppOptions) {
     verifyGoogle,
     requireAnalyses,
     requireInsights,
+    requireTranscripts,
     opinionMaxLength: options.opinionMaxLength,
   };
   const routes: Route[] = [

@@ -27,6 +27,14 @@
     {
       "source": "shared/ui/formatBuildTime.js",
       "target": "frontend/src/formatBuildTime.js"
+    },
+    {
+      "source": "shared/hooks/useSpeechRecognition.js",
+      "target": "frontend/src/hooks/useSpeechRecognition.js"
+    },
+    {
+      "source": "shared/hooks/useWakeLock.js",
+      "target": "frontend/src/hooks/useWakeLock.js"
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type { Principal } from "../lib/auth.js";
 import type { AnalysisService } from "../services/analysisService.js";
+import type { TranscriptService } from "../services/transcriptService.js";
 import type { createInsightService } from "../services/insightService.js";
 import type { ServiceContext } from "../services/context.js";
 import type { EventService } from "../services/eventService.js";
@@ -42,6 +43,7 @@ export interface RouteDeps {
   verifyGoogle: ReturnType<typeof createGoogleVerifier> | undefined;
   requireAnalyses: () => AnalysisService;
   requireInsights: () => ReturnType<typeof createInsightService>;
+  requireTranscripts: () => TranscriptService;
   opinionMaxLength: number | undefined;
 }
 

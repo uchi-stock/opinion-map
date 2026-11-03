@@ -51,6 +51,29 @@ test.describe("参加者の画面", () => {
   });
 });
 
+test.describe("話した内容から付箋を作る", () => {
+  test("文字から候補を作り、選んで投稿すると、ボードに出る", async ({ page }, testInfo) => {
+    // ヘッドレスのブラウザには、音声認識が無い。入口が出るよう、代わりを置く(文字は、手で入れる)
+    await page.addInitScript(() => {
+      (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = class {
+        start() {}
+      };
+    });
+    await page.goto("/");
+    await page.getByRole("link", { name: "参加者の画面（サンプル）" }).click();
+    await page.getByRole("link", { name: "話した内容から付箋を作る" }).click();
+    await expect(page.getByRole("heading", { name: "話した内容から、付箋を作る" })).toBeVisible();
+    await page.getByLabel("話した内容（文字）").fill("録音から作った意見です。次の会議はいつですか？");
+    await page.getByRole("button", { name: "付箋の候補を作る" }).click();
+    await expect(page.getByRole("checkbox", { name: "この付箋を投稿する" })).toHaveCount(2);
+    await expectNoHorizontalOverflow(page);
+    await captureScreenshot(page, testInfo, `record-candidates-${testInfo.project.name}`, `話した内容からの付箋の候補(${testInfo.project.name})`);
+    await page.getByRole("button", { name: "選んだ付箋を投稿する" }).click();
+    await expect(page.getByText("投稿しました。ありがとうございます。")).toBeVisible();
+    await expect(page.getByTestId("sticky-note").filter({ hasText: "録音から作った意見です" })).toBeVisible();
+  });
+});
+
 test.describe("管理画面", () => {
   // デモ版は運営者トークンが入力済みになる。Google ログインの画面は、E2E の対象外(外部サービスのため)
   test("イベント一覧が表示される", async ({ page }, testInfo) => {

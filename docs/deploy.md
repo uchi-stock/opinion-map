@@ -192,6 +192,7 @@ APIキーやトークンを、誤ってコミットしないための検知が�
 | --- | --- | --- |
 | `ANALYSIS_DAILY_LIMIT` | 分析を始められる回数 | 10 |
 | `INSIGHT_DAILY_LIMIT` | 案を作れる回数 | 100 |
+| `TRANSCRIPT_DAILY_LIMIT` | 話した内容から付箋の候補を作れる回数（参加者も使う） | 100 |
 
 - GitHub の Settings → Secrets and variables → Actions → Variables に登録する。未登録なら既定を使う
 - 0 にすると、AIを止められる（すべて断る）

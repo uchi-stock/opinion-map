@@ -8,6 +8,7 @@ import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 import { withBase } from "../lib/paths.ts";
 import { ComposeScreen } from "../components/participant/ComposeScreen.tsx";
+import { RecordScreen } from "../components/participant/RecordScreen.tsx";
 import { ReadingScreen } from "../components/participant/ReadingScreen.tsx";
 import type { ListState } from "../components/participant/types.ts";
 import { TimerBadge } from "../components/TimerBadge.tsx";
@@ -52,6 +53,8 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
   const [mode, setMode] = useState<ViewMode>("board");
   // 「投稿する」のリンク(#post)で、従来の投稿画面を開く
   const [composing, setComposing] = useHashFlag("post");
+  // 「🎙️」のリンク(#record)で、話した内容から付箋を作る画面を開く
+  const [recordingScreen, setRecordingScreen] = useHashFlag("record");
   const [posted, setPosted] = useState(false);
   // 運営者が公開した要約があるときだけ、「要約」の見方を出す
   const [summary, setSummary] = useState<PublicSummaryResponse | null>(null);
@@ -107,6 +110,12 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
     // 投稿したら、ボードに戻る。投稿できたことは、ボードに出す
     setPosted(true);
     setComposing(false);
+  }
+
+  function handleRecorded(_count: number) {
+    void loadList();
+    setPosted(true);
+    setRecordingScreen(false);
   }
 
   function handleDeleted(id: string) {
@@ -166,6 +175,8 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
 
       {composing ? (
         <ComposeScreen session={session} sessionId={sessionId} onBack={() => setComposing(false)} onSubmitted={handleSubmitted} />
+      ) : recordingScreen ? (
+        <RecordScreen accepting={session.acceptingOpinions} sessionId={sessionId} onBack={() => setRecordingScreen(false)} onPosted={handleRecorded} />
       ) : (
         <ReadingScreen
           session={session}

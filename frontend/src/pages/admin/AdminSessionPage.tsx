@@ -1,11 +1,13 @@
 import { useState } from "react";
 import type { AdminApi } from "../../api/admin.ts";
-import type { AdminOpinion, AnalysisRun, Insight, SessionRecord } from "../../api/types.ts";
+import type { AdminOpinion, AnalysisRun, EventRecord, Insight, SessionRecord } from "../../api/types.ts";
 import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { AnalysisPanel, opinionAnchor } from "../../components/admin/AnalysisPanel.tsx";
 import { SummaryView } from "../../components/SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../../components/ViewTabs.tsx";
 import { TimerBadge } from "../../components/TimerBadge.tsx";
+import { RecordScreen } from "../../components/participant/RecordScreen.tsx";
+import { isSpeechSupported } from "../../lib/speech.ts";
 import { StickyBoard } from "../../components/StickyBoard.tsx";
 import { groupByClusters, groupByKind } from "../../lib/board.ts";
 import { OpinionCard } from "../../components/OpinionCard.tsx";
@@ -81,12 +83,60 @@ function OpinionBoard({ opinions, analysis, reload }: { opinions: AdminOpinion[]
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h2 className="h6 mb-0">投稿された意見（{opinions.length}件）</h2>
         <div className="d-flex gap-2">
+          {isSpeechSupported() && (
+            <a className="btn icon-btn btn-sm btn-outline-primary" href="#record" aria-label="話した内容から付箋を作る" title="話した内容から付箋を作る">🎙️</a>
+          )}
           <a className="btn icon-btn btn-sm btn-outline-primary" href="#manage" aria-label="意見を管理する" title="意見を管理する">✏️</a>
           <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void reload()} aria-label="更新" title="更新">🔄</button>
         </div>
       </div>
       {opinions.length === 0 && <p className="text-body-secondary">まだ投稿はありません。</p>}
       {opinions.length > 0 && <StickyBoard groups={analysis ? groupByClusters(opinions, analysis) : groupByKind(opinions)} />}
+    </>
+  );
+}
+
+/** テーマの状態(公開中など)、残り時間、参加者の画面へのリンク。公開されていないときは、案内を出す */
+function SessionHeader({
+  event,
+  session,
+  eventId,
+  themePath,
+  visible,
+  reload,
+}: {
+  event: EventRecord;
+  session: SessionRecord;
+  eventId: string;
+  themePath: string;
+  visible: boolean;
+  reload: () => Promise<void>;
+}) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
+          <span className="text-body-secondary small text-break">
+            {event.name}
+            <span className={`badge ms-2 ${session.status === "active" ? "text-bg-primary" : session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
+              {SESSION_STATUS_LABELS[session.status]}
+            </span>
+            {session.status === "active" && session.deadlineAt && (
+              <span className="ms-2">
+                <TimerBadge deadlineAt={session.deadlineAt} serverNow={new Date().toISOString()} onExpire={reload} />
+              </span>
+            )}
+          </span>
+          {/* 参加者に見える画面そのもの。URLのコピーやQRは、イベントの招待URLの画面にある */}
+          <a className="btn icon-btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer" aria-label="参加者の画面を見る" title="参加者の画面を見る">👀</a>
+        </div>
+        {!visible && (
+          <div className="alert alert-warning" role="status">
+            参加者が投稿できるのは、イベントとテーマが、両方とも「公開中」のときだけです。
+            <a className="alert-link ms-1" href={`${themePath}/edit`}>
+              テーマの設定を開く
+            </a>
+          </div>
+        )}
     </>
   );
 }
@@ -122,6 +172,8 @@ function SessionContent({
   // ボード(ホワイトボード)が基本。「意見を管理する」のリンク(#manage)で、管理者向けの更新画面(一覧と、非表示・削除)を開く
   const [managing, setManaging] = useHashFlag("manage");
   const [view, setView] = useState<ContentView>("raw");
+  // 「🎙️」のリンク(#record)で、話した内容から付箋を作る画面を開く
+  const [recording, setRecording] = useHashFlag("record");
 
   if (state.status === "loading") return <p role="status">読み込んでいます…</p>;
   if (state.status === "error")
@@ -135,31 +187,23 @@ function SessionContent({
   const visible = event.status === "active" && session.status === "active";
   const themePath = withBase(`/admin/events/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`);
 
+  if (recording) {
+    return (
+      <RecordScreen
+        accepting={visible}
+        sessionId={sessionId}
+        onBack={() => setRecording(false)}
+        onPosted={() => {
+          setRecording(false);
+          void reload();
+        }}
+      />
+    );
+  }
+
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
-        <span className="text-body-secondary small text-break">
-          {event.name}
-          <span className={`badge ms-2 ${session.status === "active" ? "text-bg-primary" : session.status === "draft" ? "text-bg-warning" : "text-bg-secondary"}`}>
-            {SESSION_STATUS_LABELS[session.status]}
-          </span>
-          {session.status === "active" && session.deadlineAt && (
-            <span className="ms-2">
-              <TimerBadge deadlineAt={session.deadlineAt} serverNow={new Date().toISOString()} onExpire={reload} />
-            </span>
-          )}
-        </span>
-        {/* 参加者に見える画面そのもの。URLのコピーやQRは、イベントの招待URLの画面にある */}
-        <a className="btn icon-btn btn-sm btn-outline-secondary flex-shrink-0" href={withBase(`/e/${encodeURIComponent(eventId)}`)} target="_blank" rel="noreferrer" aria-label="参加者の画面を見る" title="参加者の画面を見る">👀</a>
-      </div>
-      {!visible && (
-        <div className="alert alert-warning" role="status">
-          参加者が投稿できるのは、イベントとテーマが、両方とも「公開中」のときだけです。
-          <a className="alert-link ms-1" href={`${themePath}/edit`}>
-            テーマの設定を開く
-          </a>
-        </div>
-      )}
+      <SessionHeader event={event} session={session} eventId={eventId} themePath={themePath} visible={visible} reload={reload} />
       <ViewTabs view={view} onChange={setView} summaryAvailable={latest !== null} />
       {view === "summary" && latest ? (
         <section aria-label="要約">

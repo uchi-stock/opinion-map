@@ -79,7 +79,8 @@ function isOpen(event: EventRecord, session: SessionRecord): boolean {
 }
 
 /** 投稿を受け付けるのは、公開中のイベントの、公開中で、開いているテーマ(選ばれていれば)だけ */
-function isAccepting(event: EventRecord, session: SessionRecord, now: Date): boolean {
+/** 投稿を受け付けているか(付箋の候補を作れるかの判断にも使う) */
+export function isAccepting(event: EventRecord, session: SessionRecord, now: Date): boolean {
   if (session.deadlineAt !== undefined && Date.parse(session.deadlineAt) <= now.getTime()) return false;
   return event.status === "active" && session.status === "active" && isOpen(event, session);
 }

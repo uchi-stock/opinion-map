@@ -262,3 +262,36 @@ describe("イベントのほかのテーマへの導線", () => {
     expect(screen.queryByRole("link", { name: "このイベントのほかのテーマを見る" })).toBeNull();
   });
 });
+
+describe("参加者の画面: 話した内容から付箋を作る入口", () => {
+  afterEach(() => {
+    delete (window as unknown as { SpeechRecognition?: unknown }).SpeechRecognition;
+  });
+
+  it("音声認識を使えないブラウザでは、入口(🎙️)を出さない", async () => {
+    fakeBackend();
+    render(<ParticipantPage sessionId="s1" />);
+    await screen.findByRole("link", { name: "意見を投稿する" });
+    expect(screen.queryByRole("link", { name: "話した内容から付箋を作る" })).toBeNull();
+  });
+
+  it("使えるブラウザでは、入口から録音の画面を開け、戻れる。投稿を受け付けていなければ、入口を出さない", async () => {
+    (window as unknown as { SpeechRecognition: unknown }).SpeechRecognition = class {
+      start() {}
+    };
+    fakeBackend();
+    const user = userEvent.setup();
+    const { unmount } = render(<ParticipantPage sessionId="s1" />);
+    await user.click(await screen.findByRole("link", { name: "話した内容から付箋を作る" }));
+    expect(await screen.findByRole("heading", { name: "話した内容から、付箋を作る" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "意見を投稿する" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "ボードへ戻る" }));
+    expect(await screen.findByRole("link", { name: "話した内容から付箋を作る" })).toBeInTheDocument();
+    unmount();
+
+    fakeBackend({ session: { acceptingOpinions: false } });
+    render(<ParticipantPage sessionId="s1" />);
+    await screen.findByText("現在、投稿を受け付けていません。");
+    expect(screen.queryByRole("link", { name: "話した内容から付箋を作る" })).toBeNull();
+  });
+});

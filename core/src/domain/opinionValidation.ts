@@ -54,6 +54,15 @@ export function parseOpinionCreate(body: unknown, maxLength = DEFAULT_OPINION_MA
   };
 }
 
+/** 話した内容の文字の長さの上限(1回あたり)。長い内容は、画面が分けて送る */
+export const TRANSCRIPT_MAX_LENGTH = 4000;
+
+/** 付箋の候補を作るための、話した内容の文字 */
+export function parseTranscript(body: unknown): { text: string } {
+  const value = text(asObject(body), "text", "話した内容の文字", TRANSCRIPT_MAX_LENGTH, { required: true });
+  return { text: value! };
+}
+
 export interface OpinionEdit {
   editKey: string;
   body: string;

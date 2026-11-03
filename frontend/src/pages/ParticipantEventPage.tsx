@@ -27,6 +27,8 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   const [picked, setPicked] = useState<string | null>(null);
   // 投稿画面(#post)のときは、投稿に集中できるよう、ほかの欄を出さない
   const [composing] = useHashFlag("post");
+  const [recording] = useHashFlag("record");
+  const focused = composing || recording;
 
   async function load() {
     try {
@@ -110,7 +112,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
   return (
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <p className="text-body-secondary small mb-1">{event.name}</p>
-      {!composing && (
+      {!focused && (
         <>
       <nav aria-label="テーマの切り替え" className="mb-3">
         <div className="d-flex justify-content-between align-items-center mb-1">
@@ -164,7 +166,7 @@ export function ParticipantEventPage({ eventId }: { eventId: string }) {
         </>
       )}
       <ParticipantPage key={selected.id} sessionId={selected.id} embedded />
-      {!composing && <PublishedNotes eventId={event.id} />}
+      {!focused && <PublishedNotes eventId={event.id} />}
     </main>
   );
 }

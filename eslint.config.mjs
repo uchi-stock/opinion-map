@@ -13,17 +13,14 @@ const COMPLEXITY_RATCHET = {
     "core/src/adapters/kouchouAi.ts": 24,
     "core/src/analysis/validation.ts": 23,
     "core/src/domain/validation.ts": 19,
-    "frontend/src/App.tsx": 28,
     "frontend/src/components/admin/AnalysisPanel.tsx": 18,
     "frontend/src/pages/ParticipantPage.tsx": 31,
-    "frontend/src/pages/admin/AdminSessionPage.tsx": 17,
 };
 /** ファイルごとの、導入時点の認知的複雑度の最大値 */
 const COGNITIVE_RATCHET = {
     "core/src/adapters/kouchouAi.ts": 31,
     "core/src/analysis/validation.ts": 28,
     "core/src/domain/validation.ts": 21,
-    "frontend/src/App.tsx": 19,
     "frontend/src/pages/ParticipantPage.tsx": 21,
 };
 /** ファイルごとの、導入時点の実効行数（コメント・空行を除く） */
@@ -31,7 +28,6 @@ const MAX_LINES_RATCHET = {
     "core/src/app.ts": 528,
     "core/src/domain/validation.ts": 342,
     "core/src/repositories/dynamoRepositories.ts": 323,
-    "frontend/src/pages/admin/AdminSessionPage.tsx": 414,
 };
 
 const source = ["frontend/src/**/*.{ts,tsx}", "backend/src/**/*.ts", "core/src/**/*.ts"];

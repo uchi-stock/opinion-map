@@ -5,7 +5,8 @@ import { AdminShell } from "../../components/admin/AdminShell.tsx";
 import { NotesEditor } from "../../components/admin/NotesEditor.tsx";
 import { withBase } from "../../lib/paths.ts";
 import { useLoad } from "../../lib/useLoad.ts";
-import { latestAnalysis, SessionForm } from "./AdminSessionPage.tsx";
+import { SessionForm } from "../../components/admin/SessionForm.tsx";
+import { latestAnalysis } from "./AdminSessionPage.tsx";
 
 type Draft = Parameters<typeof NotesEditor>[0]["draftSource"];
 

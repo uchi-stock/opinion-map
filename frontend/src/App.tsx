@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AdminAdminsPage } from "./pages/admin/AdminAdminsPage.tsx";
 import { AdminEventEditPage } from "./pages/admin/AdminEventEditPage.tsx";
 import { AdminEventInvitePage } from "./pages/admin/AdminEventInvitePage.tsx";
@@ -32,69 +33,82 @@ export type Route =
   | { page: "adminSession"; eventId: string; sessionId: string }
   | { page: "notFound" };
 
+const dec = (value: string | undefined) => decodeURIComponent(value ?? "");
+
+/**
+ * パスと画面の対応表。上から順に調べ、最初に合ったものを使う。
+ * 「new」は ID ではなく作る画面なので、ID を受ける行より先に置く。
+ */
+const ROUTE_TABLE: { pattern: RegExp; build: (m: RegExpExecArray) => Route }[] = [
+  { pattern: /^\/s\/([^/]+)\/?$/, build: (m) => ({ page: "session", sessionId: dec(m[1]) }) },
+  { pattern: /^\/e\/([^/]+)\/?$/, build: (m) => ({ page: "event", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/?$/, build: () => ({ page: "adminEvents" }) },
+  { pattern: /^\/admin\/events\/new\/?$/, build: () => ({ page: "adminEventNew" }) },
+  { pattern: /^\/admin\/admins\/?$/, build: () => ({ page: "adminAdmins" }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/proposals\/?$/, build: (m) => ({ page: "adminEventProposals", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/notes\/?$/, build: (m) => ({ page: "adminEventNotes", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/usage\/?$/, build: (m) => ({ page: "adminEventUsage", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/?$/, build: (m) => ({ page: "adminEvent", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/edit\/?$/, build: (m) => ({ page: "adminEventEdit", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/invite\/?$/, build: (m) => ({ page: "adminEventInvite", eventId: dec(m[1]) }) },
+  { pattern: /^\/admin\/events\/([^/]+)\/sessions\/new\/?$/, build: (m) => ({ page: "adminSessionNew", eventId: dec(m[1]) }) },
+  {
+    pattern: /^\/admin\/events\/([^/]+)\/sessions\/([^/]+)\/edit\/?$/,
+    build: (m) => ({ page: "adminSessionEdit", eventId: dec(m[1]), sessionId: dec(m[2]) }),
+  },
+  {
+    pattern: /^\/admin\/events\/([^/]+)\/sessions\/([^/]+)\/notes\/?$/,
+    build: (m) => ({ page: "adminSessionNotes", eventId: dec(m[1]), sessionId: dec(m[2]) }),
+  },
+  {
+    pattern: /^\/admin\/events\/([^/]+)\/sessions\/([^/]+)\/?$/,
+    build: (m) => ({ page: "adminSession", eventId: dec(m[1]), sessionId: dec(m[2]) }),
+  },
+];
+
 /** 参加者の招待URLは /e/<イベントID>(テーマは運営者が切り替える)。/s/<テーマID> も使える。運営者の画面は /admin 以下 */
 export function routeOf(pathname: string): Route {
   if (pathname === "/" || pathname === "") return { page: "top" };
-  const session = /^\/s\/([^/]+)\/?$/.exec(pathname);
-  if (session?.[1]) return { page: "session", sessionId: decodeURIComponent(session[1]) };
-  const eventPage = /^\/e\/([^/]+)\/?$/.exec(pathname);
-  if (eventPage?.[1]) return { page: "event", eventId: decodeURIComponent(eventPage[1]) };
-  if (/^\/admin\/?$/.test(pathname)) return { page: "adminEvents" };
-  // 「new」は、イベントのIDではなく、作る画面。イベントのURLより先に判定する
-  if (/^\/admin\/events\/new\/?$/.test(pathname)) return { page: "adminEventNew" };
-  if (/^\/admin\/admins\/?$/.test(pathname)) return { page: "adminAdmins" };
-  for (const [name, page] of [["proposals", "adminEventProposals"], ["notes", "adminEventNotes"], ["usage", "adminEventUsage"]] as const) {
-    const sub = new RegExp(`^/admin/events/([^/]+)/${name}/?$`).exec(pathname);
-    if (sub?.[1]) return { page, eventId: decodeURIComponent(sub[1]) };
-  }
-  const event = /^\/admin\/events\/([^/]+)\/?$/.exec(pathname);
-  if (event?.[1]) return { page: "adminEvent", eventId: decodeURIComponent(event[1]) };
-  const eventEdit = /^\/admin\/events\/([^/]+)\/edit\/?$/.exec(pathname);
-  if (eventEdit?.[1]) return { page: "adminEventEdit", eventId: decodeURIComponent(eventEdit[1]) };
-  const eventInvite = /^\/admin\/events\/([^/]+)\/invite\/?$/.exec(pathname);
-  if (eventInvite?.[1]) return { page: "adminEventInvite", eventId: decodeURIComponent(eventInvite[1]) };
-  // 「new」は、テーマのIDではなく、追加の画面。テーマのURLより先に判定する
-  const sessionNew = /^\/admin\/events\/([^/]+)\/sessions\/new\/?$/.exec(pathname);
-  if (sessionNew?.[1]) return { page: "adminSessionNew", eventId: decodeURIComponent(sessionNew[1]) };
-  for (const [name, page] of [["edit", "adminSessionEdit"], ["notes", "adminSessionNotes"]] as const) {
-    const sub = new RegExp(`^/admin/events/([^/]+)/sessions/([^/]+)/${name}/?$`).exec(pathname);
-    if (sub?.[1] && sub[2]) return { page, eventId: decodeURIComponent(sub[1]), sessionId: decodeURIComponent(sub[2]) };
-  }
-  const adminSession = /^\/admin\/events\/([^/]+)\/sessions\/([^/]+)\/?$/.exec(pathname);
-  if (adminSession?.[1] && adminSession[2]) {
-    return {
-      page: "adminSession",
-      eventId: decodeURIComponent(adminSession[1]),
-      sessionId: decodeURIComponent(adminSession[2]),
-    };
+  for (const { pattern, build } of ROUTE_TABLE) {
+    const match = pattern.exec(pathname);
+    if (match) return build(match);
   }
   return { page: "notFound" };
 }
 
-export function App({ pathname = window.location.pathname }: { pathname?: string }) {
-  const route = routeOf(stripBase(pathname));
-  if (route.page === "top") return <TopPage />;
-  if (route.page === "session") return <ParticipantPage sessionId={route.sessionId} />;
-  if (route.page === "event") return <ParticipantEventPage eventId={route.eventId} />;
-  if (route.page === "adminEvents") return <AdminEventsPage />;
-  if (route.page === "adminEventNew") return <AdminEventNewPage />;
-  if (route.page === "adminAdmins") return <AdminAdminsPage />;
-  if (route.page === "adminEventProposals") return <AdminProposalsPage eventId={route.eventId} />;
-  if (route.page === "adminEventNotes") return <AdminNotesPage eventId={route.eventId} />;
-  if (route.page === "adminEventUsage") return <AdminUsagePage eventId={route.eventId} />;
-  if (route.page === "adminEvent") return <AdminEventPage eventId={route.eventId} />;
-  if (route.page === "adminEventEdit") return <AdminEventEditPage eventId={route.eventId} />;
-  if (route.page === "adminEventInvite") return <AdminEventInvitePage eventId={route.eventId} />;
-  if (route.page === "adminSessionNew") return <AdminSessionNewPage eventId={route.eventId} />;
-  if (route.page === "adminSessionEdit") return <AdminSessionEditPage eventId={route.eventId} sessionId={route.sessionId} />;
-  if (route.page === "adminSessionNotes") return <AdminSessionNotesPage eventId={route.eventId} sessionId={route.sessionId} />;
-  if (route.page === "adminSession") return <AdminSessionPage eventId={route.eventId} sessionId={route.sessionId} />;
-  return (
+type PageRenderers = { [P in Route["page"]]: (route: Extract<Route, { page: P }>) => ReactNode };
+
+/** 画面ごとの描画。Route に画面を足すと、ここにも足さないと型が通らない */
+const RENDER: PageRenderers = {
+  top: () => <TopPage />,
+  session: (r) => <ParticipantPage sessionId={r.sessionId} />,
+  event: (r) => <ParticipantEventPage eventId={r.eventId} />,
+  adminEvents: () => <AdminEventsPage />,
+  adminEventNew: () => <AdminEventNewPage />,
+  adminAdmins: () => <AdminAdminsPage />,
+  adminEventProposals: (r) => <AdminProposalsPage eventId={r.eventId} />,
+  adminEventNotes: (r) => <AdminNotesPage eventId={r.eventId} />,
+  adminEventUsage: (r) => <AdminUsagePage eventId={r.eventId} />,
+  adminEvent: (r) => <AdminEventPage eventId={r.eventId} />,
+  adminEventEdit: (r) => <AdminEventEditPage eventId={r.eventId} />,
+  adminEventInvite: (r) => <AdminEventInvitePage eventId={r.eventId} />,
+  adminSessionNew: (r) => <AdminSessionNewPage eventId={r.eventId} />,
+  adminSessionEdit: (r) => <AdminSessionEditPage eventId={r.eventId} sessionId={r.sessionId} />,
+  adminSessionNotes: (r) => <AdminSessionNotesPage eventId={r.eventId} sessionId={r.sessionId} />,
+  adminSession: (r) => <AdminSessionPage eventId={r.eventId} sessionId={r.sessionId} />,
+  notFound: () => (
     <main className="container py-4" style={{ maxWidth: 640 }}>
       <h1 className="h4">ページが見つかりません</h1>
       <p>
         <a href={withBase("/")}>トップページへ</a>
       </p>
     </main>
-  );
+  ),
+};
+
+export function App({ pathname = window.location.pathname }: { pathname?: string }) {
+  const route = routeOf(stripBase(pathname));
+  // 画面の種類ごとに型が決まるため、描画の関数を型の上で取り出す
+  const render = RENDER[route.page] as (r: Route) => ReactNode;
+  return render(route);
 }

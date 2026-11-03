@@ -55,13 +55,14 @@ jobs:
         backend/README.md
         frontend/README.md
         eval/kouchou/README.md
-      # コードの重複。まず報告だけ(しきい値0)。実測は0.6%と低いので、しきい値は後で決める
+      # コードの重複。しきい値は3%(標準の目標は5%以下)。実測は約1.7%(手元のjscpdで測定)。
+      # 余裕を残した値から始め、実測が下がったら、しきい値も下げる(上げない)
       # 循環依存と越境 import の検知。TypeScript まで見る検査は、下の architecture ジョブで行う
       enable_architecture_check: true
       enable_duplication_check: true
       # 依存更新のPRに、更新の種類(major/minor/patch)と直接/間接のリスクの要約をコメントする
       enable_dependency_risk_summary: true
-      duplication_threshold: 0
+      duplication_threshold: 3
     secrets: inherit
 
   # eval配下を変更したPRだけ広聴AI評価を、kouchou-runner配下を変更したPRだけランナーのイメージの確認を実行する

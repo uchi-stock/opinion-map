@@ -1,9 +1,20 @@
+import { parseTranscript } from "../domain/validation.js";
 import type { Route, RouteDeps } from "./types.js";
 
 /** analysisRoutes: このグループのAPIの定義 */
 export function analysisRoutes(d: RouteDeps): Route[] {
-  const { requireAnalyses, requireInsights } = d;
+  const { requireAnalyses, requireInsights, requireTranscripts } = d;
   return [
+    {
+      // 話した内容の文字から、付箋の候補を作る。参加者も使える(投稿を受け付けているテーマだけ)。何も保存しない
+      method: "POST",
+      pattern: /^\/sessions\/(?<id>[^/]+)\/transcript$/,
+      admin: false,
+      handle: async ({ params, body }) => ({
+        status: 200,
+        data: { candidates: await requireTranscripts().extract(params["id"]!, parseTranscript(body).text) },
+      }),
+    },
     {
       method: "POST",
       pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,

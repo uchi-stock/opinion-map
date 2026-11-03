@@ -1,4 +1,4 @@
-import type { NotesEntry, PublicEventSummary, PublicSummaryResponse, Proposal, ProposalList, PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
+import type { NotesEntry, PublicEventSummary, PublicSummaryResponse, Proposal, ProposalList, PublicEvent, OpinionKind, OpinionCandidate, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
 import { trimTrailingSlashes } from "../lib/paths.ts";
 
 export class ApiError extends Error {
@@ -98,6 +98,16 @@ export function postOpinion(sessionId: string, submission: OpinionSubmission): P
     headers: { "content-type": "application/json" },
     body: JSON.stringify(submission),
   });
+}
+
+/** 話した内容の文字から、付箋の候補を作る。何も保存しない。候補は、確かめてから、ふつうの投稿として送る */
+export async function extractCandidates(sessionId: string, text: string): Promise<OpinionCandidate[]> {
+  const result = await request<{ candidates: OpinionCandidate[] }>(`/sessions/${enc(sessionId)}/transcript`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return result.candidates;
 }
 
 const jsonPost = (method: string, body: unknown): RequestInit => ({

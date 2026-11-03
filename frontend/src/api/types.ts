@@ -101,6 +101,12 @@ export interface OpinionSubmission {
   editKey?: string;
 }
 
+/** 話した内容の文字から作った、付箋の候補。まだ投稿されていない */
+export interface OpinionCandidate {
+  body: string;
+  kind: OpinionKind;
+}
+
 /** 運営者向けの投稿。非表示かどうかを含む */
 export interface AdminOpinion extends PublicOpinion {
   status: "active" | "hidden";

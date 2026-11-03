@@ -62,6 +62,7 @@ npm run dev --workspace backend
 | `POST /opinions/:id/delete` | 自分の投稿を削除する（編集用の鍵が必要） | 鍵 |
 | `POST /sessions/:id/presence` | 画面を見ていることを知らせる(`deviceId`)。人数の目安に使う | 不要 |
 | `POST /opinions/:id/reaction` | いいねを付ける・外す(`voterId` と `reacted`)。同じ投票者は1回だけ。受け付け中のテーマだけ | 不要 |
+| `POST /sessions/:id/transcript` | 話した内容の文字（4000文字まで）から、付箋の候補をAIで作る。何も保存しない。投稿を受け付けているテーマだけ | 不要 |
 | `POST /opinions/:id/moderation` | 投稿を非表示・再表示・削除する（status は active / hidden / deleted） | 運営者 |
 | `POST /sessions/:id/analyses` | 分析を始める | 運営者 |
 | `GET /sessions/:id/analyses` | 分析の一覧 | 運営者 |
@@ -80,6 +81,17 @@ npm run dev --workspace backend
 - 案は、作った時点では採用されていない（`approved: false`）。自動で使われない
 - 出力は検証し、形が違えば保存せず 502 を返す
 - 意見は、データとして渡す。意見の中の指示には従わないよう、プロンプトで指示する
+
+## 話した内容から付箋を作る
+
+参加者も運営者も、話した内容から付箋の候補を作れる（`POST /sessions/:id/transcript`）。
+
+- 音声は、サーバーに送らない。端末のブラウザが文字にして、その文字だけを送る（1回4000文字まで。長いときは画面が分けて送る）
+- AIが、文字から付箋の候補（本文と種類）を取り出して返す。候補は保存しない。使う人が確かめて直し、ふつうの投稿（`POST /sessions/:id/opinions`）として送る。誰が話したかは、記録しない
+- 投稿を受け付けていないテーマでは、AIを呼ばず、400を返す
+- 公開のAPIなので、費用を抑えるため、イベントごとに1日の上限がある（`TRANSCRIPT_DAILY_LIMIT`、既定100）。超えると429を返す
+- 出力は検証する。形が違えば502、長い候補は切り、候補は20件まで。0件は、正しい結果として返す
+- `GEMINI_API_KEY` がないときは、503を返す
 
 ## 投稿の頻度制限と、編集・削除
 

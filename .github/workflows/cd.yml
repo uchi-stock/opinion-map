@@ -64,6 +64,7 @@ jobs:
       ALERT_EMAIL: ${{ secrets.ALERT_EMAIL || vars.ALERT_EMAIL }}
       ANALYSIS_DAILY_LIMIT: ${{ vars.ANALYSIS_DAILY_LIMIT }}
       INSIGHT_DAILY_LIMIT: ${{ vars.INSIGHT_DAILY_LIMIT }}
+      TRANSCRIPT_DAILY_LIMIT: ${{ vars.TRANSCRIPT_DAILY_LIMIT }}
       STACK_NAME: opinion-map-prod
     steps:
       - name: SESSION_SECRET がなければ、AWS のシークレットキーから作る

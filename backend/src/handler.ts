@@ -23,7 +23,7 @@ import { createDynamoRepositories } from "../../core/src/repositories/dynamoRepo
  * - ANALYSIS_BUCKET、ANALYSIS_CLUSTER、ANALYSIS_TASK_DEFINITION、ANALYSIS_CONTAINER、
  *   ANALYSIS_SUBNETS、ANALYSIS_SECURITY_GROUPS(後ろ2つはカンマ区切り): 広聴AIをFargateで動かす設定。
  *   すべて揃っているときだけ、分析のAPIが使える(なければ503)
- * - ANALYSIS_DAILY_LIMIT、INSIGHT_DAILY_LIMIT: AIの利用の、イベントごと・1日あたりの上限(分析は既定10、案の生成は既定100。0以上の整数)
+ * - ANALYSIS_DAILY_LIMIT、INSIGHT_DAILY_LIMIT、TRANSCRIPT_DAILY_LIMIT: AIの利用の、イベントごと・1日あたりの上限(分析は既定10、案の生成は既定100、付箋の候補の作成は既定100。0以上の整数)
  * - GEMINI_API_KEY: 共通点・相違点・問いの案を作るために使う（未設定なら、そのAPIは503）
  */
 const tableName = process.env["TABLE_NAME"];
@@ -74,6 +74,7 @@ const limitFromEnv = (name: string): number | undefined => {
 };
 const analysisDailyLimit = limitFromEnv("ANALYSIS_DAILY_LIMIT");
 const insightDailyLimit = limitFromEnv("INSIGHT_DAILY_LIMIT");
+const transcriptDailyLimit = limitFromEnv("TRANSCRIPT_DAILY_LIMIT");
 
 const app = createApp({
   repos: createDynamoRepositories(new DynamoKvStore(client, tableName)),
@@ -82,6 +83,7 @@ const app = createApp({
   dailyLimits: {
     ...(analysisDailyLimit === undefined ? {} : { analysis: analysisDailyLimit }),
     ...(insightDailyLimit === undefined ? {} : { insight: insightDailyLimit }),
+    ...(transcriptDailyLimit === undefined ? {} : { transcript: transcriptDailyLimit }),
   },
   ...(googleClientId && sessionSecret
     ? { ownerLogin: { googleClientId, sessionSecret, ownerEmails } }

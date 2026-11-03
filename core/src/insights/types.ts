@@ -20,10 +20,20 @@ export interface InsightRequest {
   opinions: AnalysisOpinion[];
 }
 
+/** 話した内容の文字から、付箋の候補を取り出す依頼 */
+export interface TranscriptRequest {
+  /** テーマの問い */
+  question: string;
+  /** 端末で文字にした、話した内容 */
+  text: string;
+}
+
 /** 共通点・相違点・問いを案として作る、LLMの呼び出し。出力は、アプリ側で検証してから使う */
 export interface InsightProvider {
   readonly name: string;
   generate(request: InsightRequest): Promise<unknown>;
+  /** 話した内容の文字から、付箋(意見)の候補を取り出す。出力は、アプリ側で検証してから使う */
+  extractOpinions(request: TranscriptRequest): Promise<unknown>;
 }
 
 /**

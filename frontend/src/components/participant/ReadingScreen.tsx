@@ -2,8 +2,25 @@ import type { PublicSession, PublicSummaryResponse } from "../../api/types.ts";
 import { SummaryView } from "../SummaryView.tsx";
 import { ViewTabs, type ContentView } from "../ViewTabs.tsx";
 import type { ViewMode } from "../StickyBoard.tsx";
+import { isSpeechSupported } from "../../lib/speech.ts";
 import { OpinionsSection } from "./OpinionsSection.tsx";
 import type { ListState } from "./types.ts";
+
+/** 投稿への入口。文字で書く(✍️)と、話した内容から作る(🎙️。音声認識を使えるブラウザだけ) */
+function PostLinks({ onPostLink }: { onPostLink: () => void }) {
+  return (
+    <div className="d-flex gap-2">
+      <a className="btn icon-btn btn-primary flex-grow-1" href="#post" onClick={onPostLink} aria-label="意見を投稿する" title="意見を投稿する">
+        ✍️
+      </a>
+      {isSpeechSupported() && (
+        <a className="btn icon-btn btn-outline-primary" href="#record" onClick={onPostLink} aria-label="話した内容から付箋を作る" title="話した内容から付箋を作る">
+          🎙️
+        </a>
+      )}
+    </div>
+  );
+}
 
 /** 基本の画面。要約か、投稿へのリンクと投稿された意見 */
 export function ReadingScreen({
@@ -58,15 +75,7 @@ export function ReadingScreen({
       )}
       <section className="mb-3" aria-label="投稿する">
         {session.acceptingOpinions ? (
-          <a
-            className="btn icon-btn btn-primary w-100"
-            href="#post"
-            onClick={onPostLink}
-            aria-label="意見を投稿する"
-            title="意見を投稿する"
-          >
-            ✍️
-          </a>
+          <PostLinks onPostLink={onPostLink} />
         ) : (
           <div className="alert alert-secondary mb-0" role="status">
             現在、投稿を受け付けていません。

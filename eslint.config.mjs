@@ -5,20 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 // 複雑度・認知的複雑度・ファイルサイズを見る lint。oxlint が見ない観点を補う
 // （dev-standards/docs/code-quality-conventions.md「lint」）。
 // 標準の値（complexity 15、認知的複雑度 15、max-lines 300）を、すべてのファイルに適用する。
-// 導入時点で超えていたファイルだけ、現状の値に固定する（ラチェット）。上げない。直したら、この表から消す。
-// 新しいコードは標準の値で判定される。
-
-/** ファイルごとの、導入時点の complexity（循環的複雑度）の最大値 */
-const COMPLEXITY_RATCHET = {
-};
-/** ファイルごとの、導入時点の認知的複雑度の最大値 */
-const COGNITIVE_RATCHET = {
-};
-/** ファイルごとの、導入時点の実効行数（コメント・空行を除く） */
-const MAX_LINES_RATCHET = {
-    "core/src/app.ts": 528,
-    "core/src/repositories/dynamoRepositories.ts": 323,
-};
+// 例外の表(ラチェット)は、すべて解消したので、もう無い。値を上げず、超えるなら分ける。
 
 const source = ["frontend/src/**/*.{ts,tsx}", "backend/src/**/*.ts", "core/src/**/*.ts"];
 
@@ -50,10 +37,4 @@ export default tseslint.config(
       "sonarjs/no-nested-functions": "off", // コールバックの入れ子は、非同期の処理と React の副作用で避けにくい
     },
   },
-  ...Object.entries(COMPLEXITY_RATCHET).map(([file, max]) => ({ files: [file], rules: { complexity: ["error", max] } })),
-  ...Object.entries(COGNITIVE_RATCHET).map(([file, max]) => ({ files: [file], rules: { "sonarjs/cognitive-complexity": ["error", max] } })),
-  ...Object.entries(MAX_LINES_RATCHET).map(([file, max]) => ({
-    files: [file],
-    rules: { "max-lines": ["error", { max, skipBlankLines: true, skipComments: true }] },
-  })),
 );

@@ -1,23 +1,6 @@
-import {
-  parseEventCreate,
-  parseEventPatch,
-  parseEditKeyBody,
-  parsePresence,
-  parseReaction,
-  parseProposalCreate,
-  parseProposalDecision,
-  parseNotes,
-  parseClientError,
-  parseModeration,
-  parseOpinionCreate,
-  parseOpinionEdit,
-  parseSessionCreate,
-  parseSessionPatch,
-} from "./domain/validation.js";
-import { createAuthenticator, type Principal } from "./lib/auth.js";
+import { createAuthenticator } from "./lib/auth.js";
 import { createGoogleVerifier } from "./lib/googleAuth.js";
-import { signSession } from "./lib/jwt.js";
-import { AppError, badRequest, forbidden, notFound, unauthorized } from "./lib/errors.js";
+import { AppError, badRequest, notFound, unauthorized } from "./lib/errors.js";
 import type { Repositories } from "./repositories/types.js";
 import type { AnalysisProvider } from "./analysis/types.js";
 import { createAnalysisService } from "./services/analysisService.js";
@@ -33,6 +16,13 @@ import { createAdminService } from "./services/adminService.js";
 import { createOpinionService, type OpinionRateLimit } from "./services/opinionService.js";
 import { createTimerService } from "./services/timerService.js";
 import { createSessionService } from "./services/sessionService.js";
+import { DEFAULT_SESSION_SECONDS, MIN_SESSION_SECRET_LENGTH } from "./routes/constants.js";
+import { analysisRoutes } from "./routes/analysisRoutes.js";
+import { authRoutes } from "./routes/authRoutes.js";
+import { eventRoutes } from "./routes/eventRoutes.js";
+import { opinionRoutes } from "./routes/opinionRoutes.js";
+import { proposalRoutes } from "./routes/proposalRoutes.js";
+import type { OwnerLoginOptions, Params, Route, RouteDeps } from "./routes/types.js";
 
 export interface HttpRequest {
   method: string;
@@ -74,35 +64,12 @@ export interface AppOptions {
   newId?: () => string;
 }
 
-export interface OwnerLoginOptions {
-  googleClientId: string;
-  /** セッショントークンの署名鍵。32文字以上 */
-  sessionSecret: string;
-  ownerEmails: readonly string[];
-  /** セッションの有効期間(秒)。既定は7日 */
-  sessionSeconds?: number;
-  fetch?: typeof fetch;
-}
+export type { OwnerLoginOptions };
 
-export const DEFAULT_SESSION_SECONDS = 7 * 24 * 60 * 60;
-export const MIN_SESSION_SECRET_LENGTH = 32;
+export { DEFAULT_SESSION_SECONDS, MIN_SESSION_SECRET_LENGTH };
 
 /** リクエスト本文の上限（バイト）。投稿は短い文章なので、小さく抑える */
 export const MAX_BODY_BYTES = 16 * 1024;
-
-type Params = Record<string, string>;
-interface Route {
-  method: string;
-  pattern: RegExp;
-  admin: boolean;
-  handle: (ctx: {
-    params: Params;
-    body: unknown;
-    isAdmin: boolean;
-    principal: Principal | null;
-    headers: Record<string, string | undefined>;
-  }) => Promise<{ status: number; data: unknown }>;
-}
 
 export function createApp(options: AppOptions) {
   const ctx = {
@@ -144,352 +111,27 @@ export function createApp(options: AppOptions) {
     return analyses;
   };
 
+  const deps: RouteDeps = {
+    ctx,
+    events,
+    sessions,
+    opinions,
+    proposals,
+    summaries,
+    usage,
+    admins,
+    login,
+    verifyGoogle,
+    requireAnalyses,
+    requireInsights,
+    opinionMaxLength: options.opinionMaxLength,
+  };
   const routes: Route[] = [
-    {
-      method: "GET",
-      pattern: /^\/health$/,
-      admin: false,
-      handle: async () => ({ status: 200, data: { status: "ok" } }),
-    },
-    {
-      // Googleのトークンを、オーナーのセッショントークンに交換する。ログイン時の1回だけ使う
-      method: "POST",
-      pattern: /^\/auth\/session$/,
-      admin: false,
-      handle: async ({ headers }) => {
-        if (!login || !verifyGoogle) throw new AppError(503, "login_unavailable", "Googleログインが設定されていません");
-        const header = headers["authorization"];
-        if (!header || !header.startsWith("Bearer ")) throw unauthorized();
-        const identity = await verifyGoogle(header.slice("Bearer ".length));
-        if (!(await admins.isAdmin(identity.email))) {
-          throw forbidden("not_owner", "このアカウントは、運営者として登録されていません");
-        }
-        await admins.recordProfile(identity.email, identity.picture);
-        const iat = Math.floor(ctx.now().getTime() / 1000);
-        const exp = iat + (login.sessionSeconds ?? DEFAULT_SESSION_SECONDS);
-        const token = await signSession({ sub: identity.sub, email: identity.email, iat, exp }, login.sessionSecret);
-        return { status: 200, data: { token, email: identity.email, expiresAt: new Date(exp * 1000).toISOString() } };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/me$/,
-      admin: true,
-      handle: async ({ principal }) => {
-        // ログイン中のアカウントのアイコン(Googleのプロフィール画像)。無ければ、画面が頭文字で代わりにする
-        const picture = principal?.email ? (await ctx.repos.admins.get(principal.email.toLowerCase()))?.picture : undefined;
-        return {
-          status: 200,
-          data: { role: "owner", ...(principal?.email ? { email: principal.email } : {}), ...(picture ? { picture } : {}) },
-        };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/admins$/,
-      admin: true,
-      handle: async () => ({ status: 200, data: { admins: await admins.list() } }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/admins$/,
-      admin: true,
-      handle: async ({ body, principal }) => ({
-        status: 201,
-        data: await admins.add(
-          (body as { email?: unknown } | undefined)?.email,
-          principal?.kind === "owner" && principal.email ? principal.email : "(token)",
-        ),
-      }),
-    },
-    {
-      method: "DELETE",
-      pattern: /^\/admins\/(?<email>[^/]+)$/,
-      admin: true,
-      handle: async ({ params }) => {
-        await admins.remove(decodeURIComponent(params["email"]!));
-        return { status: 200, data: { removed: true } };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/events$/,
-      admin: true,
-      handle: async ({ body, principal }) => ({
-        status: 201,
-        data: await events.create(parseEventCreate(body), principal?.kind === "owner" && principal.email ? principal.email : "(token)"),
-      }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/events$/,
-      admin: true,
-      handle: async () => {
-        const all = await events.list();
-        // 作った管理者のプロフィール画像を、一覧に添える
-        const pictures = new Map((await admins.list()).map((a) => [a.email, a.picture]));
-        const withCreator = all.map((e) => {
-          const picture = e.createdBy ? pictures.get(e.createdBy) : undefined;
-          return picture ? { ...e, creatorPicture: picture } : e;
-        });
-        return { status: 200, data: { events: withCreator } };
-      },
-    },
-    {
-      method: "PATCH",
-      pattern: /^\/events\/(?<id>[^/]+)$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: await events.update(params["id"]!, parseEventPatch(body)),
-      }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/events\/(?<id>[^/]+)\/sessions$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 201,
-        data: await sessions.create(params["id"]!, parseSessionCreate(body)),
-      }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/events\/(?<id>[^/]+)\/sessions$/,
-      admin: true,
-      handle: async ({ params }) => ({ status: 200, data: { sessions: await sessions.listByEvent(params["id"]!) } }),
-    },
-    {
-      method: "PATCH",
-      pattern: /^\/sessions\/(?<id>[^/]+)$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: await sessions.update(params["id"]!, parseSessionPatch(body)),
-      }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/events\/(?<id>[^/]+)\/proposals$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        const result = await proposals.submit(params["id"]!, parseProposalCreate(body));
-        return { status: result.created ? 201 : 200, data: { proposal: result.proposal, duplicate: !result.created } };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/events\/(?<id>[^/]+)\/proposals$/,
-      admin: false,
-      handle: async ({ params, principal }) => {
-        // 運営者は、担当のイベントの提案を、すべて見られる
-        const isAdmin = principal?.kind === "owner";
-        if (isAdmin) return { status: 200, data: { accepting: true, proposals: await proposals.listForAdmin(params["id"]!) } };
-        return { status: 200, data: await proposals.listForParticipant(params["id"]!) };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/proposals\/(?<id>[^/]+)\/reaction$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        const { voterId, reacted } = parseReaction(body);
-        return { status: 200, data: await proposals.react(params["id"]!, voterId, reacted) };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/proposals\/(?<id>[^/]+)\/decision$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: await proposals.decide(params["id"]!, parseProposalDecision(body)),
-      }),
-    },
-    {
-      // 画面の描画エラーの報告。ログに残すだけで、何も保存しない。量は1日の上限で抑える
-      method: "POST",
-      pattern: /^\/client-errors$/,
-      admin: false,
-      handle: async ({ body }) => {
-        const report = parseClientError(body);
-        await usage.consume("clientError", "global");
-        ctx.log("client_error", { message: report.message, path: report.path });
-        return { status: 202, data: { received: true } };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/events\/(?<id>[^/]+)\/usage$/,
-      admin: true,
-      handle: async ({ params }) => ({ status: 200, data: await usage.summary(params["id"]!) }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/summary$/,
-      admin: false,
-      handle: async ({ params }) => ({ status: 200, data: await summaries.getPublished(params["id"]!) }),
-    },
-    {
-      method: "PUT",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/notes$/,
-      admin: true,
-      handle: async ({ params, body }) => {
-        const session = await sessions.saveNotes(params["id"]!, parseNotes(body));
-        return { status: 200, data: { notes: session.notes, published: session.notesPublished === true } };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/events\/(?<id>[^/]+)\/notes$/,
-      admin: false,
-      handle: async ({ params, principal }) => {
-        // 運営者は、担当のイベントの記録を、未公開を含めてすべて見られる
-        const isAdmin = principal?.kind === "owner";
-        return { status: 200, data: { notes: await sessions.listNotes(params["id"]!, isAdmin) } };
-      },
-    },
-    {
-      method: "GET",
-      pattern: /^\/events\/(?<id>[^/]+)\/public$/,
-      admin: false,
-      handle: async ({ params }) => ({ status: 200, data: await opinions.getPublicEvent(params["id"]!) }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/sessions\/(?<id>[^/]+)$/,
-      admin: false,
-      handle: async ({ params }) => ({ status: 200, data: await opinions.getPublicSession(params["id"]!) }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
-      admin: true,
-      handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().start(params["id"]!) }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/analyses$/,
-      admin: true,
-      handle: async ({ params }) => ({
-        status: 200,
-        data: { analyses: await requireAnalyses().list(params["id"]!) },
-      }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/analyses\/(?<id>[^/]+)$/,
-      admin: true,
-      handle: async ({ params }) => ({ status: 200, data: await requireAnalyses().get(params["id"]!) }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/analyses\/(?<id>[^/]+)\/clusters\/(?<clusterId>[^/]+)\/insights$/,
-      admin: true,
-      handle: async ({ params }) => ({
-        status: 201,
-        data: await requireInsights().generate(params["id"]!, decodeURIComponent(params["clusterId"]!)),
-      }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/analyses\/(?<id>[^/]+)\/insights$/,
-      admin: true,
-      handle: async ({ params }) => ({
-        status: 200,
-        data: { insights: await requireInsights().list(params["id"]!) },
-      }),
-    },
-    {
-      method: "PATCH",
-      pattern: /^\/insights\/(?<id>[^/]+)$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: await requireInsights().update(params["id"]!, (body ?? {}) as { edited?: unknown; approved?: unknown }),
-      }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/analyses\/(?<id>[^/]+)\/retry$/,
-      admin: true,
-      handle: async ({ params }) => ({ status: 202, data: await requireAnalyses().retry(params["id"]!) }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/opinions$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        const input = parseOpinionCreate(body, options.opinionMaxLength);
-        const result = await opinions.submit(params["id"]!, input);
-        return { status: result.created ? 201 : 200, data: { opinion: result.opinion, duplicate: !result.created } };
-      },
-    },
-    {
-      method: "PATCH",
-      pattern: /^\/opinions\/(?<id>[^/]+)$/,
-      admin: false,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: { opinion: await opinions.edit(params["id"]!, parseOpinionEdit(body, options.opinionMaxLength)) },
-      }),
-    },
-    {
-      // 招待なしで、トップページに出す、公開中のイベントの一覧
-      method: "GET",
-      pattern: /^\/public\/events$/,
-      admin: false,
-      handle: async () => ({ status: 200, data: { events: await opinions.listPublicEvents() } }),
-    },
-    {
-      method: "POST",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/presence$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        await opinions.touchPresence(params["id"]!, parsePresence(body).deviceId);
-        return { status: 200, data: { ok: true } };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/opinions\/(?<id>[^/]+)\/reaction$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        const { voterId, reacted } = parseReaction(body);
-        return { status: 200, data: await opinions.react(params["id"]!, voterId, reacted) };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/opinions\/(?<id>[^/]+)\/delete$/,
-      admin: false,
-      handle: async ({ params, body }) => {
-        await opinions.deleteByAuthor(params["id"]!, parseEditKeyBody(body));
-        return { status: 200, data: { deleted: true } };
-      },
-    },
-    {
-      method: "POST",
-      pattern: /^\/opinions\/(?<id>[^/]+)\/moderation$/,
-      admin: true,
-      handle: async ({ params, body }) => ({
-        status: 200,
-        data: await opinions.moderate(params["id"]!, parseModeration(body)),
-      }),
-    },
-    {
-      method: "GET",
-      pattern: /^\/sessions\/(?<id>[^/]+)\/opinions$/,
-      admin: false,
-      handle: async ({ params, principal }) => {
-        // 管理者は、すべての投稿を見られる
-        const isAdmin = principal?.kind === "owner";
-        if (isAdmin) {
-          return { status: 200, data: { hidden: false, opinions: await opinions.listForAdmin(params["id"]!) } };
-        }
-        return { status: 200, data: await opinions.listForParticipant(params["id"]!) };
-      },
-    },
+    ...authRoutes(deps),
+    ...eventRoutes(deps),
+    ...proposalRoutes(deps),
+    ...analysisRoutes(deps),
+    ...opinionRoutes(deps),
   ];
 
   function baseHeaders(): Record<string, string> {

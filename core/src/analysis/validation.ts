@@ -12,6 +12,39 @@ export class AnalysisOutputError extends AppError {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+/** クラスタ1つの形を検証する。投稿のIDは、入力にあったものだけを許す */
+function validateCluster(item: unknown, where: string, known: Set<string>, seenClusterIds: Set<string>): AnalysisCluster {
+  if (!isRecord(item)) throw new AnalysisOutputError(`${where} がオブジェクトではありません`);
+  const { id, level, parentId, title, summary, opinionIds } = item;
+  if (typeof id !== "string" || id.length === 0) throw new AnalysisOutputError(`${where}.id が正しくありません`);
+  if (seenClusterIds.has(id)) throw new AnalysisOutputError(`${where}.id が重複しています`);
+  if (typeof level !== "number" || !Number.isInteger(level) || level < 1) {
+    throw new AnalysisOutputError(`${where}.level が正しくありません`);
+  }
+  if (parentId !== null && typeof parentId !== "string") throw new AnalysisOutputError(`${where}.parentId が正しくありません`);
+  if (typeof title !== "string" || typeof summary !== "string") {
+    throw new AnalysisOutputError(`${where} の title または summary が文字列ではありません`);
+  }
+  if (!Array.isArray(opinionIds) || opinionIds.some((o) => typeof o !== "string")) {
+    throw new AnalysisOutputError(`${where}.opinionIds が文字列の配列ではありません`);
+  }
+  const unique = [...new Set(opinionIds as string[])];
+  if (unique.some((opinionId) => !known.has(opinionId))) {
+    throw new AnalysisOutputError(`${where} に、入力にない投稿のIDが含まれています`);
+  }
+  return { id, level, parentId: parentId as string | null, title, summary, opinionIds: unique };
+}
+
+/** 親のクラスタが、すべて存在すること */
+function checkParents(clusters: readonly AnalysisCluster[]): void {
+  const clusterIds = new Set(clusters.map((c) => c.id));
+  for (const c of clusters) {
+    if (c.parentId !== null && !clusterIds.has(c.parentId)) {
+      throw new AnalysisOutputError(`クラスタ ${c.id} の親が見つかりません`);
+    }
+  }
+}
+
 /**
  * 分析基盤の出力を検証する。
  * - 形が正しいこと
@@ -30,36 +63,12 @@ export function validateResult(raw: unknown, inputOpinionIds: readonly string[])
   const clusters: AnalysisCluster[] = [];
 
   for (const [index, item] of raw["clusters"].entries()) {
-    const where = `clusters[${index}]`;
-    if (!isRecord(item)) throw new AnalysisOutputError(`${where} がオブジェクトではありません`);
-    const { id, level, parentId, title, summary, opinionIds } = item;
-    if (typeof id !== "string" || id.length === 0) throw new AnalysisOutputError(`${where}.id が正しくありません`);
-    if (seenClusterIds.has(id)) throw new AnalysisOutputError(`${where}.id が重複しています`);
-    if (typeof level !== "number" || !Number.isInteger(level) || level < 1) {
-      throw new AnalysisOutputError(`${where}.level が正しくありません`);
-    }
-    if (parentId !== null && typeof parentId !== "string") throw new AnalysisOutputError(`${where}.parentId が正しくありません`);
-    if (typeof title !== "string" || typeof summary !== "string") {
-      throw new AnalysisOutputError(`${where} の title または summary が文字列ではありません`);
-    }
-    if (!Array.isArray(opinionIds) || opinionIds.some((o) => typeof o !== "string")) {
-      throw new AnalysisOutputError(`${where}.opinionIds が文字列の配列ではありません`);
-    }
-    const unique = [...new Set(opinionIds as string[])];
-    for (const opinionId of unique) {
-      if (!known.has(opinionId)) throw new AnalysisOutputError(`${where} に、入力にない投稿のIDが含まれています`);
-      classified.add(opinionId);
-    }
-    seenClusterIds.add(id);
-    clusters.push({ id, level, parentId: parentId as string | null, title, summary, opinionIds: unique });
+    const cluster = validateCluster(item, `clusters[${index}]`, known, seenClusterIds);
+    for (const opinionId of cluster.opinionIds) classified.add(opinionId);
+    seenClusterIds.add(cluster.id);
+    clusters.push(cluster);
   }
-
-  const clusterIds = new Set(clusters.map((c) => c.id));
-  for (const c of clusters) {
-    if (c.parentId !== null && !clusterIds.has(c.parentId)) {
-      throw new AnalysisOutputError(`クラスタ ${c.id} の親が見つかりません`);
-    }
-  }
+  checkParents(clusters);
 
   const unclassifiedOpinionIds = inputOpinionIds.filter((id) => !classified.has(id));
   const result: RawAnalysisResult = { overview: raw["overview"], clusters };

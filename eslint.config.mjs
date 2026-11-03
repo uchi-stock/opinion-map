@@ -10,18 +10,13 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 /** ファイルごとの、導入時点の complexity（循環的複雑度）の最大値 */
 const COMPLEXITY_RATCHET = {
-    "core/src/analysis/validation.ts": 23,
-    "core/src/domain/validation.ts": 19,
 };
 /** ファイルごとの、導入時点の認知的複雑度の最大値 */
 const COGNITIVE_RATCHET = {
-    "core/src/analysis/validation.ts": 28,
-    "core/src/domain/validation.ts": 21,
 };
 /** ファイルごとの、導入時点の実効行数（コメント・空行を除く） */
 const MAX_LINES_RATCHET = {
     "core/src/app.ts": 528,
-    "core/src/domain/validation.ts": 342,
     "core/src/repositories/dynamoRepositories.ts": 323,
 };
 

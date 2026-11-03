@@ -42,5 +42,6 @@ export function newEditKey(): string {
   } else {
     for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
   }
+  // eslint-disable-next-line sonarjs/slow-regex -- btoa の出力の末尾の「=」は、多くて2文字
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

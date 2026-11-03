@@ -1,4 +1,5 @@
 import type { NotesEntry, PublicEventSummary, PublicSummaryResponse, Proposal, ProposalList, PublicEvent, OpinionKind, OpinionList, OpinionResult, OpinionSubmission, PublicOpinion, PublicSession } from "./types.ts";
+import { trimTrailingSlashes } from "../lib/paths.ts";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -14,7 +15,7 @@ export class ApiError extends Error {
 
 export function apiBaseUrl(): string {
   const configured = import.meta.env["VITE_API_BASE_URL"] as string | undefined;
-  return (configured ?? "/api").replace(/\/+$/, "");
+  return trimTrailingSlashes(configured ?? "/api");
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {

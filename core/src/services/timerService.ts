@@ -1,3 +1,4 @@
+import type { SessionRecord } from "../domain/types.js";
 import type { AnalysisService } from "./analysisService.js";
 import type { ServiceContext } from "./context.js";
 
@@ -7,6 +8,26 @@ import type { ServiceContext } from "./context.js";
  * この処理は、状態の後始末と分析の開始だけを行うため、遅れても投稿の取りこぼしは起きない。
  */
 export function createTimerService(ctx: ServiceContext, analyses: AnalysisService | undefined) {
+  const isExpired = (session: SessionRecord, now: number) =>
+    session.status === "active" && session.deadlineAt !== undefined && Date.parse(session.deadlineAt) <= now;
+
+  /** 先に締め切る。分析が失敗しても、受付は止まったままにする */
+  async function closeSession(session: SessionRecord): Promise<void> {
+    const { deadlineAt: _gone, ...rest } = session;
+    await ctx.repos.sessions.update({ ...rest, status: "closed", updatedAt: ctx.now().toISOString() });
+  }
+
+  /** 投稿があるときだけ、分析を始める。失敗しても、ほかのテーマの処理を止めない */
+  async function startAnalysisIfAny(sessionId: string): Promise<void> {
+    if (!analyses) return;
+    if ((await ctx.repos.opinions.listBySession(sessionId)).length === 0) return;
+    try {
+      await analyses.start(sessionId);
+    } catch {
+      ctx.log("timer_analysis_failed", { sessionId });
+    }
+  }
+
   return {
     /** 締め切りを過ぎた、公開中のテーマ。戻り値は、締め切ったテーマの数 */
     async sweep(): Promise<number> {
@@ -15,21 +36,10 @@ export function createTimerService(ctx: ServiceContext, analyses: AnalysisServic
       for (const event of await ctx.repos.events.list()) {
         if (event.status !== "active") continue;
         for (const session of await ctx.repos.sessions.listByEvent(event.id)) {
-          if (session.status !== "active" || session.deadlineAt === undefined) continue;
-          if (Date.parse(session.deadlineAt) > now) continue;
-          // 先に締め切る。分析が失敗しても、受付は止まったままにする
-          const { deadlineAt: _gone, ...rest } = session;
-          await ctx.repos.sessions.update({ ...rest, status: "closed", updatedAt: ctx.now().toISOString() });
+          if (!isExpired(session, now)) continue;
+          await closeSession(session);
           closed++;
-          if (!analyses) continue;
-          const opinions = await ctx.repos.opinions.listBySession(session.id);
-          if (opinions.length === 0) continue;
-          try {
-            await analyses.start(session.id);
-          } catch (e) {
-            ctx.log("timer_analysis_failed", { sessionId: session.id });
-            void e;
-          }
+          await startAnalysisIfAny(session.id);
         }
       }
       return closed;

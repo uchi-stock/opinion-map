@@ -9,6 +9,7 @@ const encoder = new TextEncoder();
 export function base64urlEncode(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
+  // eslint-disable-next-line sonarjs/slow-regex -- btoa の出力の末尾の「=」は、多くて2文字
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 

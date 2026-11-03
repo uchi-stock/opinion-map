@@ -1,4 +1,5 @@
 import { AnalysisOutputError } from "../analysis/validation.js";
+import { trimTrailingSlashes } from "../lib/path.js";
 import type {
   AnalysisCluster,
   AnalysisOpinion,
@@ -125,7 +126,7 @@ export class KouchouAiProvider implements AnalysisProvider {
   }
 
   private url(path: string): string {
-    return `${this.options.baseUrl.replace(/\/+$/, "")}${path}`;
+    return `${trimTrailingSlashes(this.options.baseUrl)}${path}`;
   }
 
   /** 広聴AI側のレポートのID。英数字・ハイフン・アンダースコアだけが使える */

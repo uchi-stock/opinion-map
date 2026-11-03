@@ -5,6 +5,7 @@ import type { NotesEntry } from "../api/types.ts";
  * 担当者は名前の文字列だけ。見出しや記号が崩れないよう、改行は1つの空白にする。
  */
 export function notesToMarkdown(eventName: string, entries: NotesEntry[]): string {
+  // eslint-disable-next-line sonarjs/slow-regex -- 入力は、サーバーが長さを制限した記録の項目
   const oneLine = (s: string) => s.replace(/\s*\n\s*/g, " ").trim();
   const lines: string[] = [`# ${oneLine(eventName)}`, ""];
   for (const entry of entries) {

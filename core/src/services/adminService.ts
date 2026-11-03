@@ -2,6 +2,7 @@ import { badRequest, notFound } from "../lib/errors.js";
 import type { AdminRecord } from "../domain/types.js";
 import type { ServiceContext } from "./context.js";
 
+// eslint-disable-next-line sonarjs/slow-regex -- 検証の前に、長さを MAX_EMAIL(254)以下に絞る
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL = 254;
 export const SEED_ADDED_BY = "(seed)";

@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, getPublicSummary, getSession, listOpinions, sendPresence } from "../api/client.ts";
-import type { OpinionList, OpinionResult, PublicSession, PublicSummaryResponse } from "../api/types.ts";
-import { OpinionCard } from "../components/OpinionCard.tsx";
-import { MyOpinionActions } from "../components/MyOpinionActions.tsx";
-import { ReactionButton } from "../components/ReactionButton.tsx";
-import { SummaryView } from "../components/SummaryView.tsx";
-import { ViewTabs, type ContentView } from "../components/ViewTabs.tsx";
-import { StickyBoard, ViewToggle, type ViewMode } from "../components/StickyBoard.tsx";
-import { groupByKind } from "../lib/board.ts";
-import { OpinionForm } from "../components/OpinionForm.tsx";
+import type { OpinionResult, PublicSession, PublicSummaryResponse } from "../api/types.ts";
+import type { ContentView } from "../components/ViewTabs.tsx";
+import type { ViewMode } from "../components/StickyBoard.tsx";
 import { getVoterId } from "../lib/reactions.ts";
 import { useVisiblePolling } from "../lib/useVisiblePolling.ts";
 import { forgetMyOpinion, loadMyOpinions } from "../lib/myOpinions.ts";
 import { withBase } from "../lib/paths.ts";
+import { ComposeScreen } from "../components/participant/ComposeScreen.tsx";
+import { ReadingScreen } from "../components/participant/ReadingScreen.tsx";
+import type { ListState } from "../components/participant/types.ts";
 import { TimerBadge } from "../components/TimerBadge.tsx";
 import { useHashFlag } from "../lib/useHashFlag.ts";
 
@@ -24,11 +21,6 @@ type SessionState =
   | { status: "notFound" }
   | { status: "error"; message: string }
   | { status: "ready"; session: PublicSession };
-
-type ListState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; list: OpinionList };
 
 function MainShell({ children }: { children: React.ReactNode }) {
   return (
@@ -173,156 +165,22 @@ export function ParticipantPage({ sessionId, embedded = false }: { sessionId: st
       </header>
 
       {composing ? (
-        <>
-      <div className="mb-3">
-        <button
-          type="button"
-          className="btn icon-btn btn-sm btn-outline-secondary"
-          onClick={() => setComposing(false)}
-          aria-label="ボードへ戻る"
-          title="ボードへ戻る"
-        >
-          ⬅️
-        </button>
-      </div>
-      <section className="mb-4" aria-label="投稿について">
-        <div className="card bg-body-tertiary">
-          <div className="card-body small">
-            <p className="mb-1">
-              <strong>投稿について</strong>
-            </p>
-            <ul className="mb-0 ps-3">
-              <li>名前の入力は不要です。投稿は匿名で扱われます。</li>
-              <li>
-                {session.showOpinions
-                  ? "投稿は、このページを開いている参加者と運営者に表示されます。"
-                  : "投稿は、運営者にだけ表示されます。"}
-              </li>
-              <li>
-                運営者が、AIを使って意見を分析することがあります。そのために、外部のAIサービスへ送信される場合があります。
-                AIの結果は参考情報であり、運営者が確認します。
-              </li>
-              <li>自分の投稿は、投稿したこのブラウザから、編集・削除できます。</li>
-              <li>個人が特定される情報は書かないでください。</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className="mb-4" aria-label="投稿する">
-        {session.acceptingOpinions ? (
-          <OpinionForm sessionId={sessionId} onSubmitted={handleSubmitted} />
-        ) : (
-          <div className="alert alert-secondary mb-0" role="status">
-            現在、投稿を受け付けていません。
-          </div>
-        )}
-      </section>
-
-        </>
+        <ComposeScreen session={session} sessionId={sessionId} onBack={() => setComposing(false)} onSubmitted={handleSubmitted} />
       ) : (
-        <>
-      <ViewTabs view={view} onChange={setView} summaryAvailable={summary?.published === true} />
-      {view === "summary" && summary?.published === true ? (
-        <SummaryView
-          audience="participant"
-          opinions={listState.status === "ready" ? listState.list.opinions : []}
-          data={{
-            overview: summary.overview,
-            clusters: summary.clusters,
-            unclassifiedCount: summary.unclassifiedCount,
-            ...(summary.unclassifiedOpinionIds ? { unclassifiedOpinionIds: summary.unclassifiedOpinionIds } : {}),
-            insights: summary.insights.map((i) => ({ ...i, approved: true })),
-            newOpinionCount: summary.newOpinionCount,
-          }}
+        <ReadingScreen
+          session={session}
+          summary={summary}
+          view={view}
+          setView={setView}
+          listState={listState}
+          mode={mode}
+          setMode={setMode}
+          posted={posted}
+          onPostLink={() => setPosted(false)}
+          mine={mine}
+          reload={() => void loadList()}
+          onDeleted={handleDeleted}
         />
-      ) : (
-        <>
-      {posted && (
-        <div className="alert alert-success" role="status">
-          投稿しました。ありがとうございます。
-        </div>
-      )}
-      <section className="mb-3" aria-label="投稿する">
-        {session.acceptingOpinions ? (
-          <a
-            className="btn icon-btn btn-primary w-100"
-            href="#post"
-            onClick={() => setPosted(false)}
-            aria-label="意見を投稿する"
-            title="意見を投稿する"
-          >
-            ✍️
-          </a>
-        ) : (
-          <div className="alert alert-secondary mb-0" role="status">
-            現在、投稿を受け付けていません。
-          </div>
-        )}
-      </section>
-
-      {session.showOpinions && (
-        <section aria-label="投稿された意見">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h2 className="h6 mb-0">投稿された意見</h2>
-            <div className="d-flex gap-2">
-              <ViewToggle mode={mode} onChange={setMode} />
-              <button type="button" className="btn icon-btn btn-sm btn-outline-secondary" onClick={() => void loadList()} aria-label="更新" title="更新">🔄</button>
-            </div>
-          </div>
-          {listState.status === "loading" && <p role="status">読み込んでいます…</p>}
-          {listState.status === "error" && (
-            <div className="alert alert-warning" role="alert">
-              {listState.message}
-            </div>
-          )}
-          {listState.status === "ready" && listState.list.opinions.length === 0 && (
-            <p className="text-body-secondary">まだ投稿はありません。</p>
-          )}
-          {listState.status === "ready" && mode === "board" && (
-            <StickyBoard
-              groups={groupByKind(listState.list.opinions)}
-              renderActions={(o) => (
-                <ReactionButton
-                  opinionId={o.id}
-                  count={o.reactionCount ?? 0}
-                  disabled={!session.acceptingOpinions}
-                  onChanged={() => void loadList()}
-                />
-              )}
-            />
-          )}
-          {listState.status === "ready" &&
-            mode === "list" &&
-            [...listState.list.opinions].reverse().map((o) => (
-              <div key={o.id}>
-                <OpinionCard
-                  opinion={o}
-                  actions={
-                    <ReactionButton
-                      opinionId={o.id}
-                      count={o.reactionCount ?? 0}
-                      disabled={!session.acceptingOpinions}
-                      onChanged={() => void loadList()}
-                    />
-                  }
-                />
-                {mine[o.id] && (
-                  <MyOpinionActions
-                    opinion={o}
-                    editKey={mine[o.id]!}
-                    canEdit={session.acceptingOpinions}
-                    onEdited={() => void loadList()}
-                    onDeleted={handleDeleted}
-                  />
-                )}
-              </div>
-            ))}
-        </section>
-      )}
-        </>
-      )}
-        </>
       )}
     </Shell>
   );

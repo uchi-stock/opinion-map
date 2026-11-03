@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/uchi-stock/opinion-map/compare/v1.31.0...v1.32.0) (2026-11-03)
+
+
+### Features
+
+* 話した内容から付箋を作る(録音・文字起こし・AIで候補) ([#203](https://github.com/uchi-stock/opinion-map/issues/203)) ([9e056b0](https://github.com/uchi-stock/opinion-map/commit/9e056b07b593d438a27f11376e120a924197d50b)), closes [#185](https://github.com/uchi-stock/opinion-map/issues/185)
+
 # [1.31.0](https://github.com/uchi-stock/opinion-map/compare/v1.30.0...v1.31.0) (2026-10-31)
 
 

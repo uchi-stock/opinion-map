@@ -19,6 +19,14 @@
     {
       "source": "shared/pwa/UpdateNotifier.jsx",
       "target": "frontend/src/pwa/UpdateNotifier.jsx"
+    },
+    {
+      "source": "shared/ui/getAppVersionDefine.js",
+      "target": "frontend/getAppVersionDefine.js"
+    },
+    {
+      "source": "shared/ui/formatBuildTime.js",
+      "target": "frontend/src/formatBuildTime.js"
     }
   ]
 }

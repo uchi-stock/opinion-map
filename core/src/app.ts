@@ -24,6 +24,7 @@ import { createAnalysisService } from "./services/analysisService.js";
 import { createEventService } from "./services/eventService.js";
 import type { InsightProvider } from "./insights/types.js";
 import { createInsightService } from "./services/insightService.js";
+import { trimTrailingSlashes } from "./lib/path.js";
 import { consoleLogger, type Logger } from "./lib/log.js";
 import { createUsageService, DEFAULT_DAILY_LIMITS, type DailyLimits } from "./services/usageService.js";
 import { createSummaryService } from "./services/summaryService.js";
@@ -537,7 +538,7 @@ export function createApp(options: AppOptions) {
       if (method === "OPTIONS") {
         return { statusCode: 204, headers: baseHeaders(), body: "" };
       }
-      const path = request.path.length > 1 ? request.path.replace(/\/+$/, "") : request.path;
+      const path = request.path.length > 1 ? trimTrailingSlashes(request.path) : request.path;
       const principal = await authenticate(request.headers);
       const isAdmin = principal !== null;
 

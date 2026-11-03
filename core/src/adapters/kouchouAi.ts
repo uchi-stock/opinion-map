@@ -46,6 +46,53 @@ export function clusterCounts(opinionCount: number): number[] {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+/** 数字だけのIDは、CSV由来で数値として返ることがあるので、文字列にそろえる */
+function commentIdOf(arg: Record<string, unknown>): string | undefined {
+  const raw = arg["comment_id"];
+  const id = typeof raw === "number" ? String(raw) : raw;
+  return typeof id === "string" && id !== "" ? id : undefined;
+}
+
+/** argumentsから、クラスタごとの元の投稿のIDを集める */
+function groupCommentsByCluster(args: unknown[]): Map<string, Set<string>> {
+  const byCluster = new Map<string, Set<string>>();
+  for (const arg of args) {
+    if (!isRecord(arg)) throw new AnalysisOutputError("arguments の要素がオブジェクトではありません");
+    const commentId = commentIdOf(arg);
+    const clusterIds = arg["cluster_ids"];
+    if (commentId === undefined || !Array.isArray(clusterIds)) continue;
+    for (const clusterId of clusterIds) {
+      if (typeof clusterId !== "string") continue;
+      const set = byCluster.get(clusterId) ?? new Set<string>();
+      set.add(commentId);
+      byCluster.set(clusterId, set);
+    }
+  }
+  return byCluster;
+}
+
+const textOr = (value: unknown, fallback: string) => (typeof value === "string" ? value : fallback);
+
+/** clusters の1要素を、アプリの形にする。階層0（全体）は除くので、undefined を返す */
+function toCluster(c: unknown, byCluster: Map<string, Set<string>>): AnalysisCluster | undefined {
+  if (!isRecord(c)) throw new AnalysisOutputError("clusters の要素がオブジェクトではありません");
+  const level = c["level"];
+  if (level === 0) return undefined;
+  const id = c["id"];
+  if (typeof id !== "string" || typeof level !== "number") {
+    throw new AnalysisOutputError("クラスタの id または level が正しくありません");
+  }
+  const parent = c["parent"];
+  return {
+    id,
+    level,
+    parentId: level === 1 || typeof parent !== "string" ? null : parent,
+    title: textOr(c["label"], ""),
+    summary: textOr(c["takeaway"], ""),
+    opinionIds: [...(byCluster.get(id) ?? [])],
+  };
+}
+
 /**
  * 広聴AIの結果（hierarchical_result.json）を、アプリの形に直す。
  * - 階層0（全体）は除く
@@ -58,40 +105,11 @@ export function parseKouchouResult(json: unknown): RawAnalysisResult {
     throw new AnalysisOutputError("広聴AIの結果に、clusters または arguments がありません");
   }
 
-  const byCluster = new Map<string, Set<string>>();
-  for (const arg of args) {
-    if (!isRecord(arg)) throw new AnalysisOutputError("arguments の要素がオブジェクトではありません");
-    // CSV由来の数字だけのIDは、数値として返ることがある
-    const rawCommentId = arg["comment_id"];
-    const commentId = typeof rawCommentId === "number" ? String(rawCommentId) : rawCommentId;
-    const clusterIds = arg["cluster_ids"];
-    if (typeof commentId !== "string" || commentId === "" || !Array.isArray(clusterIds)) continue;
-    for (const clusterId of clusterIds) {
-      if (typeof clusterId !== "string") continue;
-      const set = byCluster.get(clusterId) ?? new Set<string>();
-      set.add(commentId);
-      byCluster.set(clusterId, set);
-    }
-  }
-
+  const byCluster = groupCommentsByCluster(args);
   const result: AnalysisCluster[] = [];
   for (const c of clusters) {
-    if (!isRecord(c)) throw new AnalysisOutputError("clusters の要素がオブジェクトではありません");
-    const level = c["level"];
-    if (level === 0) continue;
-    const id = c["id"];
-    if (typeof id !== "string" || typeof level !== "number") {
-      throw new AnalysisOutputError("クラスタの id または level が正しくありません");
-    }
-    const parent = c["parent"];
-    result.push({
-      id,
-      level,
-      parentId: level === 1 ? null : typeof parent === "string" ? parent : null,
-      title: typeof c["label"] === "string" ? c["label"] : "",
-      summary: typeof c["takeaway"] === "string" ? c["takeaway"] : "",
-      opinionIds: [...(byCluster.get(id) ?? [])],
-    });
+    const cluster = toCluster(c, byCluster);
+    if (cluster) result.push(cluster);
   }
   return { overview: typeof overview === "string" ? overview : "", clusters: result };
 }

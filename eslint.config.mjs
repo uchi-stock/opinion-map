@@ -10,14 +10,11 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 /** ファイルごとの、導入時点の complexity（循環的複雑度）の最大値 */
 const COMPLEXITY_RATCHET = {
-    "core/src/adapters/kouchouAi.ts": 24,
     "core/src/analysis/validation.ts": 23,
     "core/src/domain/validation.ts": 19,
-    "frontend/src/components/admin/AnalysisPanel.tsx": 18,
 };
 /** ファイルごとの、導入時点の認知的複雑度の最大値 */
 const COGNITIVE_RATCHET = {
-    "core/src/adapters/kouchouAi.ts": 31,
     "core/src/analysis/validation.ts": 28,
     "core/src/domain/validation.ts": 21,
 };

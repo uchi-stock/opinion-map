@@ -102,37 +102,11 @@ export function AnalysisResultView({
   );
 }
 
-export function AnalysisPanel({
-  api,
-  sessionId,
-  opinions,
-  describeError,
-}: {
-  api: AdminApi;
-  sessionId: string;
-  opinions: PublicOpinion[];
-  describeError: (e: unknown) => string;
-}) {
-  const [run, setRun] = useState<AnalysisRun | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+/** 成功した分析の、まとまりごとの案(共通点・相違点・問い)を読み込み、作る */
+function useInsights(api: AdminApi, run: AnalysisRun | null, fail: (e: unknown) => void, clearError: () => void) {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [insightsAvailable, setInsightsAvailable] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
-
-  const fail = useCallback((e: unknown) => setError(describeError(e)), [describeError]);
-
-  // 最新の実行を取り直す（結果も含める）
-  const refresh = useCallback(async () => {
-    const runs = await api.listAnalyses(sessionId);
-    const latest = runs[runs.length - 1];
-    setRun(latest ? await api.getAnalysis(latest.id) : null);
-  }, [api, sessionId]);
-
-  useEffect(() => {
-    refresh().catch(fail);
-  }, [refresh, fail]);
 
   const succeededId = run?.status === "succeeded" ? run.id : null;
   useEffect(() => {
@@ -150,7 +124,7 @@ export function AnalysisPanel({
   async function generateInsight(analysisId: string, clusterId: string) {
     if (generating) return;
     setGenerating(clusterId);
-    setError(null);
+    clearError();
     try {
       const created = await api.generateInsight(analysisId, clusterId);
       setInsights((prev) => [...prev, created]);
@@ -160,6 +134,115 @@ export function AnalysisPanel({
       setGenerating(null);
     }
   }
+
+  return { insights, setInsights, insightsAvailable, generating, generateInsight };
+}
+
+/** まとまりの下に出す、AIの案と、案を作る(作り直す)ボタン */
+function ClusterInsight({
+  api,
+  analysisId,
+  clusterId,
+  insights,
+  setInsights,
+  available,
+  generating,
+  generate,
+  describeError,
+}: {
+  api: AdminApi;
+  analysisId: string;
+  clusterId: string;
+  insights: Insight[];
+  setInsights: (update: (prev: Insight[]) => Insight[]) => void;
+  available: boolean;
+  generating: string | null;
+  generate: (analysisId: string, clusterId: string) => Promise<void>;
+  describeError: (e: unknown) => string;
+}) {
+  // 同じクラスタの案は、新しいものを表示する
+  const insight = [...insights].reverse().find((i) => i.clusterId === clusterId);
+  const label = generating === clusterId ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）";
+  const icon = generating === clusterId ? "⏳" : insight ? "🔁" : "💡";
+  return (
+    <>
+      {insight && (
+        <InsightCard
+          key={insight.id}
+          api={api}
+          insight={insight}
+          describeError={describeError}
+          onChanged={(updated) => setInsights((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+        />
+      )}
+      {available && (
+        <button
+          type="button"
+          className="btn icon-btn btn-sm btn-outline-secondary mt-2"
+          disabled={generating !== null}
+          onClick={() => void generate(analysisId, clusterId)}
+          aria-label={label}
+          title={label}
+        >
+          {icon}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** 実行の状態の表示。実行中の案内と、失敗したときの再実行 */
+function RunStatus({ run, active, busy, onRetry }: { run: AnalysisRun; active: boolean; busy: boolean; onRetry: () => void }) {
+  return (
+    <>
+          <p className="small mb-2">
+            状態: <strong>{STATUS_LABELS[run.status]}</strong>（対象{run.inputCount}件
+            {run.newOpinionCount > 0 && `、この後に${run.newOpinionCount}件が増えています`}）
+          </p>
+          {active && (
+            <p className="small text-body-secondary">
+              AIが分析しています。数分かかります。このまま、画面を開いておいてください。
+            </p>
+          )}
+          {run.status === "failed" && (
+            <div className="alert alert-danger" role="alert">
+              分析に失敗しました。{run.error?.summary}
+              <button type="button" className="btn icon-btn btn-sm btn-outline-danger d-block mt-2" disabled={busy} onClick={() => onRetry()} aria-label="再実行する" title="再実行する">🔁</button>
+            </div>
+          )}
+    </>
+  );
+}
+
+export function AnalysisPanel({
+  api,
+  sessionId,
+  opinions,
+  describeError,
+}: {
+  api: AdminApi;
+  sessionId: string;
+  opinions: PublicOpinion[];
+  describeError: (e: unknown) => string;
+}) {
+  const [run, setRun] = useState<AnalysisRun | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fail = useCallback((e: unknown) => setError(describeError(e)), [describeError]);
+
+  // 最新の実行を取り直す（結果も含める）
+  const refresh = useCallback(async () => {
+    const runs = await api.listAnalyses(sessionId);
+    const latest = runs[runs.length - 1];
+    setRun(latest ? await api.getAnalysis(latest.id) : null);
+  }, [api, sessionId]);
+
+  useEffect(() => {
+    refresh().catch(fail);
+  }, [refresh, fail]);
+
+  const { insights, setInsights, insightsAvailable, generating, generateInsight } = useInsights(api, run, fail, () => setError(null));
 
   const active = run?.status === "queued" || run?.status === "running";
   useEffect(() => {
@@ -207,54 +290,24 @@ export function AnalysisPanel({
       )}
       {run && (
         <div aria-live="polite">
-          <p className="small mb-2">
-            状態: <strong>{STATUS_LABELS[run.status]}</strong>（対象{run.inputCount}件
-            {run.newOpinionCount > 0 && `、この後に${run.newOpinionCount}件が増えています`}）
-          </p>
-          {active && (
-            <p className="small text-body-secondary">
-              AIが分析しています。数分かかります。このまま、画面を開いておいてください。
-            </p>
-          )}
-          {run.status === "failed" && (
-            <div className="alert alert-danger" role="alert">
-              分析に失敗しました。{run.error?.summary}
-              <button type="button" className="btn icon-btn btn-sm btn-outline-danger d-block mt-2" disabled={busy} onClick={() => void act(() => api.retryAnalysis(run.id))} aria-label="再実行する" title="再実行する">🔁</button>
-            </div>
-          )}
+          <RunStatus run={run} active={active} busy={busy} onRetry={() => void act(() => api.retryAnalysis(run.id))} />
           {run.status === "succeeded" && (
             <AnalysisResultView
               run={run}
               opinions={opinions}
-              clusterExtra={(cluster) => {
-                // 同じクラスタの案は、新しいものを表示する
-                const insight = [...insights].reverse().find((i) => i.clusterId === cluster.id);
-                return (
-                  <>
-                    {insight && (
-                      <InsightCard
-                        key={insight.id}
-                        api={api}
-                        insight={insight}
-                        describeError={describeError}
-                        onChanged={(updated) => setInsights((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-                      />
-                    )}
-                    {insightsAvailable && (
-                      <button
-                        type="button"
-                        className="btn icon-btn btn-sm btn-outline-secondary mt-2"
-                        disabled={generating !== null}
-                        onClick={() => void generateInsight(run.id, cluster.id)}
-                        aria-label={generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
-                        title={generating === cluster.id ? "考えています…" : insight ? "案を作り直す" : "共通点・相違点を考える（AIの案）"}
-                      >
-                        {generating === cluster.id ? "⏳" : insight ? "🔁" : "💡"}
-                      </button>
-                    )}
-                  </>
-                );
-              }}
+              clusterExtra={(cluster) => (
+                <ClusterInsight
+                  api={api}
+                  analysisId={run.id}
+                  clusterId={cluster.id}
+                  insights={insights}
+                  setInsights={setInsights}
+                  available={insightsAvailable}
+                  generating={generating}
+                  generate={generateInsight}
+                  describeError={describeError}
+                />
+              )}
             />
           )}
         </div>

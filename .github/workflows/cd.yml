@@ -121,15 +121,15 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json
-            frontend/package-lock.json
+          cache-dependency-path: package-lock.json
+
+      - name: 依存パッケージをインストールする
+        # frontend と backend は npm workspaces。ルートで1回だけ入れる
+        run: npm ci
 
       - name: バックエンドをバンドルする
         working-directory: backend
-        run: |
-          npm ci
-          npm run bundle
+        run: npm run bundle
 
       - name: 作成に失敗して残ったスタックを片付ける
         # 初回の作成に失敗したスタックは ROLLBACK_COMPLETE で残り、そのままでは更新できない。
@@ -190,9 +190,7 @@ jobs:
         env:
           # クライアントIDは公開してよい値。ログインのボタンを出すために使う
           VITE_GOOGLE_CLIENT_ID: ${{ env.GOOGLE_OAUTH_CLIENT_ID }}
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
       - name: 画面を S3 へ置く
         env:

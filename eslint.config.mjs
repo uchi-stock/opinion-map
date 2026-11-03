@@ -14,14 +14,12 @@ const COMPLEXITY_RATCHET = {
     "core/src/analysis/validation.ts": 23,
     "core/src/domain/validation.ts": 19,
     "frontend/src/components/admin/AnalysisPanel.tsx": 18,
-    "frontend/src/pages/ParticipantPage.tsx": 31,
 };
 /** ファイルごとの、導入時点の認知的複雑度の最大値 */
 const COGNITIVE_RATCHET = {
     "core/src/adapters/kouchouAi.ts": 31,
     "core/src/analysis/validation.ts": 28,
     "core/src/domain/validation.ts": 21,
-    "frontend/src/pages/ParticipantPage.tsx": 21,
 };
 /** ファイルごとの、導入時点の実効行数（コメント・空行を除く） */
 const MAX_LINES_RATCHET = {

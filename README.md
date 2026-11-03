@@ -74,10 +74,11 @@ Node.js 22以上が必要である。
 
 1. バックエンドを起動する。データはメモリ上にあり、再起動すると消える。
 
+   frontend と backend は npm workspaces で、依存パッケージはルートで1回だけ入れる。
+
    ```sh
-   cd backend
    npm ci
-   npm run dev
+   npm run dev --workspace backend
    ```
 
    起動時に、「テーマID」が表示される。
@@ -85,9 +86,7 @@ Node.js 22以上が必要である。
 2. 別のターミナルで、フロントエンドを起動する。
 
    ```sh
-   cd frontend
-   npm ci
-   npm run dev
+   npm run dev --workspace frontend
    ```
 
 3. ブラウザで `http://localhost:5173/s/<テーマID>` を開く。

@@ -29,9 +29,8 @@ AWS やプロセスに依存する部分だけが、この `backend/` にある�
 ## ローカルで動かす
 
 ```sh
-cd backend
 npm ci
-npm run dev
+npm run dev --workspace backend
 ```
 
 起動すると、すぐ試せるイベントとテーマを1つ作り、ID と運営者トークンを表示する。

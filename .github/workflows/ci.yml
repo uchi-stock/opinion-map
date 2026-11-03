@@ -23,6 +23,8 @@ jobs:
       self_ref: v2.114.1
       # カバレッジの閾値は、実測(backend 約94%、frontend 約91%)に近い値から始め、80%の目標を下回らない範囲で上げていく(下げない)。
       # functions は、V8 の集計が揺れやすいので、判定の対象にしない
+      # frontend と backend は npm workspaces（ルートの package-lock.json を1本だけ持つ）
+      workspaces: true
       packages: '[{"dir":"backend","node_version":"22","coverage_threshold":88,"coverage_metrics":"lines,statements,branches"},{"dir":"frontend","node_version":"22","build":true,"coverage_threshold":85,"coverage_metrics":"lines,statements,branches"}]'
       # CI単独でのマージは止める。広聴AI評価の完了を待つgate jobがマージする
       # （dev-standardsの「1 job per app」パターン、docs/cicd-pipeline-specification.md参照）
@@ -179,9 +181,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: 依存パッケージをインストールする
-        working-directory: backend
+        # frontend と backend は npm workspaces。ルートで入れる
         run: npm ci
       - name: DynamoDB Local の起動を待つ
         run: |

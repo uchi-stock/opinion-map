@@ -17,15 +17,13 @@
 バックエンドを先に起動する。
 
 ```sh
-cd backend && npm ci && npm run dev
+npm ci && npm run dev --workspace backend
 ```
 
 起動時に表示される「テーマID」を控える。続けて、フロントエンドを起動する。
 
 ```sh
-cd frontend
-npm ci
-npm run dev
+npm run dev --workspace frontend
 ```
 
 ブラウザで `http://localhost:5173/s/<テーマID>` を開く。

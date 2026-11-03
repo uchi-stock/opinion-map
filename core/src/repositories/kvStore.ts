@@ -79,18 +79,20 @@ export class MemoryKvStore implements KvStore {
 
   async transactWrite(ops: WriteOp[]): Promise<"ok" | "conflict"> {
     for (const op of ops) if (op.type === "put") assertItemSize(op.item);
-    for (const op of ops) {
-      const existing = this.items.get(op.type === "put" ? op.item.pk : op.pk);
-      if (op.type === "put" && !conditionHolds(existing, op.condition)) return "conflict";
-      if (op.type === "delete" && op.ifDataEquals) {
-        if (!existing || dataField(existing, op.ifDataEquals.field) !== op.ifDataEquals.value) return "conflict";
-      }
-    }
+    for (const op of ops) if (!this.opAllowed(op)) return "conflict";
     for (const op of ops) {
       if (op.type === "put") this.items.set(op.item.pk, structuredClone(op.item));
       else this.items.delete(op.pk);
     }
     return "ok";
+  }
+
+  /** 条件つきの書き込みと削除の条件が、いまの状態で満たされるか */
+  private opAllowed(op: WriteOp): boolean {
+    const existing = this.items.get(op.type === "put" ? op.item.pk : op.pk);
+    if (op.type === "put") return conditionHolds(existing, op.condition);
+    if (!op.ifDataEquals) return true;
+    return existing !== undefined && dataField(existing, op.ifDataEquals.field) === op.ifDataEquals.value;
   }
 
   private query(gsi1pk: string, fromSk: string | undefined): KvItem[] {

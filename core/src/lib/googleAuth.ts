@@ -59,7 +59,8 @@ export function createGoogleVerifier(options: GoogleVerifierOptions) {
     return keys.find((k) => k.kid === kid) ?? (await loadKeys(true)).find((k) => k.kid === kid);
   }
 
-  return async function verify(idToken: string): Promise<GoogleIdentity> {
+  /** トークンを3つに分け、ヘッダーと本文を読む。形が違えば、無効にする */
+  function decodeToken(idToken: string) {
     const parts = idToken.split(".");
     if (parts.length !== 3) throw invalid();
     const [head, body, signature] = parts as [string, string, string];
@@ -72,8 +73,12 @@ export function createGoogleVerifier(options: GoogleVerifierOptions) {
       throw invalid();
     }
     if (header.alg !== "RS256" || typeof header.kid !== "string") throw invalid();
+    return { head, body, signature, kid: header.kid, claims };
+  }
 
-    const jwk = await findKey(header.kid);
+  /** Google の公開鍵で、署名を確かめる */
+  async function verifySignature(kid: string, signingInput: string, signature: string): Promise<void> {
+    const jwk = await findKey(kid);
     if (!jwk) throw invalid();
     const key = await globalThis.crypto.subtle.importKey(
       "jwk",
@@ -86,10 +91,13 @@ export function createGoogleVerifier(options: GoogleVerifierOptions) {
       "RSASSA-PKCS1-v1_5",
       key,
       base64urlDecode(signature),
-      new TextEncoder().encode(`${head}.${body}`),
+      new TextEncoder().encode(signingInput),
     );
     if (!ok) throw invalid();
+  }
 
+  /** 発行元・宛先・期限・メールの確認を見て、本人の情報を取り出す */
+  function readClaims(claims: Record<string, unknown>): GoogleIdentity {
     if (typeof claims["iss"] !== "string" || !ISSUERS.has(claims["iss"])) throw invalid();
     // 他のサービス向けに発行されたトークンを弾く
     if (claims["aud"] !== options.clientId) throw invalid();
@@ -98,5 +106,11 @@ export function createGoogleVerifier(options: GoogleVerifierOptions) {
     if (claims["email_verified"] !== true) throw invalid("Googleのメールアドレスが確認されていません");
     const picture = safeGooglePicture(claims["picture"]);
     return { sub: claims["sub"], email: claims["email"], ...(picture ? { picture } : {}) };
+  }
+
+  return async function verify(idToken: string): Promise<GoogleIdentity> {
+    const { head, body, signature, kid, claims } = decodeToken(idToken);
+    await verifySignature(kid, `${head}.${body}`, signature);
+    return readClaims(claims);
   };
 }

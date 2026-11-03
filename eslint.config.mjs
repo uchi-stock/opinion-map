@@ -13,7 +13,6 @@ const COMPLEXITY_RATCHET = {
     "core/src/adapters/kouchouAi.ts": 24,
     "core/src/analysis/validation.ts": 23,
     "core/src/domain/validation.ts": 19,
-    "core/src/lib/googleAuth.ts": 16,
     "frontend/src/App.tsx": 28,
     "frontend/src/components/admin/AnalysisPanel.tsx": 18,
     "frontend/src/pages/ParticipantPage.tsx": 31,
@@ -24,9 +23,6 @@ const COGNITIVE_RATCHET = {
     "core/src/adapters/kouchouAi.ts": 31,
     "core/src/analysis/validation.ts": 28,
     "core/src/domain/validation.ts": 21,
-    "core/src/insights/validation.ts": 21,
-    "core/src/repositories/kvStore.ts": 19,
-    "core/src/services/analysisService.ts": 18,
     "frontend/src/App.tsx": 19,
     "frontend/src/pages/ParticipantPage.tsx": 21,
 };

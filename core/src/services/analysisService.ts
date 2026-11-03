@@ -150,6 +150,38 @@ export function createAnalysisService(
     return failed;
   }
 
+  /** 実行中の分析の状態を、分析基盤に確かめる。終わっていれば結果を取り込み、長すぎれば失敗にする */
+  async function refreshRunning(run: AnalysisRunRecord, providerRunId: string): Promise<AnalysisRunRecord> {
+    const startedAt = run.startedAt ? Date.parse(run.startedAt) : ctx.now().getTime();
+    let state;
+    try {
+      state = await provider.poll(providerRunId);
+    } catch (e) {
+      // 通信の失敗では、実行の状態を変えない。分析基盤では、続いているかもしれない
+      throw new AppError(502, "provider_unreachable", `分析基盤に接続できません: ${summarize(e)}`);
+    }
+    if (state.status === "failed") return fail(run, state.errorCode, state.errorSummary);
+    if (state.status === "succeeded") return importResult(run, providerRunId);
+    if (ctx.now().getTime() - startedAt > timeoutMs) {
+      return fail(run, "timeout", "分析が、上限の時間内に終わりませんでした");
+    }
+    return run;
+  }
+
+  /** 終わった分析の結果を取り込み、検証して保存する */
+  async function importResult(run: AnalysisRunRecord, providerRunId: string): Promise<AnalysisRunRecord> {
+    try {
+      const raw = await provider.fetchResult(providerRunId, run.input.opinions);
+      const result = validateResult(raw, run.input.opinions.map((o) => o.id));
+      const done: AnalysisRunRecord = { ...run, status: "succeeded", completedAt: ctx.now().toISOString(), result };
+      await ctx.repos.analyses.update(done);
+      return done;
+    } catch (e) {
+      if (e instanceof AnalysisOutputError) return fail(run, "invalid_output", e.message);
+      throw new AppError(502, "provider_unreachable", `結果を取得できません: ${summarize(e)}`);
+    }
+  }
+
   return {
     /** 分析を始める。そのときの投稿を固定して記録する */
     async start(sessionId: string): Promise<PublicAnalysisRun> {
@@ -181,33 +213,9 @@ export function createAnalysisService(
 
     /** 実行を返す。実行中なら、分析基盤に状態を確認し、終わっていれば結果を取り込む */
     async get(runId: string): Promise<PublicAnalysisRun> {
-      let run = await load(runId);
-      if (run.status === "running" && run.providerRunId) {
-        const startedAt = run.startedAt ? Date.parse(run.startedAt) : ctx.now().getTime();
-        let state;
-        try {
-          state = await provider.poll(run.providerRunId);
-        } catch (e) {
-          // 通信の失敗では、実行の状態を変えない。分析基盤では、続いているかもしれない
-          throw new AppError(502, "provider_unreachable", `分析基盤に接続できません: ${summarize(e)}`);
-        }
-        if (state.status === "failed") {
-          run = await fail(run, state.errorCode, state.errorSummary);
-        } else if (state.status === "succeeded") {
-          try {
-            const raw = await provider.fetchResult(run.providerRunId, run.input.opinions);
-            const result = validateResult(raw, run.input.opinions.map((o) => o.id));
-            run = { ...run, status: "succeeded", completedAt: ctx.now().toISOString(), result };
-            await ctx.repos.analyses.update(run);
-          } catch (e) {
-            if (e instanceof AnalysisOutputError) run = await fail(run, "invalid_output", e.message);
-            else throw new AppError(502, "provider_unreachable", `結果を取得できません: ${summarize(e)}`);
-          }
-        } else if (ctx.now().getTime() - startedAt > timeoutMs) {
-          run = await fail(run, "timeout", "分析が、上限の時間内に終わりませんでした");
-        }
-      }
-      return toPublic(run, true);
+      const run = await load(runId);
+      const current = run.status === "running" && run.providerRunId ? await refreshRunning(run, run.providerRunId) : run;
+      return toPublic(current, true);
     },
 
     async list(sessionId: string): Promise<PublicAnalysisRun[]> {
